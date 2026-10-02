@@ -44,7 +44,7 @@ on those layouts. The `deck-builder` and `deck-brand` skills read this topic bef
   | A place, product or screen | `image` or `image-right` |
   | A voice from outside the team | `quote` |
   | Rows a reader will look up | `table`, six rows or fewer |
-  | A short argument | `content`, three to five bullets |
+  | A short argument | `content`, four bullets or fewer |
 
 - **Digestible amounts.** Four bullets or fewer, each two lines at most, and about 40 words on a
   projected slide. Working memory holds about four chunks; the exact limits are convention. Move
