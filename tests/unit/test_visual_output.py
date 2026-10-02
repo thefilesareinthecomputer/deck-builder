@@ -83,3 +83,17 @@ def test_built_table_file_has_no_style_banding(ws, capsys):
     tblPr = next(frames(prs)).table._tbl.tblPr
     assert tblPr.get("bandRow") in (None, "0")
     assert Path(ws / "out" / "decks.pptx").is_file()
+
+
+def test_table_tall_warns_when_the_estimated_height_exceeds_its_placeholder(ws, capsys):
+    set_table_tokens(ws, font_size=200, row_height_factor=3)
+    code, out = cli_json(ws, "check", str(write_deck(ws, TABLE_DECK)), capsys=capsys)
+    issue = next(i for i in out["issues"] if i["code"] == "TABLE_TALL")
+    assert issue["severity"] == "warning" and issue["field"] == "table"
+    assert code == 0  # a warning alone doesn't fail check
+
+
+def test_table_tall_is_quiet_for_a_table_that_fits(ws, capsys):
+    code, out = cli_json(ws, "check", str(write_deck(ws, TABLE_DECK)), capsys=capsys)
+    assert code == 0
+    assert not any(i["code"] == "TABLE_TALL" for i in out["issues"])

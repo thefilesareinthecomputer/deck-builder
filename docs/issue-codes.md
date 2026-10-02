@@ -20,6 +20,7 @@ Generated from the engine by `deck-builder docs codes`. Fix by code, not by mess
 | `BUDGET_BULLET_CHARS` | A single bullet is longer than the per-bullet budget. | Shorten the bullet or split it into two. |
 | `BUDGET_LEVEL` | Bullets nest deeper than the field allows. | Flatten the nesting. |
 | `TABLE_SHAPE` | A table has no header, too many rows or columns, or rows of different lengths. | Fix the table so every row matches the header and fits the field's limits. |
+| `TABLE_TALL` | A table's estimated rendered height, from its row count and each row's wrapped line count, exceeds its layout placeholder's height. | Shorten cell text, cut rows or columns, or choose a layout with a taller table placeholder. |
 | `CHART_SHAPE` | A chart has an unknown type, no categories or series, or a series of the wrong length. | Give every series one value per category and use a supported chart type. |
 | `UNKNOWN_ASSET` | A brand:logo, brand:icon or palette name doesn't exist in the brand. | Run `deck-builder assets <slug>` for the available ids. |
 | `ASSET_FORMAT` | An image is in a format PowerPoint placeholders can't take, such as SVG. | Convert it to PNG or JPEG. |

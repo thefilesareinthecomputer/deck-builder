@@ -3,7 +3,14 @@
 `pdftotext -bbox-layout` gives every word's box on the rendered page. Each word is assigned to the
 nearest text shape whose text contains it, and any assigned word outside its shape's box beyond a
 small tolerance is overflow. Exact on PowerPoint's PDF; a close proxy on LibreOffice's. The
-assignment is a heuristic: a word shared by two adjacent shapes goes to the nearer one.
+assignment is a heuristic: a word shared by two adjacent shapes goes to the nearer one, preferring
+one whose box contains the word outright.
+
+Tables are measured too, against their layout placeholder's box rather than their own nominal frame
+(row height times row count), which the renderer ignores once wrapped cells grow past it. The footer
+and slide-number placeholders only ever take a word that actually sits inside their own small box, so
+a table's wrapped words never get mistaken for footer overflow, and a list's auto-numbered marker
+("1.", "2.", a bullet glyph) never gets mistaken for a page number.
 """
 from __future__ import annotations
 
@@ -15,6 +22,7 @@ from pathlib import Path
 from typing import Any
 
 from pptx import Presentation
+from pptx.enum.shapes import PP_PLACEHOLDER
 
 from deck_builder.errors import Issue
 
@@ -22,6 +30,9 @@ EMU_PER_PT = 12700
 TOLERANCE_PT = 3.0
 VERTICAL_SLACK = 0.15  # of a word box's height; see overshoot()
 TOKEN = re.compile(r"[\w%$€£.,:'-]+", re.UNICODE)
+LIST_MARKER = re.compile(r"^\d+[.)]$")  # an auto-numbered list's own marker, e.g. "1." or "2)"
+BULLET_GLYPHS = {"•", "◦", "‣", "∙", "●", "○", "■", "▪", "▸", "–", "—", "*", "·"}
+PROTECTED_TYPES = {PP_PLACEHOLDER.FOOTER, PP_PLACEHOLDER.SLIDE_NUMBER}
 
 
 @dataclass
@@ -52,10 +63,17 @@ class TextShape:
     name: str
     box: Box
     tokens: set[str]
+    protected: bool = False  # the footer or slide-number placeholder: only a word truly inside it counts
 
 
 def norm(token: str) -> str:
     return token.strip(".,:;'\"").lower()
+
+
+def is_list_marker(text: str) -> bool:
+    """A bare auto-numbered list marker or bullet glyph, pdftotext's own word for it: never in any
+    shape's text, so it must never be matched to one by token."""
+    return text in BULLET_GLYPHS or bool(LIST_MARKER.match(text))
 
 
 def pdf_words(pdf: Path) -> list[tuple[float, float, list[Word]]]:
@@ -82,23 +100,51 @@ def _box(sh: Any) -> Box:
                (sh.top + sh.height) / EMU_PER_PT)
 
 
+def _layout_placeholder_box(sh: Any, layout: Any) -> Box:
+    """A placeholder shape's box on its slide layout, not its own (the layout's is the brand's intended
+    area; a table's own box is row height times row count, which the renderer ignores once wrapped
+    cells grow past it). Falls back to the shape's own box when the layout has no matching idx."""
+    if layout is not None and getattr(sh, "is_placeholder", False):
+        idx = sh.placeholder_format.idx
+        for ph in layout.placeholders:
+            if ph.placeholder_format.idx == idx and ph.left is not None and ph.width is not None:
+                return _box(ph)
+    return _box(sh)
+
+
+def _table_tokens(sh: Any) -> set[str]:
+    tokens: set[str] = set()
+    for row in sh.table.rows:
+        for cell in row.cells:
+            tokens |= {norm(t) for t in TOKEN.findall(cell.text_frame.text)}
+    return tokens - {""}
+
+
+def _is_protected(sh: Any) -> bool:
+    return bool(getattr(sh, "is_placeholder", False)) and sh.placeholder_format.type in PROTECTED_TYPES
+
+
 def text_shapes(pptx: Path) -> tuple[float, list[tuple[list[TextShape], list[Box]]]]:
-    """Slide width in points, and per slide: the shapes holding text, and the boxes of charts and tables,
-    whose own words are left out of the measurement."""
+    """Slide width in points, and per slide: the shapes measured for overflow (text frames and
+    tables), and the boxes of charts, whose own words are left out of the measurement."""
     prs = Presentation(str(pptx))
     out = []
     for slide in prs.slides:
+        layout = slide.slide_layout
         shapes, visuals = [], []
         for sh in slide.shapes:
             if sh.left is None or sh.width is None:
                 continue
-            if getattr(sh, "has_chart", False) or getattr(sh, "has_table", False):
+            if getattr(sh, "has_chart", False):
                 visuals.append(_box(sh))
+                continue
+            if getattr(sh, "has_table", False):
+                shapes.append(TextShape(sh.name, _layout_placeholder_box(sh, layout), _table_tokens(sh)))
                 continue
             if not getattr(sh, "has_text_frame", False) or not sh.text_frame.text.strip():
                 continue
             tokens = {norm(t) for t in TOKEN.findall(sh.text_frame.text)} - {""}
-            shapes.append(TextShape(sh.name, _box(sh), tokens))
+            shapes.append(TextShape(sh.name, _box(sh), tokens, protected=_is_protected(sh)))
         out.append((shapes, visuals))
     return prs.slide_width / EMU_PER_PT, out
 
@@ -132,11 +178,20 @@ def overflow(pptx: Path, pdf: Path, manifest: dict[str, Any] | None = None,
         scale = page_w / slide_w if slide_w else 1.0
         assigned: dict[int, list[Word]] = {}
         for w in words:
+            if is_list_marker(w.text):
+                continue  # a list's own auto-numbered marker or bullet: not in any shape's text
             t = norm(w.text)
             x, y = (c / scale for c in w.center)
             if any(v.distance(x, y) == 0 for v in visuals):
-                continue  # a chart's or table's own text
-            cands = [(s.box.distance(x, y), i) for i, s in enumerate(shapes) if t in s.tokens]
+                continue  # a chart's own text
+            cands = []
+            for i, s in enumerate(shapes):
+                if t not in s.tokens:
+                    continue
+                d = s.box.distance(x, y)
+                if s.protected and d != 0:
+                    continue  # the footer and slide number only take a word that's actually inside them
+                cands.append((d, i))
             if cands:
                 assigned.setdefault(min(cands)[1], []).append(w)
         for i, ws in assigned.items():
