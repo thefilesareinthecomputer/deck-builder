@@ -46,7 +46,7 @@ You or an agent supply the content, and deck-builder sets every slide in a place
 
 ## Install
 
-Requires [uv](https://docs.astral.sh/uv/). Rendering also requires poppler and LibreOffice, the verified renderer; PowerPoint on macOS is supported but not yet verified. `deck-builder doctor` checks what is installed.
+Requires Python 3.11 or later. The commands below use [uv](https://docs.astral.sh/uv/), the quickest way to install; pipx or pip work too (see below). Rendering also requires poppler and LibreOffice, the verified renderer; PowerPoint on macOS is supported but not yet verified. `deck-builder doctor` checks what is installed.
 
 ```bash
 git clone https://github.com/thefilesareinthecomputer/deck-builder.git && cd deck-builder
@@ -60,7 +60,7 @@ deck-builder skills install --yes     # optional: the skills and agents in every
 | **As a skill in your other Claude Code projects** | `deck-builder skills install --yes`, after the tool | The three skills and three agents, linked into `~/.claude` |
 | **From the clone**, to try it or work on it | `uv run deck-builder ...` | No install; a Claude Code session opened in the clone has the skills |
 
-**No uv?** Any Python 3.11 or later works the same way: `pipx install .`, or `pip install .` inside a virtual environment, puts the same `deck-builder` command on your PATH, and `deck-builder skills install --yes` follows as above.
+**Without uv:** `pipx install .`, or `pip install .` inside a virtual environment, puts the same `deck-builder` command on your PATH, and `deck-builder skills install --yes` follows as above.
 
 After a `git pull`, update with `uv tool install --reinstall .` (or `pipx install --force .`). To work on the engine itself, install with `--editable` so the tool runs the clone's source.
 
