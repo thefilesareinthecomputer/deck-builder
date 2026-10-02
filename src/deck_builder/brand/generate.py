@@ -256,7 +256,8 @@ def tokens_for(defs: list[LayoutDef], meta: dict[str, Any]) -> dict[str, Any]:
                   "colors": [name_for("accent1", "primary"), name_for("accent2", "accent"),
                              name_for("accent3", "muted"), name_for("accent4", "accent4")]},
         "table": {"font_size": 14, "header_font_size": 14, "header_fill": name_for("dk2", "primary"),
-                  "header_text": name_for("lt1", "background"), "band_fill": name_for("lt2", "surface")},
+                  "header_text": name_for("lt1", "background"), "band_fill": name_for("lt2", "surface"),
+                  "status": {"Green": "15803D", "Amber": "B45309", "Red": "B91C1C"}},
         "layouts": layouts,
     }
 

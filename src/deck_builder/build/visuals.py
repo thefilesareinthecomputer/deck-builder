@@ -129,12 +129,17 @@ def fill_table(slide: Any, ph: Any, spec: Table, brand: Brand) -> None:
     header_text, body_text = _rgb(brand, tok.get("header_text")), _rgb(brand, tok.get("text"))
     fills = {"header": _rgb(brand, tok.get("header_fill")), "row": _rgb(brand, tok.get("row_fill")),
              "band": _rgb(brand, tok.get("band_fill"))}
+    status = {str(k).strip().casefold(): _rgb(brand, v) for k, v in (tok.get("status") or {}).items()}
     for r in range(nrows):
         for c in range(ncols):
             cell = table.cell(r, c)
             cell.vertical_anchor = MSO_ANCHOR.MIDDLE
             cell.text = ""
-            add_runs(cell.text_frame.paragraphs[0], spec.header[c] if r == 0 else spec.rows[r - 1][c], code_font)
+            value = spec.header[c] if r == 0 else spec.rows[r - 1][c]
+            dot_color = status.get(value.strip().casefold()) if r else None
+            if dot_color is not None:
+                cell.text_frame.paragraphs[0].add_run().text = "● "
+            add_runs(cell.text_frame.paragraphs[0], value, code_font)
             for p in cell.text_frame.paragraphs:
                 for run in p.runs:
                     if tok.get("font"):
@@ -145,6 +150,8 @@ def fill_table(slide: Any, ph: Any, spec: Table, brand: Brand) -> None:
                     color = header_text if r == 0 else body_text
                     if color:
                         run.font.color.rgb = color
+            if dot_color is not None:
+                cell.text_frame.paragraphs[0].runs[0].font.color.rgb = dot_color
             fill = fills["header"] if r == 0 else (fills["band"] if r % 2 == 0 else fills["row"])
             if fill:
                 cell.fill.solid()
