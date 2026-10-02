@@ -35,6 +35,7 @@ FURNITURE = {PP_PLACEHOLDER.DATE, PP_PLACEHOLDER.FOOTER, PP_PLACEHOLDER.SLIDE_NU
 TITLES = {PP_PLACEHOLDER.TITLE, PP_PLACEHOLDER.CENTER_TITLE, PP_PLACEHOLDER.VERTICAL_TITLE}
 FITS = {"text": {"text", "bullets"}, "image": {"image"}, "icon": {"icon"}, "table": {"table"},
         "chart": {"chart"}}
+EXACT_ONLY = ("takeaway",)  # filled only from the matching placeholder idx, never by type or position
 CHART_NAMES = {v: k for k, v in CHART_TYPES.items()}
 DIAGRAM_URI = "http://schemas.openxmlformats.org/drawingml/2006/diagram"
 NOT_FORMATTING = {"lang", "altLang", "dirty", "err", "smtClean", "smtId", "noProof", "bmk", "b", "i"}
@@ -409,7 +410,7 @@ class Importer:
                 rest.append(f)
         left: list[Found] = []
         for f in rest:
-            free = sorted((k for k, fs in fspecs.items() if k != hf and k not in placed
+            free = sorted((k for k, fs in fspecs.items() if k not in (hf, *EXACT_ONLY) and k not in placed
                            and fs.get("kind", "text") in FITS[f.kind]),
                           key=lambda k: fspecs[k].get("kind", "text") != _preferred(f))  # stable: field order
             cx, cy = f.box[0] + f.box[2] // 2, f.box[1] + f.box[3] // 2
@@ -427,7 +428,7 @@ class Importer:
                 left.remove(heading)
         fallback = 0
         for f in list(left):
-            free = [k for k, fs in fspecs.items() if k != hf and k not in placed
+            free = [k for k, fs in fspecs.items() if k not in (hf, *EXACT_ONLY) and k not in placed
                     and fs.get("kind", "text") in FITS[f.kind]]
             if len(free) == 1:
                 placed[free[0]] = f

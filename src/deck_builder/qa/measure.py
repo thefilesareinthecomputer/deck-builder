@@ -36,6 +36,7 @@ TOLERANCE_PT = 3.0
 VERTICAL_SLACK = 0.15  # of a word box's height; see overshoot()
 TOKEN = re.compile(r"[\w%$€£.,:'-]+", re.UNICODE)
 LIST_MARKER = re.compile(r"^\d+[.)]$")  # an auto-numbered list's own marker, e.g. "1." or "2)"
+CHART_NUMBER = re.compile(r"^[+\-−]?[$€£]?[\d.,]+%?$")  # an axis tick or data label inside a chart
 BULLET_GLYPHS = {"•", "◦", "‣", "∙", "●", "○", "■", "▪", "▸", "–", "—", "*", "·"}
 PROTECTED_TYPES = {PP_PLACEHOLDER.FOOTER, PP_PLACEHOLDER.SLIDE_NUMBER}
 MIN_FRAGMENT = 3  # a shorter rendered fragment is too ambiguous to trust as a split token
@@ -70,6 +71,7 @@ class TextShape:
     box: Box
     tokens: set[str]
     protected: bool = False  # the footer or slide-number placeholder: only a word truly inside it counts
+    chart: bool = False  # a chart's area: never takes words, but keeps its own text from other shapes
 
 
 def norm(token: str) -> str:
@@ -126,6 +128,16 @@ def _table_tokens(sh: Any) -> set[str]:
     return tokens - {""}
 
 
+def _chart_tokens(sh: Any) -> set[str]:
+    """The words a chart draws itself: its title, series names and categories."""
+    chart = sh.chart
+    text = " ".join(str(s.name or "") for plot in chart.plots for s in plot.series)
+    text += " " + " ".join(str(c) for plot in chart.plots for c in plot.categories)
+    if chart.has_title:
+        text += " " + chart.chart_title.text_frame.text
+    return {norm(t) for t in TOKEN.findall(text)} - {""}
+
+
 def _is_protected(sh: Any) -> bool:
     return bool(getattr(sh, "is_placeholder", False)) and sh.placeholder_format.type in PROTECTED_TYPES
 
@@ -144,6 +156,7 @@ def text_shapes(pptx: Path) -> tuple[float, list[list[TextShape]]]:
             if sh.left is None or sh.width is None:
                 continue
             if getattr(sh, "has_chart", False):
+                shapes.append(TextShape(sh.name, _box(sh), _chart_tokens(sh), chart=True))
                 continue
             if getattr(sh, "has_table", False):
                 shapes.append(TextShape(sh.name, _layout_placeholder_box(sh, layout), _table_tokens(sh)))
@@ -182,8 +195,8 @@ def _candidates(t: str, x: float, y: float, shapes: list[TextShape]) -> list[tup
     """The shapes a word could belong to, nearest first (0 when its point is inside the box). Exact
     token matches win over split-fragment matches; the footer and slide number only ever take a word
     that's actually inside their own small box, so neither steals overflow from a nearby shape."""
-    exact = [i for i, s in enumerate(shapes) if t in s.tokens]
-    pool = exact or [i for i, s in enumerate(shapes) if _fragment_of(t, s.tokens)]
+    exact = [i for i, s in enumerate(shapes) if not s.chart and t in s.tokens]
+    pool = exact or [i for i, s in enumerate(shapes) if not s.chart and _fragment_of(t, s.tokens)]
     cands = []
     for i in pool:
         s = shapes[i]
@@ -211,6 +224,9 @@ def overflow(pptx: Path, pdf: Path, manifest: dict[str, Any] | None = None,
                 continue  # a list's own auto-numbered marker or bullet: not in any shape's text
             t = norm(w.text)
             x, y = (c / scale for c in w.center)
+            if any(s.chart and s.box.distance(x, y) == 0 and (t in s.tokens or CHART_NUMBER.match(t))
+                   for s in shapes):
+                continue  # the chart's own legend, category, title or axis text, not another shape's overflow
             cands = _candidates(t, x, y, shapes)
             if cands:
                 assigned.setdefault(min(cands)[1], []).append(w)

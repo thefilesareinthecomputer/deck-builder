@@ -59,6 +59,7 @@
         "header_text": {"$ref": "#/$defs/colorRef"},
         "row_fill": {"$ref": "#/$defs/colorRef"},
         "band_fill": {"$ref": "#/$defs/colorRef"},
+        "rule": {"$ref": "#/$defs/colorRef"},
         "text": {"$ref": "#/$defs/colorRef"},
         "status": {
           "type": "object",
