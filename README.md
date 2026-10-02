@@ -156,11 +156,14 @@ deck-builder check workspace/decks/refresh --render
 
 ```
 brands/<slug>/
-  brand.yaml       # palette, fonts, logos, icons, voice, lint rules
-  tokens.yaml      # layouts -> template placeholders, with content budgets
-  template.potx    # the design: masters, layouts, theme
-  assets/          # logos and icons
+  brand.yaml       # the recipe: palette, fonts, logos, icons, voice, lint rules, mode and type scale
+  assets/          # the ingredients: logos and icons
+  template.potx    # generated: masters, layouts, theme
+  tokens.yaml      # generated: layouts -> placeholders, budgets, table and chart styling, what made the kit
+  references/      # optional: past decks to match, read-only
 ```
+
+A generated kit is self-contained: `brand init <slug> --force` rebuilds it from its own recipe and ingredients, and `brand check` warns `KIT_STALE` when the recipe changed since.
 
 | Starting point | Command |
 |---|---|

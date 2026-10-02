@@ -24,6 +24,10 @@ table:                           # brand init writes every key, so each is visib
   rule: "D1D4D3"                 # a thin rule between body rows, and no vertical lines; leave out for none
   # band_fill: surface           # optional: fill every other body row instead of, or as well as, rules
   status: {Green: "15803D", Amber: "B45309", Red: "B91C1C"}  # exact cell value -> dot color, case-insensitive
+generated:                       # written by brand init; a record, not a setting
+  by: deck-builder 0.1.0         # the engine that generated the kit
+  inputs_sha256: "..."           # palette, theme colors, fonts, generate settings and master logo
+                                 # brand check warns KIT_STALE when these no longer match
 furniture:                       # written by brand init; a record, not a setting
   slide_numbers: true            # from brand.yaml generate.slide_numbers
   color: muted                   # numbers and footers: muted, or ink when muted is under 4.5:1

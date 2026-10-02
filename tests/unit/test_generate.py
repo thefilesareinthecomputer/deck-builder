@@ -138,6 +138,31 @@ def test_type_scale_and_placement_come_from_brand_yaml(ws, capsys, tmp_path):
     assert body["max_chars"] > default_body["max_chars"]
 
 
+def test_a_kit_records_its_recipe_regenerates_from_it_and_reports_drift(ws, capsys, tmp_path):
+    kit, tokens = _kit(ws, capsys, tmp_path)
+    assert tokens["generated"]["by"].startswith("deck-builder ")
+    assert len(tokens["generated"]["inputs_sha256"]) == 64
+
+    def stale():
+        code, out = cli_json(ws, "brand", "check", "pemberton", capsys=capsys)
+        return code, [i for i in out["issues"] if i["code"] == "KIT_STALE"]
+
+    assert stale() == (0, [])
+    # a changed ingredient (the logo) makes the kit stale, as a warning
+    Image.new("RGB", (600, 200), "#E07A2F").save(kit / "assets" / "logo.png")
+    code, found = stale()
+    assert code == 0 and [i["severity"] for i in found] == ["warning"]
+    # the kit regenerates from its own brand.yaml and assets, with no --from
+    code, out = cli_json(ws, "brand", "init", "pemberton", "--force", capsys=capsys)
+    assert code == 0, out
+    assert stale() == (0, [])
+    # an icon is read at build time, not baked into the template, so adding one never makes the kit stale
+    Image.new("RGBA", (256, 256), (0, 0, 0, 255)).save(kit / "assets" / "icons" / "box.png")
+    assert stale() == (0, [])
+    code, out = cli_json(ws, "brand", "init", "pemberton", capsys=capsys)
+    assert code == 2  # an existing kit is never regenerated without --force
+
+
 def test_unknown_type_key_is_refused(ws, capsys, tmp_path):
     code, out = cli_json(ws, "brand", "init", "pemberton", "--from", str(source(tmp_path, type={"huge": 99})),
                          capsys=capsys)

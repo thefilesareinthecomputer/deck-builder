@@ -68,6 +68,12 @@
         }
       }
     },
+    "generated": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "written by brand init: the deck-builder that generated the kit and a hash of what shaped its template (brand.yaml's palette, theme colors, fonts and generate settings, and the master logo), so brand check can say when the kit is stale",
+      "properties": {"by": {"type": "string"}, "inputs_sha256": {"type": "string"}}
+    },
     "furniture": {
       "type": "object",
       "additionalProperties": false,

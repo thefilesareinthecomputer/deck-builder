@@ -142,6 +142,12 @@ CODES: dict[str, tuple[str, str]] = {
         "content, often in speaker notes, collided with deck.md's own syntax.",
         "Open the named slide in deck.md, reword the colliding line, then run `deck-builder check`.",
     ),
+    "KIT_STALE": (
+        "A generated kit no longer matches what made it: brand.yaml's palette, fonts or generate settings, or "
+        "the logo on the master, changed after `brand init`, or a different deck-builder generated it.",
+        "Run `deck-builder brand init <slug> --force` to regenerate the kit from its own brand.yaml and assets. "
+        "That replaces tuned budgets and edits made to the template in PowerPoint.",
+    ),
     "LOW_CONTRAST": (
         "Two brand colors that sit on each other don't meet WCAG 2.2 contrast: 4.5:1 for text (ink on "
         "background or surface, background on primary, links on background), 3:1 for icons and chart series.",

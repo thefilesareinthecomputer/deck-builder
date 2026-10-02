@@ -80,6 +80,11 @@ in `tokens.yaml` are computed from these sizes, so changing them changes how muc
 Since `--force` regenerates from `brand.yaml` alone, put type and placement choices in `generate:` rather
 than in the template, so they survive a regenerate.
 
+A generated kit holds its own recipe and ingredients: `brand.yaml` and the logos and icons it names are
+copied into the kit. `deck-builder brand init <slug> --force`, with no `--from`, regenerates the kit
+from them, and `brand check` warns `KIT_STALE` when the palette, fonts, `generate` settings or the
+master logo changed since the kit was generated.
+
 `deck-builder docs design` describes the design rules the generated layouts follow.
 
 ## Layout sets
