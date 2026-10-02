@@ -11,9 +11,10 @@
 </p>
 
 <p align="center">
-  <a href="#quick-start"><b>Quick start</b></a> &nbsp;|&nbsp;
+  <a href="#install"><b>Install</b></a> &nbsp;|&nbsp;
   <a href="#how-it-works"><b>How it works</b></a> &nbsp;|&nbsp;
   <a href="#write-a-deck"><b>Write a deck</b></a> &nbsp;|&nbsp;
+  <a href="#fix-up-an-existing-deck"><b>Fix up a deck</b></a> &nbsp;|&nbsp;
   <a href="#brands"><b>Brands</b></a> &nbsp;|&nbsp;
   <a href="#commands"><b>Commands</b></a> &nbsp;|&nbsp;
   <a href="#claude-code"><b>Claude Code</b></a>
@@ -43,22 +44,36 @@ You or an agent supply the content, and deck-builder sets every slide in a place
   </tr>
 </table>
 
-## Quick start
+## Install
 
-Requires [uv](https://docs.astral.sh/uv/). Rendering also requires poppler and LibreOffice, the verified renderer; PowerPoint on macOS is supported but not yet verified. `uv run deck-builder doctor` checks what is installed.
+Requires [uv](https://docs.astral.sh/uv/). Rendering also requires poppler and LibreOffice, the verified renderer; PowerPoint on macOS is supported but not yet verified. `deck-builder doctor` checks what is installed.
 
 ```bash
 git clone https://github.com/thefilesareinthecomputer/deck-builder.git && cd deck-builder
-uv run deck-builder init
-uv run deck-builder check workspace/decks/quarterly-review --render
+uv tool install .                     # deck-builder on your PATH, for you and for Claude Code's agents
+deck-builder skills install --yes     # optional: the skills and agents in every Claude Code project
 ```
 
-`init` creates a workspace with a neutral brand and two example decks, and `check --render` validates, builds and renders the first of them. The deck is written to `workspace/out/quarterly-review.pptx`, and its slide images and contact sheet to `workspace/out/quarterly-review.render/`.
+| Use it | Set up with | You get |
+|---|---|---|
+| **As a tool for agents and the CLI** (most common) | `uv tool install .` | `deck-builder` in any folder, and the MCP server (`deck-builder mcp`) the subagents run on |
+| **As a skill in your other Claude Code projects** | `deck-builder skills install --yes`, after the tool | The three skills and three agents, linked into `~/.claude` |
+| **From the clone**, to try it or work on it | `uv run deck-builder ...` | No install; a Claude Code session opened in the clone has the skills |
 
-To use `deck-builder` from any directory, install it once with `uv tool install --editable .`.
+After a `git pull`, update with `uv tool install --reinstall .`. To work on the engine itself, install with `--editable` so the tool runs the clone's source.
+
+## Quick start
+
+```bash
+deck-builder init --dir ~/decks       # a workspace: config, the neutral brand, two example decks
+cd ~/decks
+deck-builder check workspace/decks/quarterly-review --render
+```
+
+`check --render` validates, builds and renders the example deck. The deck is written to `workspace/out/quarterly-review.pptx`, and its slide images and contact sheet to `workspace/out/quarterly-review.render/`.
 
 > [!TIP]
-> **Working in Claude Code?** Open the repository and start a session. Onboarding runs these steps with you and then sets up your brand.
+> **Working in Claude Code?** Ask in plain words: "set up deck-builder", "make a deck from these notes", "fix the fonts in this deck". Onboarding runs the steps above with you and then sets up your brand.
 
 ## How it works
 
@@ -118,7 +133,16 @@ caption: "Opened in August: same-day delivery for the northern accounts."
 
 Field values are YAML, so quote any value that contains `: `. `deck-builder brand show <slug>` lists a brand's layouts, fields and character budgets. The [full showcase deck](tests/fixtures/demo-brands/showcase/deck.md) builds into all three brands with a single `build --data` command.
 
-Existing decks can be brought in with `deck-builder import old.pptx new-deck --brand <slug>`, which recovers `deck.md` and its images, removes one-off formatting and reports anything that needs a decision.
+## Fix up an existing deck
+
+To make a deck consistent (fonts, sizes, colors and slide numbers) or move it onto your brand, import it and rebuild:
+
+```bash
+deck-builder import old.pptx workspace/decks/refresh --brand <slug>
+deck-builder check workspace/decks/refresh --render
+```
+
+`import` turns the .pptx back into `deck.md` and its images, and the rebuild takes every style from the brand and numbers every content slide. The original file is never changed. Anything that doesn't map to a layout field, such as SmartArt or a stray text box, is listed in `import-report.md` and kept in that slide's speaker notes, so nothing is lost. In Claude Code, ask for it directly: "fix the fonts and slide numbers in this deck" or "put this deck on our brand".
 
 ## Brands
 
@@ -171,7 +195,7 @@ deck-builder includes skills and agents for Claude Code. Describe the deck you n
 | `deck-brand-agent` | Builds or adopts a brand kit and tunes its budgets with a test render |
 | `deck-builder-agent` | Runs the check, build and render loop on a larger deck in its own context |
 
-The agents have no shell access. They reach the engine only through its MCP server (`deck-builder mcp`), confined to the workspace (and the configured `brand_paths` folders for brand tools) and refusing this clone's own `src/`, `.claude/` and `.git/` regardless of those settings; the CLI must be on your PATH (`uv tool install --editable .` from the repository). `deck-builder skills install` makes the skills and agents available in other projects.
+The agents have no shell access. They reach the engine only through its MCP server (`deck-builder mcp`), confined to the workspace (and the configured `brand_paths` folders for brand tools) and refusing this clone's own `src/`, `.claude/` and `.git/` regardless of those settings; the CLI must be on your PATH (`uv tool install .` from the repository). `deck-builder skills install --yes` makes the skills and agents available in other projects.
 
 > [!NOTE]
 > The engine runs locally, but content an agent reads is sent to Anthropic, as in any Claude Code session. The MCP server confines the engine's own tools; each agent's own Write and Edit tools are limited only by its instructions, not by code, so keep client work outside the clone.

@@ -56,9 +56,12 @@ To keep their decks in a folder outside the clone, run `uv run deck-builder init
 from the clone (it creates the folder if needed). Then work from that folder with
 `uv run --project <clone> deck-builder ...`; the CLI finds that folder's `deck-builder.toml`.
 
-Then install the CLI on their PATH, with their OK: `uv tool install --editable <clone>`. The
-subagents have no shell and run the engine through `deck-builder mcp`, so they need it. Confirm
-with `uv run deck-builder doctor`: the `agent tools (mcp)` row should be `ok`.
+Then install the CLI on their PATH, with their OK: `uv tool install <clone>` (the most common
+setup; `--editable` only for someone changing the engine). The subagents have no shell and run
+the engine through `deck-builder mcp`, so they need it. Confirm with `deck-builder doctor`: the
+`agent tools (mcp)` row should be `ok`. To use the skills in their other Claude Code projects too,
+run `deck-builder skills install` from the clone, show them the plan it prints, and rerun with
+`--yes` after they agree.
 
 ## 3. Choose a brand path
 

@@ -2,14 +2,14 @@
 name: deck-builder
 description: >-
   Builds branded, editable PowerPoint decks by driving the deterministic deck-builder CLI: the
-  agent writes content (deck.md or a workbook), the engine validates, builds, renders and
+  agent writes content (deck.md or a workbook); the engine validates, builds, renders and
   measures. MUST be used whenever a deck, presentation, slides or a .pptx is created, drafted,
   updated, converted or bulk-generated, including from notes, markdown, a spreadsheet or a data
-  file; when converting between markdown and Excel for team editing; when an existing .pptx is
-  refreshed or re-branded (import); and whenever an existing deck.md or workbook is restructured,
-  reordered, aligned, synced, reconciled, compared, revised, tightened or otherwise edited. Takes
-  precedence over generic pptx tooling for creating decks. Not for just reading or quoting text
-  from a .pptx someone else made.
+  file; when converting between markdown and Excel; when an existing .pptx is refreshed,
+  re-branded or cleaned up (consistent fonts, colors, slide numbers, via import); and whenever an
+  existing deck.md or workbook is restructured, reordered, aligned, synced, reconciled, compared,
+  revised, tightened or otherwise edited. Preferred over generic pptx tooling. Not for just reading
+  or quoting text from a .pptx someone else made.
 license: MIT
 ---
 
@@ -101,10 +101,14 @@ deck.md or workbook is still this skill. Back up first: commit the workspace rep
 `deck.md` into `scratch/`. When `deck.md` already exists, edit it; never `import` over it. After
 a restructure, report a slide-mapping table: old slide, new slide, what changed.
 
-## Refresh an existing deck
+## Fix up or re-brand an existing .pptx
 
-For a .pptx that already exists, often with many contributors, that should become consistent in a
-brand. If the source folder holds both a `.pptx` and a `.pdf` of the same deck, the `.pptx` is the
+Use this for "fix the fonts", "align the formatting", "fix the slide numbers", "make this deck
+match our brand", or a deck with many contributors that should look like one. The engine never
+edits the old file in place: `import` turns it back into `deck.md`, and the rebuild takes every
+font, size, color and position from the brand, with slide numbers on every content slide
+(`slide_numbers: false` in front matter turns them off). The original .pptx is never modified.
+If the source folder holds both a `.pptx` and a `.pdf` of the same deck, the `.pptx` is the
 content source for `import`; the `.pdf` is the visual reference, since a LibreOffice render can
 substitute fonts.
 
