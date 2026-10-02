@@ -341,8 +341,9 @@ def _write_yaml(path: Path, data: dict[str, Any], header: str) -> None:
     path.write_text(header + yaml.safe_dump(data, sort_keys=False, allow_unicode=True, width=110), encoding="utf-8")
 
 
-def _adopt(args: argparse.Namespace, cfg: cfgmod.Config, r: Result, strip_slides: bool = False) -> Result:
-    """Wrap a template as a kit. strip_slides: the template is a deck, so keep its masters and layouts only."""
+def _adopt(args: argparse.Namespace, cfg: cfgmod.Config, r: Result) -> Result:
+    """Wrap a template as a kit. A .pptx is a deck, so its slides, their notes and their media are
+    stripped before it becomes the kit's template; a .potx holds no slides, so it's copied as is."""
     if not args.template:
         raise EnvError("brand adopt needs --template FILE (.potx or .pptx)")
     src = Path(args.template)
@@ -350,13 +351,14 @@ def _adopt(args: argparse.Namespace, cfg: cfgmod.Config, r: Result, strip_slides
         raise EnvError(f"not a .potx or .pptx file: {src}")
     target = _kit_dir(args, cfg)
     target.mkdir(parents=True, exist_ok=True)
-    if strip_slides:
+    written = f"template{src.suffix.lower()}"
+    slides_removed = 0
+    if src.suffix.lower() == ".pptx":
         prs = tpl.open_template(src)
+        slides_removed = len(prs.slides)
         tpl.remove_all_slides(prs)  # slides, their notes and their media stop being saved
-        prs.save(str(target / "template.pptx"))
-        written = "template.pptx"
+        prs.save(str(target / written))
     else:
-        written = f"template{src.suffix.lower()}"
         shutil.copyfile(src, target / written)
     stale = target / next(n for n in registry.TEMPLATE_NAMES if n != written)
     if stale.is_file():  # a kit this replaces may have had the other extension; leave exactly one template
@@ -370,9 +372,11 @@ def _adopt(args: argparse.Namespace, cfg: cfgmod.Config, r: Result, strip_slides
     b = registry.load_kit(target)
     for i in kit.check_kit(b):
         r.add(i)
-    r.data.update({"slug": args.slug, "path": str(target), "layouts": b.layout_names()})
+    r.data.update({"slug": args.slug, "path": str(target), "layouts": b.layout_names(),
+                   "slides_removed": slides_removed})
+    removed = f", {slides_removed} slide(s) removed" if slides_removed else ""
     r.summary = (f"{'ok' if r.ok else 'failed'} brand adopt {args.slug}: {len(b.layout_names())} layouts "
-                 f"at {target}, {_tally(r)}")
+                 f"at {target}{removed}, {_tally(r)}")
     return r
 
 
@@ -520,7 +524,7 @@ def import_cmd(args: argparse.Namespace) -> Result:
     r = Result(command="import", data={"input": str(src)})
     if args.adopt:
         ns = argparse.Namespace(slug=args.adopt, template=str(src), out=None, force=args.force, action="adopt")
-        _adopt(ns, cfg, r, strip_slides=True)
+        _adopt(ns, cfg, r)
         brand = registry.load_kit(Path(r.data["path"]))
     else:
         brand = registry.get(cfg, args.brand)
