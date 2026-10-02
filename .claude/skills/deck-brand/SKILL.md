@@ -15,7 +15,9 @@ license: MIT
 A brand kit is the design system: `brand.yaml` (what the user decides), `tokens.yaml` (the
 contract the engine checks against) and the template. This skill is a conversation with the
 user; the engine generates and validates. You write `brand.yaml` and, with the user's
-approval, edits to `tokens.yaml`. You never write template XML.
+approval, edits to `tokens.yaml`. You never write template XML. Styling always goes into the
+kit; an engine change under `src/` is a separate task, started only when the user asks, with
+tests (see AGENTS.md).
 
 `deck-builder docs brand-yaml` and `deck-builder docs tokens-yaml` are the formats. Read them
 before writing either file.
@@ -74,7 +76,8 @@ tuned budgets and any PowerPoint polish; copy those files aside first and tell t
 
 Budgets in a generated `tokens.yaml` are estimates. Build a test deck with deliberately long
 text in each layout, run `check --render`, and propose tighter or looser budgets per field from
-the `OVERFLOW_MEASURED` results. Change `tokens.yaml` only after the user agrees.
+the `OVERFLOW_MEASURED` results. Change `tokens.yaml` only after the user agrees. Tune for at
+most two rounds of test-render and adjust, then report any remaining overflow to the user.
 
 Fonts: `MISSING_FONT` means the brand font isn't installed on the machine that rendered. Install it
 before tuning budgets, since budgets measured with a substitute font are wrong.

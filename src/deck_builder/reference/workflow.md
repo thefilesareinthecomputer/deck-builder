@@ -1,6 +1,7 @@
 # The build workflow, step by step
 
 The engine owns layout, styling and validation. You write content; the engine checks and builds it.
+`workspace/README.md` lists the workspace folders and who writes each.
 
 1. Pick a brand: `deck-builder brand list`, then `deck-builder brand show <slug>` for its layouts,
    fields and budgets. Only those layouts exist.

@@ -238,6 +238,7 @@ def init_cmd(args: argparse.Namespace) -> Result:
             target = cfg.workspace / "decks" / example.name
             if example.is_dir() and not target.exists():
                 shutil.copytree(example, target)
+                (target / "source").mkdir(exist_ok=True)
                 created.append(str(target))
     r = Result(command="init", data={"config": str(cfg_path), "workspace": str(cfg.workspace), "created": created})
     r.summary = (f"initialized {root}: created {len(created)} item(s); next: deck-builder brand list"

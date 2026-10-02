@@ -1,6 +1,6 @@
 ---
 name: deck-builder-agent
-description: Runs the deck-builder write, check, fix, build and render loop for one deck in its own context, then returns a short report for the main agent to review. Use when a deck needs more than a handful of slides written or revised, when a check or render reports issues across many slides, or for a bulk run. Give it the source material paths, the brand slug, the approved storyline, the deck's path and any constraints; every path must be inside the workspace.
+description: Runs the deck-builder write, check, fix, build and render loop for one deck in its own context, then returns a short report for the main agent to review. Use at AGENTS.md's delegation threshold for writing, revising or restructuring a deck, when a check or render reports issues across many slides, or for a bulk run. Give it the source material paths, the brand slug, the approved storyline, the deck's path and any constraints; every path must be inside the workspace.
 tools: Read, Edit, Write, Glob, Grep, mcp__deck-builder
 mcpServers:
   - deck-builder:
@@ -43,7 +43,7 @@ report.
 4. `check` with `render: true`. This builds, renders and measures. Read the PNGs for
    `flagged_slides` only (`render_dir`/`slide-NN.png`) and the `contact_sheets`, then fix what they
    show in the deck file.
-5. Stop after three loops of steps 3 and 4, even if issues remain.
+5. Stop after two loops of steps 3 and 4, even if issues remain.
 
 ## Report
 
