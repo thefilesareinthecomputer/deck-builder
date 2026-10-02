@@ -33,7 +33,7 @@ def substitute(text: str, row: dict[str, str] | None, file: str, issues: list[Is
             return m.group(0)
         value = str(row[key])
         line_start = not text[text.rfind("\n", 0, m.start()) + 1 : m.start()].strip()
-        if "\n" in value or "\r" in value:
+        if len(f"x{value}x".splitlines()) > 1:  # any break splitlines() honors: \v, \f, \x85, U+2028...
             issues.append(Issue("BAD_DATA_VALUE", f"column {key!r} holds a line break", file=file))
         elif line_start and value.lstrip().startswith(("#", "![")):
             issues.append(Issue("BAD_DATA_VALUE", f"column {key!r} would start a heading or image line: "
@@ -189,6 +189,7 @@ def _scalar_field(v: Any) -> Value:
 
 
 def parse(path: Path, row: dict[str, str] | None = None) -> tuple[Deck, list[Issue]]:
+    """deck.md -> Deck. With a bulk data row, its {{tokens}} are substituted first."""
     issues: list[Issue] = []
     name = path.name
     raw = substitute(path.read_text(encoding="utf-8"), row, name, issues)

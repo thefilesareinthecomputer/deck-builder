@@ -57,67 +57,88 @@ class Tool:
                 "additionalProperties": False}
 
 
+# Arguments several tools share, so the same name always means the same thing.
+DECK = Arg("deck", TEXT, path=ROOT, required=True,
+           about="the deck file (deck.md, deck.xlsx or deck.csv) or its folder, e.g. workspace/decks/q3")
+BRAND = Arg("brand", SLUG, "--brand", about="a brand slug (see brand_list), overriding the deck's own brand:")
+SLUG_ARG = Arg("slug", SLUG, required=True, about="the brand's slug, e.g. neutral (see brand_list)")
+FORCE = Arg("force", FLAG, "--force", about="replace what's already there (default false)")
+
+# Every tool returns the CLI's --json object as text: "ok", "issues" (each with code, severity, message,
+# slide, field) and command-specific keys. isError is true when the command exits 1 (issues to fix) or
+# 2 (a usage or environment problem, with "error" saying what).
 TOOLS = {t.name: t for t in (
-    Tool("check", "Validate a deck (deck.md, deck.xlsx or deck.csv, or the folder holding it). With render, also "
-         "build, render and measure; the result lists flagged_slides, render_dir and contact_sheets.", ("check",), (
-             Arg("deck", TEXT, path=ROOT, required=True, about="the deck file or its folder, inside the workspace"),
-             Arg("brand", SLUG, "--brand", about="brand slug, overriding the deck's brand:"),
-             Arg("render", FLAG, "--render"))),
-    Tool("build", "Build a deck into a .pptx and its manifest. With data, build one deck per row of a CSV or "
-         "XLSX file.", ("build",), (
-             Arg("deck", TEXT, path=ROOT, required=True),
-             Arg("brand", SLUG, "--brand"),
-             Arg("output", TEXT, "--output", ROOT, about="a .pptx path or a folder, inside the workspace"),
-             Arg("data", TEXT, "--data", ROOT),
+    Tool("check", "Validate a deck against its brand: layouts, fields, budgets, assets. Returns ok and issues; fix "
+         "each issue by its code (explain gives the fix). With render: true it also builds, renders and measures, "
+         "and adds output, flagged_slides, render_dir and contact_sheets: read the PNGs of flagged slides only.",
+         ("check",), (DECK, BRAND, Arg("render", FLAG, "--render", about="also build, render and measure"))),
+    Tool("build", "Build a deck into a .pptx plus its manifest; returns output, manifest and slides. With data, "
+         "builds one deck per row of a CSV or XLSX file into the output folder.", ("build",), (
+             DECK, BRAND,
+             Arg("output", TEXT, "--output", ROOT, about="a .pptx path or a folder, inside the workspace "
+                 "(default: workspace/out/<deck folder name>.pptx)"),
+             Arg("data", TEXT, "--data", ROOT, about="bulk mode: a CSV or XLSX file, one deck per row"),
              Arg("name", {"type": "string", "pattern": r"^(?!.*\.\.)[^/\\]+\.pptx$"}, "--name",
-                 about="bulk file name pattern, such as {{client}}.pptx"))),
-    Tool("render", "Render a .pptx the engine built (its manifest must sit beside it) with the configured backend: "
-         "PDF, slide PNGs, contact sheets and the slides to look at.", ("render",), (
-             Arg("pptx", TEXT, path=ROOT, required=True),
-             Arg("slides", {"type": "string", "pattern": "^[0-9]+(,[0-9]+)*$"}, "--slides"),
-             Arg("dpi", {"type": "integer", "minimum": 48, "maximum": 300}, "--dpi"))),
-    Tool("convert", "Convert a deck between .md, .xlsx and .csv without losing anything.", ("convert",), (
-        Arg("input", TEXT, path=ROOT, required=True),
-        Arg("output", TEXT, path=ROOT, required=True, about="its extension picks the format"),
-        Arg("force", FLAG, "--force"))),
-    Tool("import", "Turn an existing .pptx back into deck.md, its images and import-report.md, on an existing "
-         "brand or a brand adopted from the file. Give exactly one of brand and adopt.", ("import",), (
-             Arg("pptx", TEXT, path=ROOT, required=True),
-             Arg("out", TEXT, path=ROOT, required=True),
-             Arg("brand", SLUG, "--brand"),
-             Arg("adopt", SLUG, "--adopt"),
-             Arg("force", FLAG, "--force"))),
-    Tool("brand_list", "List the brands under brand_paths.", ("brand", "list")),
-    Tool("brand_show", "A brand's layouts, fields, kinds and budgets, palette names and asset ids.",
-         ("brand", "show"), (Arg("slug", SLUG, required=True),)),
-    Tool("brand_check", "Check a brand kit: schemas, template mapping, assets and color contrast.",
-         ("brand", "check"), (Arg("slug", SLUG, required=True),)),
-    Tool("brand_init", "Generate a brand kit (template and tokens.yaml) from a brand.yaml.", ("brand", "init"), (
-        Arg("slug", SLUG, required=True),
-        Arg("from", TEXT, "--from", BRAND_READ, required=True, about="the brand.yaml to generate from"),
-        Arg("out", TEXT, "--out", BRAND_WRITE, about="a brand_paths folder (default: the first)"),
-        Arg("force", FLAG, "--force"))),
-    Tool("brand_adopt", "Wrap an existing .potx or .pptx template as a brand kit.", ("brand", "adopt"), (
-        Arg("slug", SLUG, required=True),
-        Arg("template", TEXT, "--template", BRAND_READ, required=True),
-        Arg("out", TEXT, "--out", BRAND_WRITE),
-        Arg("force", FLAG, "--force"))),
-    Tool("brand_add_asset", "Copy a PNG into a brand kit as a logo or an icon.", ("brand", "add-asset"), (
-        Arg("slug", SLUG, required=True),
-        Arg("file", TEXT, path=BRAND_READ, required=True),
-        Arg("as", {"type": "string", "pattern": "^(logo|icon)/[a-z0-9][a-z0-9-]*$"}, "--as", required=True,
-            about="logo/<id> or icon/<id>"),
-        Arg("force", FLAG, "--force"))),
-    Tool("inspect", "A template's layouts, placeholders and theme.", ("inspect",), (
-        Arg("template", TEXT, path=BRAND_READ, required=True),
+                 about="bulk mode file name pattern, e.g. {{client}}.pptx"))),
+    Tool("render", "Render a .pptx that build made (its .manifest.json must sit beside it) with the configured "
+         "backend. Returns render_dir, the slide PNGs, contact_sheets and flagged_slides.", ("render",), (
+             Arg("pptx", TEXT, path=ROOT, required=True, about="the built .pptx, e.g. workspace/out/q3.pptx"),
+             Arg("slides", {"type": "string", "pattern": "^[0-9]+(,[0-9]+)*$"}, "--slides",
+                 about="only these slide numbers, e.g. 3,7"),
+             Arg("dpi", {"type": "integer", "minimum": 48, "maximum": 300}, "--dpi",
+                 about="PNG resolution (default 96, which gives 1280 px wide slides)"))),
+    Tool("convert", "Convert a deck between .md, .xlsx and .csv without losing anything; refuses with "
+         "CONVERT_LOSSY when the target can't hold the content.", ("convert",), (
+             Arg("input", TEXT, path=ROOT, required=True, about="the deck to convert"),
+             Arg("output", TEXT, path=ROOT, required=True, about="the file to write; its extension picks the format"),
+             FORCE)),
+    Tool("import", "Turn an existing .pptx back into out/deck.md, out/assets/ and out/import-report.md. Give "
+         "exactly one of brand (map onto an existing kit) and adopt (make a new kit from the file's own layouts). "
+         "Then read import-report.md: unplaced content is in each slide's notes.", ("import",), (
+             Arg("pptx", TEXT, path=ROOT, required=True, about="the .pptx to import; treated as untrusted"),
+             Arg("out", TEXT, path=ROOT, required=True, about="the folder to write into, e.g. workspace/decks/refresh"),
+             Arg("brand", SLUG, "--brand", about="map onto this existing brand"),
+             Arg("adopt", SLUG, "--adopt", about="the slug for a new kit made from the file's own layouts"),
+             FORCE)),
+    Tool("brand_list", "List the brands: slug, name, version, path and whether each is valid.", ("brand", "list")),
+    Tool("brand_show", "What a deck can use in a brand: its layouts with each field's kind and character budget "
+         "(kind<=chars, xN bullets, * required), palette names, logo and icon ids, and which layouts show slide "
+         "numbers and footers. Read it before writing a deck.", ("brand", "show"), (SLUG_ARG,)),
+    Tool("brand_check", "Check a brand kit: schemas, the template mapping, assets and color contrast "
+         "(LOW_CONTRAST is a warning for the user, not something to fix by hand).", ("brand", "check"),
+         (SLUG_ARG,)),
+    Tool("brand_init", "Generate a brand kit (template.potx and tokens.yaml) from a brand.yaml into a brand_paths "
+         "folder. Asset paths in the brand.yaml are relative to its own folder.", ("brand", "init"), (
+             SLUG_ARG,
+             Arg("from", TEXT, "--from", BRAND_READ, required=True, about="the brand.yaml to generate from"),
+             Arg("out", TEXT, "--out", BRAND_WRITE, about="a brand_paths folder (default: the first)"),
+             FORCE)),
+    Tool("brand_adopt", "Wrap an existing .potx or .pptx template as a brand kit, with starter tokens.yaml and "
+         "brand.yaml to fill in.", ("brand", "adopt"), (
+             SLUG_ARG,
+             Arg("template", TEXT, "--template", BRAND_READ, required=True, about="the .potx or .pptx to wrap"),
+             Arg("out", TEXT, "--out", BRAND_WRITE, about="a brand_paths folder (default: the first)"),
+             FORCE)),
+    Tool("brand_add_asset", "Copy a PNG into a brand kit as a logo or an icon. A new logo also needs a line under "
+         "logos: in the kit's brand.yaml; the result says which.", ("brand", "add-asset"), (
+             SLUG_ARG,
+             Arg("file", TEXT, path=BRAND_READ, required=True, about="the PNG, inside the workspace"),
+             Arg("as", {"type": "string", "pattern": "^(logo|icon)/[a-z0-9][a-z0-9-]*$"}, "--as", required=True,
+                 about="logo/<id> or icon/<id>, e.g. logo/mono"),
+             FORCE)),
+    Tool("inspect", "A template's layouts, placeholders (idx, type, position, size) and theme.", ("inspect",), (
+        Arg("template", TEXT, path=BRAND_READ, required=True, about="a .potx or .pptx"),
         Arg("yaml", FLAG, "--yaml", about="also a starter layouts block for tokens.yaml"))),
-    Tool("assets", "Inventory a brand's assets (by slug) or a deck's (by path).", ("assets",), (
-        Arg("target", TEXT, path=SLUG_OR_ROOT, required=True),)),
-    Tool("docs", "A reference topic, such as deck-md, workbook, brand-yaml, tokens-yaml, workflow or codes; "
-         "no topic lists them.", ("docs",), (Arg("topic", {"type": "string", "pattern": "^[a-z-]+$"}),)),
+    Tool("assets", "Inventory a brand's assets (pass its slug) or a deck's (pass its path), with the slides that "
+         "use each.", ("assets",), (
+             Arg("target", TEXT, path=SLUG_OR_ROOT, required=True, about="a brand slug or a deck path"),)),
+    Tool("docs", "A reference topic: deck-md, workbook, brand-yaml, tokens-yaml, workflow or codes. With no topic, "
+         "the list.", ("docs",), (
+             Arg("topic", {"type": "string", "pattern": "^[a-z][a-z-]*$"}, about="e.g. deck-md"),)),
     Tool("explain", "The cause and fix for one issue code.", ("explain",), (
-        Arg("code", {"type": "string", "pattern": "^[A-Za-z_]+$"}, required=True),)),
-    Tool("doctor", "Dependencies, render backends and what this machine can do.", ("doctor",)),
+        Arg("code", {"type": "string", "pattern": "^[A-Za-z_]+$"}, required=True, about="e.g. BUDGET_CHARS"),)),
+    Tool("doctor", "What this machine can do: dependencies, render backends, the config and these tools.",
+         ("doctor",)),
 )}
 
 
@@ -142,7 +163,10 @@ class Server:
         if arg.path == SLUG_OR_ROOT and jsonschema.Draft202012Validator(SLUG).is_valid(value):
             return value  # a brand slug, not a path
         p = Path(value)
-        full = (p if p.is_absolute() else self.root / p).resolve()  # follows symlinks
+        try:
+            full = (p if p.is_absolute() else self.root / p).resolve()  # follows symlinks
+        except (ValueError, OSError) as e:  # a NUL byte, a symlink loop
+            raise Refused(f"{arg.name}: {value!r} isn't a usable path ({e})") from None
         allowed = {ROOT: [self.root], SLUG_OR_ROOT: [self.root], BRAND_WRITE: self.brands,
                    BRAND_READ: [self.root, *self.brands]}[str(arg.path)]
         if not any(full.is_relative_to(a) for a in allowed):
@@ -189,8 +213,8 @@ class Server:
         except Refused as e:
             return _text(f"refused: {e}", error=True)
         err = io.StringIO()
-        try:
-            with contextlib.redirect_stderr(err):
+        try:  # argparse prints help to stdout and errors to stderr; stdout belongs to the protocol
+            with contextlib.redirect_stderr(err), contextlib.redirect_stdout(err):
                 args = self.parser.parse_args(argv)
         except SystemExit:
             return _text(f"refused: {err.getvalue().strip().splitlines()[-1] if err.getvalue() else 'bad arguments'}",
@@ -222,8 +246,11 @@ class Server:
                 "protocolVersion": asked if asked in PROTOCOLS else PROTOCOLS[0],
                 "capabilities": {"tools": {"listChanged": False}},
                 "serverInfo": {"name": "deck-builder", "version": __version__},
-                "instructions": f"deck-builder tools, confined to the workspace at {self.root}. Paths are "
-                                "relative to it. Start with brand_show and docs deck-md.",
+                "instructions": (
+                    f"deck-builder tools, confined to the workspace at {self.root}; relative paths resolve "
+                    "against it, and anything outside it is refused. The usual loop: brand_show and docs "
+                    "deck-md once, write the deck file, check until it has no errors (explain gives each "
+                    "code's fix), then check with render: true and read only the flagged slides' PNGs."),
             })
         if method == "ping":
             return _result(mid, {})

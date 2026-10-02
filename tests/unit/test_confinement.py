@@ -169,6 +169,13 @@ def test_a_line_break_in_a_data_value_is_refused(ws, capsys):
     assert len(out["outputs"]) == 1  # row 1 still builds
 
 
+@pytest.mark.parametrize("sep", ["\x0b", "\x0c", "\x1c", "\x85", "\N{LINE SEPARATOR}", "\N{PARAGRAPH SEPARATOR}"])
+def test_any_line_separator_in_a_data_value_is_refused(ws, capsys, sep):
+    code, out = bulk(ws, capsys, BULK, f'client,note\nAcme,"ok{sep}# Injected"\n')
+    assert code == 1
+    assert out["issues"][0]["message"] == "row 1: column 'note' holds a line break"
+
+
 @pytest.mark.parametrize("value", ["# Injected heading", "![x](/etc/secret.png)"])
 def test_a_value_that_would_start_a_heading_or_image_line_is_refused(ws, capsys, value):
     code, out = bulk(ws, capsys, BULK, f'client,note\nAcme,"{value}"\n')

@@ -7,7 +7,6 @@
 !/AGENTS.md
 !/CLAUDE.md
 !/README.md
-!/SPEC.md
 !/CHANGELOG.md
 !/LICENSE
 !/pyproject.toml
@@ -23,6 +22,7 @@
 /tasks/*
 !/tasks/plan.md
 !/tasks/handoff.md
+!/tasks/completed/
 
 # .claude ships only the skills and the agent; local settings stay local
 /.claude/*

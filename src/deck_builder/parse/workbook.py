@@ -77,6 +77,7 @@ def table_from_rows(rows: list[list[Any]]) -> Table:
 
 
 def parse(path: Path, row: dict[str, str] | None = None) -> tuple[Deck, list[Issue]]:
+    """deck.xlsx -> Deck: the `deck` sheet is front matter, `slides` the slides, chart and table sheets by name."""
     issues: list[Issue] = []
     name = path.name
     try:

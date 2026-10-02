@@ -84,6 +84,19 @@ def test_nothing_that_installs_or_initializes_is_exposed(server):
     assert "backend" not in render  # renders use the configured backend only
 
 
+def test_every_tool_parameter_and_cli_argument_says_what_it_takes():
+    from deck_builder.cli import build_parser
+
+    for tool in mcp.TOOLS.values():
+        for name, prop in tool.schema()["properties"].items():
+            assert prop.get("description"), f"{tool.name}.{name}"
+    ap, _ = build_parser()
+    commands = next(a for a in ap._actions if a.dest == "command").choices
+    for cmd, p in commands.items():
+        for a in p._actions:
+            assert a.dest in ("help", "json") or a.help, f"{cmd} {a.option_strings or a.dest}"
+
+
 def test_ping_and_notifications(server):
     assert rpc(server, "ping")["result"] == {}
     assert server.handle(json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"})) is None
@@ -268,6 +281,18 @@ def test_render_takes_only_files_the_engine_built(server, ws):
     built = ws / "out" / "decks.pptx"
     built.write_bytes(built.read_bytes() + b"tampered")
     assert "isn't the file its manifest records" in refused(server, "render", pptx="out/decks.pptx")
+
+
+def test_help_text_never_reaches_the_protocol_stream(server, capsys):
+    refused(server, "docs", topic="-h")  # the schema refuses a topic starting with -
+    capsys.readouterr()
+    call(server, "explain", code="PARSE")
+    server.call(mcp.TOOLS["docs"], {"topic": "codes"})
+    assert capsys.readouterr().out == ""  # handlers and argparse write nothing to stdout
+
+
+def test_a_path_with_a_nul_byte_is_refused_not_a_crash(server):
+    assert "isn't a usable path" in refused(server, "check", deck="decks/\x00deck.md")
 
 
 def test_a_refused_call_runs_nothing(server, ws, outside):

@@ -46,6 +46,7 @@ def _alt(frame: Any, text: str) -> None:
 
 
 def fill_chart(slide: Any, ph: Any, spec: Chart, brand: Brand) -> None:
+    """A native, editable chart in the placeholder, styled from tokens.yaml chart, with alt text."""
     ct = CHART_TYPES[spec.type]
     data = CategoryChartData(number_format=spec.number_format)
     data.categories = spec.categories
@@ -112,6 +113,7 @@ def fill_chart(slide: Any, ph: Any, spec: Chart, brand: Brand) -> None:
 
 
 def fill_table(slide: Any, ph: Any, spec: Table, brand: Brand) -> None:
+    """A native table in the placeholder: fills, fonts and status dots from tokens.yaml table, with alt text."""
     nrows, ncols = len(spec.rows) + 1, len(spec.header)
     if hasattr(ph, "insert_table"):
         frame = ph.insert_table(nrows, ncols)

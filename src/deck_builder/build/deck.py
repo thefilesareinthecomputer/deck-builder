@@ -6,6 +6,7 @@ import datetime as dt
 import hashlib
 import io
 import json
+import re
 from pathlib import Path
 from typing import Any
 from xml.sax.saxutils import escape
@@ -29,7 +30,8 @@ from deck_builder.validate import plain, resolve_asset, text_of
 EMU_PER_INCH = 914400
 MIN_DPI = 150
 DEFAULT_DATE = dt.date(2000, 1, 1)
-SLIDENUM_FIELD = "{B6F15528-21DE-4FAA-801E-634DDDAF4B2B}"  # used when the layout's field has no id
+SLIDENUM_FIELD = "{B6F15528-21DE-4FAA-801E-634DDDAF4B2B}"  # used when the layout's field has no usable id
+FIELD_ID = re.compile(r"\{[0-9A-Fa-f-]{36}\}")
 OFF = {"false", "no", "off", "0"}
 
 
@@ -48,12 +50,14 @@ def add_furniture(slide: Any, layout: Any, n: int, numbers: bool, footer: str | 
     are never copied.
     """
     tree = slide.shapes._spTree
-    next_id = max((int(e.get("id", 0)) for e in tree.iter(qn("p:cNvPr"))), default=1) + 1
+    ids = [str(e.get("id", "")) for e in tree.iter(qn("p:cNvPr"))]
+    next_id = max((int(i) for i in ids if i.isdigit()), default=1) + 1
     for ph in layout.placeholders:
         kind = ph.placeholder_format.type
         if kind == PP_PLACEHOLDER.SLIDE_NUMBER and numbers:
             fld = ph._element.find(f".//{qn('a:fld')}[@type='slidenum']")
-            fid = fld.get("id") if fld is not None else SLIDENUM_FIELD
+            fid = str(fld.get("id")) if fld is not None else ""
+            fid = fid if FIELD_ID.fullmatch(fid) else SLIDENUM_FIELD  # an adopted template is untrusted XML
             para = f'<a:fld id="{fid}" type="slidenum"><a:rPr lang="en-US"/><a:t>{n}</a:t></a:fld>'
         elif kind == PP_PLACEHOLDER.FOOTER and footer:
             para = f'<a:r><a:rPr lang="en-US"/><a:t>{escape(footer)}</a:t></a:r>'

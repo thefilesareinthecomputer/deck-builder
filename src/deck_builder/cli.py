@@ -17,6 +17,7 @@ Handler = Callable[[argparse.Namespace], Result]
 
 
 def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
+    """Every subcommand and its handler. The MCP server parses tool calls with this same parser."""
     ap = argparse.ArgumentParser(
         prog="deck-builder",
         description="Build branded, editable PowerPoint decks from markdown or spreadsheets.",
@@ -33,9 +34,9 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
         return p
 
     p = add("docs", "print a reference topic; no topic lists them", commands.docs_cmd)
-    p.add_argument("topic", nargs="?")
+    p.add_argument("topic", nargs="?", help="deck-md, workbook, brand-yaml, tokens-yaml, workflow or codes")
     p = add("explain", "print the cause and fix for an issue code", commands.explain)
-    p.add_argument("code")
+    p.add_argument("code", help="an issue code from a check or build, e.g. BUDGET_CHARS")
 
     p = add("init", "create the workspace, config, neutral example brand and example decks", commands.init_cmd)
     p.add_argument("--dir", help="where to write deck-builder.toml (default: the current directory)")
@@ -43,8 +44,10 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
     p.add_argument("--powerpoint", action="store_true",
                    help="also test PowerPoint automation (launches PowerPoint; the first run shows a macOS prompt)")
     p = add("brand", "list, show, check, init or adopt brand kits, or add a logo or icon", commands.brand_cmd)
-    p.add_argument("action", choices=["list", "show", "check", "init", "adopt", "add-asset"])
-    p.add_argument("slug", nargs="?")
+    p.add_argument("action", choices=["list", "show", "check", "init", "adopt", "add-asset"],
+                   help="list brands; show one's layouts and budgets; check a kit; init a kit from brand.yaml; "
+                        "adopt a template; add-asset to copy a logo or icon in")
+    p.add_argument("slug", nargs="?", help="the brand's slug, e.g. neutral (every action but list)")
     p.add_argument("file", nargs="?", help="add-asset: the PNG to copy into the kit")
     p.add_argument("--as", dest="as_", metavar="KIND/ID", help="add-asset: logo/<id> or icon/<id>")
     p.add_argument("--from", dest="from_", metavar="BRAND_YAML", help="init: the brand.yaml to generate from")
@@ -53,10 +56,10 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
     p.add_argument("--force", action="store_true",
                    help="replace the generated files of an existing kit, or an existing asset")
     p = add("inspect", "list a template's layouts and placeholders", commands.inspect_cmd)
-    p.add_argument("template")
+    p.add_argument("template", help="a .potx or .pptx")
     p.add_argument("--yaml", action="store_true", help="print a starter layouts block for tokens.yaml")
     p = add("assets", "inventory a brand's or a deck's assets", commands.assets_cmd)
-    p.add_argument("target")
+    p.add_argument("target", help="a brand slug, or a deck file to list the assets its slides use")
     deck_help = "a deck.md, deck.xlsx or deck.csv file, or the folder holding it"
     p = add("check", "validate a deck without building it", commands.check)
     p.add_argument("deck", help=deck_help)
@@ -92,9 +95,10 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
     sub.add_parser("mcp", help="serve the engine as MCP tools over stdio, confined to the workspace (for agents)",
                    description="serve the engine as MCP tools over stdio, confined to the workspace (for agents)")
     p = add("schema", "print a JSON Schema", commands.schema_cmd)
-    p.add_argument("name", choices=["brand", "tokens", "manifest"])
+    p.add_argument("name", choices=["brand", "tokens", "manifest"],
+                   help="brand.yaml, tokens.yaml, or a build's manifest.json")
     p = add("skills", "link this clone's skills and agent into another Claude Code setup", commands.skills_cmd)
-    p.add_argument("action", choices=["install"])
+    p.add_argument("action", choices=["install"], help="install: link the skills and agents (needs --yes)")
     p.add_argument("--target", help="the Claude Code folder to link into (default: ~/.claude)")
     p.add_argument("--yes", action="store_true", help="create the links; without it, only show the plan")
     return ap, handlers

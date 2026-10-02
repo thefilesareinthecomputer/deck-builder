@@ -371,6 +371,7 @@ def _first_difference(a: Deck, b: Deck) -> str:
 
 
 def convert_cmd(args: argparse.Namespace) -> Result:
+    """deck.md <-> deck.xlsx <-> .csv; the output is parsed back and refused with CONVERT_LOSSY if it differs."""
     cfg = _cfg(args)
     src, dst = Path(args.input), Path(args.output)
     fmt = pipeline.FORMATS.get(dst.suffix.lower())

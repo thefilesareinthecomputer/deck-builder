@@ -167,7 +167,15 @@ v0.1.0, with the changes since in [CHANGELOG.md](CHANGELOG.md). Known limits:
 - The PowerPoint render backend hasn't been verified on a Mac with PowerPoint yet. Its results include the warning `RENDER_UNVERIFIED` until `scripts/probe_powerpoint.sh` passes; LibreOffice renders are a close proxy.
 - Icons are PNG alpha masks; SVG isn't supported.
 
-[SPEC.md](SPEC.md) has the full design and the open decisions.
+### Rules the engine keeps
+
+- **Deterministic and local.** The same input builds the same file, and the engine makes no network calls.
+- **Content in, design out.** Decks hold text, data and image references; layout, fonts and colors come only from the brand kit. Content that doesn't fit fails `check` with a code, and budgets aren't loosened to pass.
+- **Confined.** A deck reads images only inside its folder, writes only `.pptx` files it built, and bulk data can't add slides or images. Imported decks are untrusted input.
+- **Agents have no shell.** The subagents reach the engine only through `deck-builder mcp`, confined to the workspace. They can still write files the session allows, so keep client work outside the clone.
+- **Restraint.** Visual additions (slide numbers, footers, status dots) are the smallest mark that does the job.
+
+The original design spec, with its requirements and open decisions, is archived at [tasks/completed/SPEC-2026-10-02.md](tasks/completed/SPEC-2026-10-02.md).
 
 ---
 

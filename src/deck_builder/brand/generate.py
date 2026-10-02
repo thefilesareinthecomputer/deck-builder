@@ -355,6 +355,7 @@ def _finish(blob: bytes) -> bytes:
 
 
 def generate(meta: dict[str, Any], source_dir: Path) -> tuple[bytes, dict[str, Any]]:
+    """brand.yaml -> (template.potx bytes, tokens.yaml data). Asset paths resolve against source_dir."""
     gen = meta.get("generate") or {}
     w_emu, h_emu = SIZES_EMU[gen.get("slide_size", "16:9")]
     w_in, h_in = w_emu / EMU, h_emu / EMU

@@ -539,6 +539,7 @@ def _unplaced(f: Found) -> str:
 
 
 def import_pptx(pptx: Path, brand: Brand, cache_dir: Path) -> Imported:
+    """Read every slide onto the brand's layouts; front matter from core properties and slide furniture."""
     prs = tpl.open_template(pptx)
     assert brand.template is not None
     kit_layouts = tpl.layouts(tpl.open_template(brand.template))

@@ -107,6 +107,7 @@ def _budgets(brand: Brand | None) -> dict[str, dict[str, int]]:
 
 
 def write(deck: Deck, brand: Brand | None) -> bytes:
+    """Deck -> canonical deck.xlsx; with a brand, layout dropdowns and live character counts for the team."""
     wb = Workbook()
     ws = wb.active
     ws.title = "slides"

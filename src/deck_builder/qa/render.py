@@ -53,6 +53,7 @@ def empty_placeholders(pptx: Path) -> list[Issue]:
 
 def render(pptx: Path, backend: str, dpi: int, batch: int, pages: list[int] | None,
            brand: Brand | None) -> Rendered:
+    """PDF, slide PNGs and contact sheets in <deck>.render/, plus measured overflow, empty placeholders and fonts."""
     out_dir = pptx.with_name(pptx.stem + ".render")
     if out_dir.exists():
         # only ever touch a folder this command made (it holds deck.pdf, or nothing), and in it only the files

@@ -16,6 +16,8 @@ FOOTER = 0.8  # space kept clear at the bottom for the logo and slide furniture
 
 @dataclass
 class PH:
+    """One placeholder of a generated layout: the field it fills, its kind, idx, box in inches and type style."""
+
     field: str
     kind: str  # title | body | pic | chart | tbl
     idx: int
