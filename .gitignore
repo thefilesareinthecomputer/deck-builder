@@ -1,0 +1,18 @@
+# user content and local config
+workspace/
+deck-builder.toml
+*.render/
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+
+# os
+.DS_Store
