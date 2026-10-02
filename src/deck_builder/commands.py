@@ -523,7 +523,12 @@ def import_cmd(args: argparse.Namespace) -> Result:
         raise EnvError(f"{out / 'deck.md'} exists; pass --force to replace it")
     r = Result(command="import", data={"input": str(src)})
     if args.adopt:
-        ns = argparse.Namespace(slug=args.adopt, template=str(src), out=None, force=args.force, action="adopt")
+        kit_dir = cfg.brand_paths[0] / args.adopt
+        if (kit_dir / "brand.yaml").is_file():
+            raise EnvError(f"brand {args.adopt!r} already exists at {kit_dir}; import onto it with "
+                           f"--brand {args.adopt} instead of --adopt, or adopt under a different slug")
+        # --force governs deck.md only (checked above); a freshly adopted kit is never regenerated here.
+        ns = argparse.Namespace(slug=args.adopt, template=str(src), out=None, force=False, action="adopt")
         _adopt(ns, cfg, r)
         brand = registry.load_kit(Path(r.data["path"]))
     else:
@@ -532,6 +537,11 @@ def import_cmd(args: argparse.Namespace) -> Result:
         raise EnvError(f"brand {brand.slug!r} is invalid; run `deck-builder brand check {brand.slug}`")
     imp = importer.import_pptx(src, brand, _cache_dir(cfg))
     out.mkdir(parents=True, exist_ok=True)
+    report = out / "import-report.md"
+    colliding = [p for p in ([report] if report.is_file() else [])
+                + [out / "assets" / name for name in imp.assets if (out / "assets" / name).is_file()]]
+    if colliding and not args.force:
+        raise EnvError(f"{', '.join(str(p) for p in colliding)} exist; pass --force to replace them")
     if imp.assets:
         (out / "assets").mkdir(exist_ok=True)
         for name, blob in imp.assets.items():
@@ -540,7 +550,6 @@ def import_cmd(args: argparse.Namespace) -> Result:
     deck_md.write_text(md_writer.write(imp.deck), encoding="utf-8")
     back, back_issues = markdown_parser.parse(deck_md)
     mismatched = [n for n, (a, b) in enumerate(zip(imp.deck.slides, back.slides, strict=False), start=1) if a != b]
-    report = out / "import-report.md"
     report.write_text(importer.report_md(src, brand, bool(args.adopt), imp, mismatched), encoding="utf-8")
     if back_issues or len(back.slides) != len(imp.deck.slides) or mismatched:
         if back_issues:

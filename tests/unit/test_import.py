@@ -457,3 +457,40 @@ def test_adopt_makes_a_kit_from_the_decks_own_layouts(ws, capsys, messy):
     assert len(Presentation(str(kit / "template.pptx")).slides) == 0  # masters and layouts only
     assert all(x["match"].startswith("matched by layout name") for x in out["layouts"])
     assert (ws / "imp" / "deck.md").read_text().startswith("---\nbrand: messy-co\n")
+
+
+def test_import_adopt_refuses_to_regenerate_an_existing_kit(ws, capsys, messy):
+    code, out = cli_json(ws, "import", str(messy), str(ws / "imp"), "--adopt", "messy-co", capsys=capsys)
+    assert code == 0, out
+    tokens_path = ws / "brands" / "messy-co" / "tokens.yaml"
+    tuned = tokens_path.read_text() + "\n# tuned by hand after adopt\n"
+    tokens_path.write_text(tuned, encoding="utf-8")
+    code, out = cli_json(ws, "import", str(messy), str(ws / "imp2"), "--adopt", "messy-co", "--force", capsys=capsys)
+    assert code == 2
+    assert "--brand" in out["error"]
+    assert tokens_path.read_text() == tuned  # the tuned kit was never touched
+
+
+def test_import_force_with_an_existing_brand_never_touches_the_kit(ws, capsys, messy):
+    code, out = cli_json(ws, "import", str(messy), str(ws / "imp"), "--brand", "stock", capsys=capsys)
+    assert code == 0, out
+    kit = ws / "brands" / "stock"
+    before = {p: p.read_bytes() for p in kit.rglob("*") if p.is_file()}
+    code, out = cli_json(ws, "import", str(messy), str(ws / "imp"), "--brand", "stock", "--force", capsys=capsys)
+    assert code == 0, out
+    after = {p: p.read_bytes() for p in kit.rglob("*") if p.is_file()}
+    assert before == after
+
+
+def test_import_refuses_to_overwrite_an_existing_report_or_assets_without_force(ws, capsys, messy):
+    code, out = cli_json(ws, "import", str(messy), str(ws / "imp"), "--brand", "stock", capsys=capsys)
+    assert code == 0, out
+    report_before = (ws / "imp" / "import-report.md").read_text()
+    asset = next((ws / "imp" / "assets").iterdir())
+    asset_before = asset.read_bytes()
+    (ws / "imp" / "deck.md").unlink()  # deck.md gone, but the report and assets remain from the first run
+    code, out = cli_json(ws, "import", str(messy), str(ws / "imp"), "--brand", "stock", capsys=capsys)
+    assert code == 2
+    assert "--force" in out["error"]
+    assert (ws / "imp" / "import-report.md").read_text() == report_before
+    assert asset.read_bytes() == asset_before
