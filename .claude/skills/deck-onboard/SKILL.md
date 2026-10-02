@@ -23,9 +23,10 @@ uv sync                         # from the repo root; installs the Python depend
 uv run deck-builder doctor
 ```
 
-`doctor` lists each requirement as ok, missing or optional, with the install command. Offer the
-command for anything missing and wait for the user to run it or approve it. What each tool is
-for:
+`doctor` lists each requirement as `ok`, `missing`, `optional` or `unverified`, with the install
+command after `fix:`, and ends with whether building is ready and which renderer will be used.
+If `uv` itself is missing, point them to https://docs.astral.sh/uv/ first. Offer the install
+command for anything missing and wait for the user to run it or approve it. What each tool is for:
 
 | Tool | Needed for |
 |---|---|
@@ -36,9 +37,11 @@ for:
 Building and checking decks needs none of these. Without poppler and a renderer, the user can
 build but not see renders.
 
-If `doctor` reports PowerPoint's automation permission as denied, walk them to System Settings
-> Privacy & Security > Automation, and have them allow the app running Claude Code to control
-Microsoft PowerPoint.
+With PowerPoint installed, `doctor` shows it as `unverified`: its render backend hasn't been
+proven on a real Mac yet. With their OK, `uv run deck-builder doctor --powerpoint` tests it; this
+opens PowerPoint, and the first time macOS asks to let the app running Claude Code control it.
+If they denied it, walk them to System Settings > Privacy & Security > Automation and have them
+allow it. `scripts/probe_powerpoint.sh <deck.pptx>` runs the full check of that backend.
 
 ## 2. Create the workspace
 
@@ -68,16 +71,19 @@ Build and render the example deck. If they set up their own brand, change `brand
 the deck's front matter to their slug first.
 
 ```
-uv run deck-builder build workspace/decks/quarterly-review/deck.md
-uv run deck-builder render workspace/out/quarterly-review.pptx
+uv run deck-builder check workspace/decks/quarterly-review/deck.md --render
 ```
 
+That builds `workspace/out/quarterly-review.pptx`, renders it, and writes the slide PNGs and a
+contact sheet to `workspace/out/quarterly-review.render/`. Open `contact-01.png` with them and say
+what they're looking at, then point them at the `.pptx` to open in PowerPoint or Keynote.
 `workspace/decks/bulk-outreach/` is the one-deck-per-row example; its `deck.md` names the command.
-
-Open the first contact sheet with them and say what they're looking at. Then show the workflow
-for their own decks: `uv run deck-builder docs workflow`.
+Then show the workflow for their own decks: `uv run deck-builder docs workflow`.
 
 ## 5. Optional: use from other repos
 
-`uv tool install .` puts `deck-builder` on their PATH. `deck-builder skills install` shows the
-links it would create for the skills and agent; with their OK, rerun it with `--yes`.
+`uv tool install .` from the clone puts `deck-builder` on their PATH. Then, from the clone,
+`uv run deck-builder skills install` shows the links it would create in `~/.claude` for the skills
+and the agent; with their OK, rerun it with `--yes`. The links point back at this clone, so a
+`git pull` here updates them everywhere. Other repos can keep their own `deck-builder.toml` with
+`brand_paths` pointing at their brand kits.

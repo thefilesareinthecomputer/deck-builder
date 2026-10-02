@@ -48,21 +48,33 @@ Ask one topic at a time and show what you'll write before writing it.
 
 ## Generate, check, tune
 
+Run the CLI as `uv run deck-builder` inside the deck-builder clone, or `deck-builder` where it's
+installed (`db` below).
+
 ```
-deck-builder brand init <slug> --from brand.yaml   # or: brand adopt <slug> --template FILE
-deck-builder brand check <slug> --json
-deck-builder build <example deck> && deck-builder render <pptx> --json
+db brand init <slug> --from brand.yaml    # or: db brand adopt <slug> --template FILE
+db brand check <slug> --json              # must pass before any deck uses the brand
+db brand show <slug>                      # what a deck writer will see
+db check <test deck> --render --json      # build, render, measure
 ```
 
+Write the user's `brand.yaml` somewhere outside the kit first (the workspace's `decks/` or a
+scratch folder), then `brand init` copies it and its assets into `workspace/brands/<slug>/`.
+`brand init --force` regenerates `template.potx` and `tokens.yaml` from scratch, which discards
+tuned budgets and any PowerPoint polish; copy those files aside first and tell the user.
+
 Budgets in a generated `tokens.yaml` are estimates. Build a test deck with deliberately long
-text, render it, and propose tighter or looser budgets per field from what overflowed. Change
-`tokens.yaml` only after the user agrees.
+text in each layout, run `check --render`, and propose tighter or looser budgets per field from
+the `OVERFLOW_MEASURED` results. Change `tokens.yaml` only after the user agrees.
+
+Fonts: `MISSING_FONT` on a LibreOffice render can mean LibreOffice ignored the theme font. Check
+that the font is installed; a PowerPoint render is the reference.
 
 ## Polishing in PowerPoint
 
 A generated template is clean but plain. For a premium look, the user edits it in PowerPoint:
 `references/powerpoint-polish.md` is the walkthrough to give them. After any template edit, run
-`deck-builder brand check <slug>`; if layouts or placeholders moved, `deck-builder inspect
-<template> --yaml` shows the new mapping to fold into `tokens.yaml`.
+`db brand check <slug>`; if layouts or placeholders moved, `db inspect <template> --yaml` shows
+the new mapping to fold into `tokens.yaml`.
 
 Bump `version` in `brand.yaml` whenever a change affects output.
