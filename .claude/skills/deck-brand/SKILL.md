@@ -19,8 +19,9 @@ approval, edits to `tokens.yaml`. You never write template XML. Styling always g
 kit; an engine change under `src/` is a separate task, started only when the user asks, with
 tests (see AGENTS.md).
 
-`deck-builder docs brand-yaml` and `deck-builder docs tokens-yaml` are the formats. Read them
-before writing either file.
+`deck-builder docs brand-yaml` and `deck-builder docs tokens-yaml` are the formats, and
+`deck-builder docs design` is the design standard the generated layouts follow. Read them before
+writing either file.
 
 ## Pick the path with the user
 
@@ -46,6 +47,11 @@ Ask one topic at a time and show what you'll write before writing it.
   license in `icons.source`. Only use icon sets the user has the right to use.
 - **Layout set.** `minimal`, `standard` or `full`; `deck-builder docs brand-yaml` lists what each
   holds. Ask what kinds of slides they make most.
+- **Type and placement.** Ask whether decks are mostly projected or read on screen. The defaults in
+  `generate.type` suit projection; a leave-behind document takes smaller sizes. A brand that
+  prefers dark emphasis slides can set `generate.big_number: dark`. If they have past decks they
+  consider good, render them and match their sizes in `generate.type` rather than editing the
+  template.
 - **Voice and lint.** Writing rules for the agent, and banned patterns the engine enforces.
 
 ## Generate, check, tune

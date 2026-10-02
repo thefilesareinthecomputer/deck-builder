@@ -59,7 +59,27 @@ generate:                        # read only by `brand init`
   layout_set: standard           # minimal | standard | full
   logo_on_master: primary        # a logo id, or leave out
   slide_numbers: true            # a small number at the bottom left of content slides (default true)
+  body_anchor: middle            # middle | top: where single-column body text sits (default middle)
+  big_number: light              # light | dark: dark puts the numeral on the primary color (default light)
+  type:                          # type sizes in points; leave any key out to keep its default
+    title: 32                    # content-slide titles
+    title_bold: true
+    subtitle: 24                 # title and closing slides
+    body: 24                     # single-column body; the agenda is 4 pt larger
+    two_col: 20                  # two-column, comparison and image-right text
+    icon_text: 18
+    table: 16                    # table text, header included
+    big_number: 120
 ```
+
+The defaults are sized for a projected 16:9 deck. For a leave-behind document read on screen, smaller
+sizes fit more: for example `body: 18`, `two_col: 16`, `table: 12`. Character budgets in `tokens.yaml`
+are computed from these sizes, so changing them changes how much text each field takes.
+
+Since `--force` regenerates from `brand.yaml` alone, put type and placement choices in `generate:` rather
+than in the template, so they survive a regenerate.
+
+`deck-builder docs design` describes the design rules the generated layouts follow.
 
 ## Layout sets
 

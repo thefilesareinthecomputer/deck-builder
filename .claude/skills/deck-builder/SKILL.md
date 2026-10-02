@@ -31,8 +31,8 @@ user has to ask for explicitly (see AGENTS.md).
 
 When the deck has to come out of more material than fits here (a folder of documents, a
 knowledge base or vault), start with the `deck-decomposer-agent`. It runs no commands, since what
-it reads is untrusted, so put the output of `brand show <slug> --json` and `docs deck-md` in its
-prompt. It returns `outline.md` (the storyline with a source for every slide, plus open questions)
+it reads is untrusted, so put the output of `brand show <slug> --json`, `docs deck-md` and
+`docs design` in its prompt. It returns `outline.md` (the storyline with a source for every slide, plus open questions)
 and a draft `deck.md`; run `check` on the draft and send any issues back to it, up to two rounds,
 then report what's left to the user. Walk the user through the outline, co-author and proofread
 with them (or convert to `.xlsx` for their team), and only then build.
@@ -49,6 +49,7 @@ reaches the user.
 ```
 db brand show <slug>                # layouts, fields, budgets (kind<=chars, xN bullets, * required)
 db docs deck-md                     # the deck.md format, once (or: db docs workbook)
+db docs design                      # which layout fits which point, and how much goes on a slide
 db check <deck> --json              # validate; fix every issue; repeat until no errors
 db check <deck> --render --json     # build, render and measure in one step
 db explain <CODE>                   # cause and fix for any issue code
@@ -56,8 +57,10 @@ db explain <CODE>                   # cause and fix for any issue code
 
 1. **Storyline first.** Slide titles only, one takeaway each. At AGENTS.md's delegation
    threshold, or for anything client-facing, get the user's OK before writing slides.
-2. **Write to the budgets** from `brand show`. Choose layouts by content: one number is
-   big-number, a comparison is two-col or comparison, a trend is chart.
+2. **Write to the budgets** from `brand show`. Choose layouts by content, using the table in
+   `docs design`: one number is big-number, a comparison is two-col or comparison, a trend is
+   chart, three parallel actions are icon-row. Don't run table after table or list after list.
+   Put the conclusion of a chart or table slide in `takeaway:`.
 3. **Fix by code, never by loosening rules.** Cut words, split the slide, change the layout, move
    detail to speaker notes. If a budget looks wrong, say so; the user changes the brand kit.
 4. **Look at flagged slides only.** `check --render --json` returns `flagged_slides` (each with its
