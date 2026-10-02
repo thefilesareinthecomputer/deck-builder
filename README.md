@@ -45,35 +45,29 @@ You or an agent write the content, and the engine handles layout, styling and va
 
 ## Quick start
 
-Needs [uv](https://docs.astral.sh/uv/). Rendering also needs poppler and either PowerPoint (Mac) or LibreOffice; `doctor` prints the install command for anything missing.
+You need [uv](https://docs.astral.sh/uv/). Rendering also needs LibreOffice (or PowerPoint on a Mac) and poppler, and `uv run deck-builder doctor` checks for them.
 
 ```bash
 git clone <this repo> deck-builder && cd deck-builder
-uv sync
-uv run deck-builder doctor        # what this machine can do
-uv run deck-builder init          # workspace/, config, the neutral brand, two example decks
+uv run deck-builder init
 uv run deck-builder check workspace/decks/quarterly-review --render
 ```
 
-The last command validates the example deck, builds `workspace/out/quarterly-review.pptx`, and writes slide PNGs and a contact sheet next to it. To work in another folder, install the CLI once with `uv tool install --editable /path/to/deck-builder`, then run `deck-builder init` there.
+`init` creates a workspace with a neutral brand and two example decks. `check --render` builds the first one into `workspace/out/quarterly-review.pptx` and renders it, with a contact sheet next to it.
+
+To run `deck-builder` from any folder, install it once with `uv tool install --editable .`
 
 > [!TIP]
 > **Using Claude Code?** Open the clone and start a session. Onboarding runs these steps with you, then sets up your own brand.
 
 ## How it works
 
-```mermaid
-flowchart LR
-    deck["deck.md or deck.xlsx"] --> check["check"]
-    check -- "issue code and fix" --> deck
-    check --> build["build"]
-    build --> pptx[".pptx and manifest"]
-    pptx --> render["render"]
-    render -- "flagged slides" --> deck
-    render --> review["PDF, slide PNGs, contact sheet"]
-```
+1. **Write** the content in `deck.md` or `deck.xlsx`.
+2. **Check** it. Unknown layouts, missing images and text over a field's character budget fail with an issue code.
+3. **Build** the `.pptx` from the brand's template.
+4. **Render** it and review the contact sheet. Words that overflow their box, empty placeholders and substituted fonts get flagged.
 
-`check` catches what the text shows: unknown layouts, missing images and text over a field's character budget. `render` catches what only the rendered page shows: overflowing words, empty placeholders and substituted fonts. `deck-builder explain <CODE>` prints the cause and fix for any finding.
+Fix what's flagged and run it again; `deck-builder explain <CODE>` prints the cause and fix for any issue code. `check --render` runs steps 2 to 4 in one command.
 
 <p align="center">
   <img src="docs/images/contact-sheet.png" width="100%" alt="A contact sheet of nine rendered slides labeled slide 1 to slide 9, the image an agent reviews after a render.">
