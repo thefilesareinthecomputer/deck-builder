@@ -3,7 +3,9 @@ name: ci
 on:
   push:
     branches: [main]  # other branches run through their pull request, so each job runs once
+    paths-ignore: [README.md, "docs/images/**"]  # README-only changes don't need the test run
   pull_request:
+    paths-ignore: [README.md, "docs/images/**"]
   workflow_dispatch:
   schedule:
     # Weekly, Monday 13:00 UTC: catches newly published CVEs and LibreOffice or poppler changes
