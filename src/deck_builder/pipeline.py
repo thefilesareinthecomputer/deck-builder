@@ -22,9 +22,23 @@ class Loaded:
     issues: list[Issue]
 
 
-def load_deck(path: Path, row: dict[str, str] | None = None) -> Loaded:
+DECK_FILES = ("deck.md", "deck.xlsx", "deck.csv")
+
+
+def deck_path(path: Path) -> Path:
+    """A deck file as given, or the deck file inside a deck folder."""
+    if path.is_dir():
+        for name in DECK_FILES:
+            if (path / name).is_file():
+                return path / name
+        raise EnvError(f"no {', '.join(DECK_FILES)} in {path}; pass the deck file itself")
     if not path.is_file():
         raise EnvError(f"deck not found: {path}")
+    return path
+
+
+def load_deck(path: Path, row: dict[str, str] | None = None) -> Loaded:
+    path = deck_path(path)
     fmt = FORMATS.get(path.suffix.lower())
     if fmt == "markdown":
         deck, issues = markdown.parse(path, row)

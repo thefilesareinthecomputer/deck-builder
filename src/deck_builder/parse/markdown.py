@@ -18,6 +18,7 @@ BULLET = re.compile(r"^(\s*)[-*+]\s+(.*)$")
 NUMBERED = re.compile(r"^(\s*)\d+[.)]\s+(.*)$")
 TOKEN = re.compile(r"\{\{\s*([\w.-]+)\s*\}\}")
 NOTES = re.compile(r"^(Notes|\?\?\?):?\s*$")
+STRAY_HEADING = re.compile(r"^#{1,6}\s")
 
 
 def substitute(text: str, row: dict[str, str] | None, file: str, issues: list[Issue]) -> str:
@@ -238,12 +239,20 @@ def parse(path: Path, row: dict[str, str] | None = None) -> tuple[Deck, list[Iss
             slide.fields[str(key)] = _scalar_field(v)
 
         sections: list[tuple[str, list[str]]] = [("body", [])]
+        in_fence = False
         for ln in rest:
-            m = sub.match(ln)
+            if ln.startswith("```"):
+                in_fence = not in_fence
+            m = None if in_fence else sub.match(ln)
             if m:
                 sections.append((m.group(1), []))
-            else:
-                sections[-1][1].append(ln)
+                continue
+            if not in_fence and STRAY_HEADING.match(ln):
+                issues.append(Issue("PARSE", f"{ln.strip()!r} isn't a slide or a field: '{'#' * level} ' starts a "
+                                    f"slide, and '{'#' * (level + 1)} name' names a field with no spaces in it",
+                                    **_at(where)))
+                continue
+            sections[-1][1].append(ln)
         for fname, sl in sections:
             val = parse_section(sl, where, fname, issues)
             if val is None:

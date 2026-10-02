@@ -108,7 +108,9 @@ def get(cfg: Config, slug: str) -> Brand:
         raise EnvError(dup[0].message, code="BRAND_DUPLICATE")
     if slug not in brands:
         known = ", ".join(sorted(brands)) or "none"
-        raise EnvError(f"no brand {slug!r} under brand_paths (found: {known})", code="UNKNOWN_BRAND")
+        hint = "" if cfg.found else ("; no deck-builder.toml in this folder or above it, so run "
+                                     "`deck-builder init` here or pass --config")
+        raise EnvError(f"no brand {slug!r} under brand_paths (found: {known}){hint}", code="UNKNOWN_BRAND")
     return brands[slug]
 
 

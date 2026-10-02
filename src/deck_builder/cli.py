@@ -54,23 +54,25 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
     p.add_argument("--yaml", action="store_true", help="print a starter layouts block for tokens.yaml")
     p = add("assets", "inventory a brand's or a deck's assets", commands.assets_cmd)
     p.add_argument("target")
+    deck_help = "a deck.md, deck.xlsx or deck.csv file, or the folder holding it"
     p = add("check", "validate a deck without building it", commands.check)
-    p.add_argument("deck")
+    p.add_argument("deck", help=deck_help)
     p.add_argument("--brand", help="brand slug (overrides the deck's brand:)")
     p.add_argument("--render", action="store_true", help="also build, render and measure")
     p = add("build", "build a deck into a .pptx", commands.build)
-    p.add_argument("deck")
+    p.add_argument("deck", help=deck_help)
     p.add_argument("--brand", help="brand slug (overrides the deck's brand:)")
-    p.add_argument("-o", "--output")
+    p.add_argument("-o", "--output", help="the .pptx to write, or a folder to write it in; with --data, a folder "
+                                          "(default: <workspace>/out/)")
     p.add_argument("--data", help="bulk mode: one deck per row of this csv or xlsx")
     p.add_argument("--name", help="bulk mode file name pattern, e.g. '{{client}}.pptx'")
     p = add("convert", "convert a deck between .md, .xlsx and .csv, losing nothing", commands.convert_cmd)
-    p.add_argument("input")
-    p.add_argument("output")
+    p.add_argument("input", help="the deck to convert: .md, .xlsx or .csv")
+    p.add_argument("output", help="the file to write; its extension (.md, .xlsx or .csv) picks the format")
     p.add_argument("--force", action="store_true", help="replace the output file if it exists")
     p = add("render", "render a .pptx to PDF, slide PNGs and contact sheets; flags slides to look at",
             commands.render_cmd)
-    p.add_argument("pptx")
+    p.add_argument("pptx", help="a built .pptx (to build and render a deck in one step: check --render)")
     p.add_argument("--backend", choices=["auto", "powerpoint", "libreoffice"], default=None,
                    help="default from config: auto prefers PowerPoint, then LibreOffice")
     p.add_argument("--slides", help="only these slide numbers, comma-separated")
@@ -90,6 +92,10 @@ def emit(result: Result, as_json: bool) -> None:
         return
     for issue in result.issues:
         print(issue.human(), file=sys.stderr if issue.severity == "error" else sys.stdout)
+    codes = sorted({i.code for i in result.issues if i.severity == "error"})
+    if codes:
+        also = f" (also {', '.join(codes[1:])})" if codes[1:] else ""
+        print(f"for the fix: deck-builder explain {codes[0]}{also}", file=sys.stderr)
     if result.summary:
         print(result.summary)
 

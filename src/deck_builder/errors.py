@@ -95,8 +95,8 @@ CODES: dict[str, tuple[str, str]] = {
         "Use a larger source image.",
     ),
     "MISSING_IMAGE": (
-        "An image path doesn't exist.",
-        "Fix the path; paths resolve relative to the deck file.",
+        "An image path doesn't exist, or the image is a web address.",
+        "Fix the path; paths resolve relative to the deck file. Download a web image into the deck folder first.",
     ),
     "BANNED_PATTERN": (
         "Slide text or notes match one of the brand's banned patterns.",
@@ -117,6 +117,12 @@ CODES: dict[str, tuple[str, str]] = {
     "CONVERT_LOSSY": (
         "The target format can't hold everything in the input, such as charts in CSV.",
         "Convert to .xlsx or .md instead.",
+    ),
+    "LOW_CONTRAST": (
+        "Two brand colors that sit on each other don't meet WCAG 2.2 contrast: 4.5:1 for text (ink on "
+        "background or surface, background on primary, links on background), 3:1 for icons and chart series.",
+        "Darken or lighten one color of the pair in the brand's palette, then `brand init` again. Change brand "
+        "colors only with the brand owner's say-so.",
     ),
     "OVERFLOW_MEASURED": (
         "Rendered text runs past its placeholder box.",

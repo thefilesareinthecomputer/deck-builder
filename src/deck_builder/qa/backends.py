@@ -4,9 +4,11 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 from pathlib import Path
+from xml.sax.saxutils import escape
 
 from deck_builder.errors import EnvError
 from deck_builder.qa import tools
@@ -47,6 +49,25 @@ def choose(requested: str) -> str:
                    f"({tools.install_hint('libreoffice')})")
 
 
+MAC_FONT_DIRS = ("/System/Library/Fonts", "/Library/Fonts", "~/Library/Fonts")
+FONT_CACHE = Path("~/Library/Caches/deck-builder/fontconfig").expanduser()
+
+
+def lo_env(tmp: str) -> dict[str, str]:
+    """Headless LibreOffice on macOS sees only its bundled fonts, so every brand font renders as a
+    substitute. Point its fontconfig at the macOS font folders, unless the caller set its own."""
+    env = dict(os.environ)
+    if sys.platform != "darwin" or "FONTCONFIG_FILE" in env:
+        return env
+    conf = Path(tmp, "fonts.conf")
+    dirs = "".join(f"<dir>{escape(d)}</dir>" for d in MAC_FONT_DIRS)
+    conf.write_text(f'<?xml version="1.0"?><fontconfig>{dirs}<cachedir>{escape(str(FONT_CACHE))}</cachedir>'
+                    '</fontconfig>\n',
+                    encoding="utf-8")
+    env["FONTCONFIG_FILE"] = str(conf)
+    return env
+
+
 def libreoffice(pptx: Path, pdf: Path) -> None:
     exe = tools.soffice()
     if exe is None:
@@ -56,7 +77,7 @@ def libreoffice(pptx: Path, pdf: Path) -> None:
         cmd = [exe, f"-env:UserInstallation={profile}", "--headless", "--norestore", "--convert-to", "pdf",
                "--outdir", tmp, str(pptx.resolve())]  # absolute, so a name can't read as an option
         try:
-            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=LO_TIMEOUT)
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=LO_TIMEOUT, env=lo_env(tmp))
         except subprocess.TimeoutExpired as e:
             raise EnvError(f"LibreOffice took longer than {LO_TIMEOUT}s; nothing was rendered") from e
         out = Path(tmp, pptx.stem + ".pdf")

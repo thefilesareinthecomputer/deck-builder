@@ -31,9 +31,11 @@ Source: the Q3 shipment ledger.
 
 - The `##` heading fills the layout's `heading_field` (default `title`).
 - `key: value` lines right after the heading are fields. Values are YAML, so quote anything with `: `.
+  Write `caption: "Goal: 12% growth"`, not `caption: Goal: 12% growth`.
 - Content after the fields is the `body` section. If the layout has no `body` field, it goes to
   the layout's only unfilled field of the matching kind.
-- `### name` starts the section for field `name`.
+- `### name` starts the section for field `name`. Any other heading line inside a slide, such as
+  `### Two words` or `# Note`, is a PARSE error.
 - A section holds text or one visual, not both. Give a caption its own field.
 
 ## Value kinds
@@ -42,7 +44,7 @@ Source: the Q3 shipment ledger.
 |---|---|
 | text | One paragraph, or a `key: value` field |
 | bullets | `- item` lines; numbered lines also work |
-| image | `![alt text](assets/photo.png)`, or `![alt](brand:logo/primary)` |
+| image | `![alt text](assets/photo.png)`, or `![alt](brand:logo/primary)`; local files only |
 | icon | `brand:icon/<id>` as the field value |
 | table | A pipe table, or a ```` ```table ```` block with `header:` and `rows:` |
 | chart | A ```` ```chart ```` block, below |

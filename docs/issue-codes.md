@@ -24,12 +24,13 @@ Generated from the engine by `deck-builder docs codes`. Fix by code, not by mess
 | `UNKNOWN_ASSET` | A brand:logo, brand:icon or palette name doesn't exist in the brand. | Run `deck-builder assets <slug>` for the available ids. |
 | `ASSET_FORMAT` | An image is in a format PowerPoint placeholders can't take, such as SVG. | Convert it to PNG or JPEG. |
 | `ASSET_LOW_RES` | An image is smaller than its placeholder at 150 DPI and will look soft. | Use a larger source image. |
-| `MISSING_IMAGE` | An image path doesn't exist. | Fix the path; paths resolve relative to the deck file. |
+| `MISSING_IMAGE` | An image path doesn't exist, or the image is a web address. | Fix the path; paths resolve relative to the deck file. Download a web image into the deck folder first. |
 | `BANNED_PATTERN` | Slide text or notes match one of the brand's banned patterns. | Reword the text. The pattern list is in the brand's brand.yaml under lint. |
 | `MAX_SLIDES` | The deck has more slides than the brand allows. | Cut or merge slides. |
 | `UNKNOWN_TOKEN` | A {{token}} in a bulk template has no matching data column. | Fix the token name or add the column to the data file. |
 | `CSV_NO_SHEETS` | A CSV input references a chart or table sheet, which CSV can't hold. | Use an .xlsx workbook, or remove the sheet: reference. |
 | `CONVERT_LOSSY` | The target format can't hold everything in the input, such as charts in CSV. | Convert to .xlsx or .md instead. |
+| `LOW_CONTRAST` | Two brand colors that sit on each other don't meet WCAG 2.2 contrast: 4.5:1 for text (ink on background or surface, background on primary, links on background), 3:1 for icons and chart series. | Darken or lighten one color of the pair in the brand's palette, then `brand init` again. Change brand colors only with the brand owner's say-so. |
 | `OVERFLOW_MEASURED` | Rendered text runs past its placeholder box. | Cut text in that field or split the slide, then rebuild and render again. |
 | `EMPTY_PLACEHOLDER` | A rendered slide has a placeholder with no content. | Fill the field or use a layout without it. |
 | `MISSING_FONT` | The renderer used another font than the brand's, or its fallback. Under LibreOffice this can mean it didn't apply the template's theme font even though the font is installed. | Install the brand fonts where decks render. Don't change content to fit a substitute font; a PowerPoint render shows the real fonts. |

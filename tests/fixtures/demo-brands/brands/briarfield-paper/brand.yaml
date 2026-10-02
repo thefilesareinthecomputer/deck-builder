@@ -1,0 +1,44 @@
+spec_version: 1
+name: Briarfield Paper Co.
+slug: briarfield-paper
+version: 1.0.0
+description: Fictional deck-builder test brand
+palette:
+  primary: "23443D"
+  accent: "C99455"
+  ink: "172923"
+  muted: "6A7971"
+  surface: "F3F0E8"
+  background: "FFFFFF"
+theme_colors:
+  dk1: ink
+  lt1: background
+  dk2: primary
+  lt2: surface
+  accent1: primary
+  accent2: accent
+  accent3: muted
+  accent4: "23443D"
+  accent5: "C99455"
+  accent6: "6A7971"
+  hlink: accent
+  folHlink: muted
+fonts:
+  heading: {family: "Georgia", fallback: Arial}
+  body: {family: "Arial", fallback: Arial}
+logos:
+  primary: assets/logo.png
+  mono: assets/logo-mono.png
+icons:
+  dir: assets/icons
+  default_color: accent
+  source: Original fixture artwork
+voice:
+  - A regional paper supplier with a practical, established voice.
+lint:
+  max_slides: 40
+  banned_patterns: ["—"]
+generate:
+  slide_size: "16:9"
+  layout_set: full
+  logo_on_master: primary

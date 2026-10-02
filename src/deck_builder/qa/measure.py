@@ -20,6 +20,7 @@ from deck_builder.errors import Issue
 
 EMU_PER_PT = 12700
 TOLERANCE_PT = 3.0
+VERTICAL_SLACK = 0.15  # of a word box's height; see overshoot()
 TOKEN = re.compile(r"[\w%$€£.,:'-]+", re.UNICODE)
 
 
@@ -102,6 +103,22 @@ def text_shapes(pptx: Path) -> tuple[float, list[tuple[list[TextShape], list[Box
     return prs.slide_width / EMU_PER_PT, out
 
 
+def overshoot(box: Box, words: list[Box]) -> float:
+    """How far a shape's words run past its box, in points, or 0 when they fit.
+
+    A word's box spans the font's full ascent and descent, which runs past the ink by up to about 15%
+    of the line in tall-metric fonts (Avenir Next), so the vertical edges allow that much. Text that
+    really overflows spills at least one more line, well past it.
+    """
+    line = max(w.bottom - w.top for w in words)
+    vertical = max(max(w.bottom for w in words) - box.bottom, box.top - min(w.top for w in words))
+    horizontal = max(max(w.right for w in words) - box.right, box.left - min(w.left for w in words))
+    over = [horizontal] if horizontal > TOLERANCE_PT else []
+    if vertical > max(TOLERANCE_PT, VERTICAL_SLACK * line):
+        over.append(vertical)
+    return max(over, default=0.0)
+
+
 def overflow(pptx: Path, pdf: Path, manifest: dict[str, Any] | None = None) -> list[Issue]:
     slide_w, slides = text_shapes(pptx)
     issues = []
@@ -118,13 +135,9 @@ def overflow(pptx: Path, pdf: Path, manifest: dict[str, Any] | None = None) -> l
                 assigned.setdefault(min(cands)[1], []).append(w)
         for i, ws in assigned.items():
             s = shapes[i]
-            over = max(
-                max(w.box.bottom / scale for w in ws) - s.box.bottom,
-                s.box.top - min(w.box.top / scale for w in ws),
-                max(w.box.right / scale for w in ws) - s.box.right,
-                s.box.left - min(w.box.left / scale for w in ws),
-            )
-            if over > TOLERANCE_PT:
+            over = overshoot(s.box, [Box(w.box.left / scale, w.box.top / scale, w.box.right / scale,
+                                         w.box.bottom / scale) for w in ws])
+            if over:
                 field = _field_for(manifest, n, s.name)
                 issues.append(Issue("OVERFLOW_MEASURED", f"text runs {over:.0f} pt past its box ({s.name})",
                                     slide=n, field=field, actual=round(over, 1), limit=TOLERANCE_PT))

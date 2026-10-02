@@ -241,6 +241,9 @@ def _check_chart(name: str, c: Chart, brand: Brand, at: dict[str, Any]) -> list[
 
 
 def _check_asset(name: str, ref: str, brand: Brand, deck_dir: Path, at: dict[str, Any]) -> list[Issue]:
+    if re.match(r"^[a-z][a-z0-9+.-]*://", ref, re.IGNORECASE):
+        return [Issue("MISSING_IMAGE", f"{ref!r} is a web address; images must be local files, so download it "
+                      "into the deck folder and use its path", field=name, **at)]
     path, err = resolve_asset(ref, brand, deck_dir)
     if err:
         return [Issue(err, f"{ref!r} isn't defined in brand {brand.slug!r}", field=name, **at)]

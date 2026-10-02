@@ -52,6 +52,10 @@ uv run deck-builder init
 This creates `workspace/` (brands, decks, output; all gitignored), `deck-builder.toml`, the neutral
 example brand and two example decks in `workspace/decks/`. Running it again changes nothing.
 
+To keep their decks in a folder outside the clone, run `uv run deck-builder init --dir <path>`
+from the clone (it creates the folder if needed). Then work from that folder with
+`uv run --project <clone> deck-builder ...`; the CLI finds that folder's `deck-builder.toml`.
+
 ## 3. Choose a brand path
 
 Ask which fits, in plain words:

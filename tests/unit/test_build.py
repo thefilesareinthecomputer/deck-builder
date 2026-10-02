@@ -39,6 +39,17 @@ def test_default_output_uses_folder_name_for_deck_md(ws, capsys):
     assert Path(out["output"]) == ws / "out" / "q3-review.pptx"
 
 
+def test_default_output_from_inside_the_deck_folder(ws, capsys, monkeypatch):
+    # `build deck.md` run from the deck's own folder, as the bulk-outreach example documents
+    deck = ws / "decks" / "q3-review" / "deck.md"
+    deck.parent.mkdir()
+    deck.write_text(GOOD.lstrip("\n"))
+    monkeypatch.chdir(deck.parent)
+    code, out = cli_json(ws, "build", "deck.md", capsys=capsys)
+    assert code == 0
+    assert Path(out["output"]).resolve() == (ws / "out" / "q3-review.pptx").resolve()
+
+
 def test_inline_markup_becomes_runs(ws, capsys):
     _, out = build(ws, capsys)
     body = Presentation(out["output"]).slides[1].placeholders[1].text_frame

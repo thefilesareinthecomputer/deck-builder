@@ -1,0 +1,44 @@
+spec_version: 1
+name: Afterhours Soapworks
+slug: afterhours-soap
+version: 1.0.0
+description: Fictional deck-builder test brand
+palette:
+  primary: "302F35"
+  accent: "D36F50"
+  ink: "211F24"
+  muted: "8D8180"
+  surface: "F4ECE5"
+  background: "FFFFFF"
+theme_colors:
+  dk1: ink
+  lt1: background
+  dk2: primary
+  lt2: surface
+  accent1: primary
+  accent2: accent
+  accent3: muted
+  accent4: "302F35"
+  accent5: "D36F50"
+  accent6: "8D8180"
+  hlink: accent
+  folHlink: muted
+fonts:
+  heading: {family: "Helvetica Neue", fallback: Arial}
+  body: {family: "Georgia", fallback: Arial}
+logos:
+  primary: assets/logo.png
+  mono: assets/logo-mono.png
+icons:
+  dir: assets/icons
+  default_color: accent
+  source: Original fixture artwork
+voice:
+  - A moody small-batch goods company with blunt, spare language.
+lint:
+  max_slides: 40
+  banned_patterns: ["—"]
+generate:
+  slide_size: "16:9"
+  layout_set: full
+  logo_on_master: primary

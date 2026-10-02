@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import json
+import os
 import re
 import shutil
 import tempfile
@@ -170,6 +171,11 @@ def init_cmd(args: argparse.Namespace) -> Result:
     root = Path(args.dir).resolve() if args.dir else Path.cwd()
     cfg_path = root / cfgmod.FILENAME
     created: list[str] = []
+    if root.exists() and not root.is_dir():
+        raise EnvError(f"{root} is a file; init needs a folder")
+    if not root.exists():
+        root.mkdir(parents=True)
+        created.append(str(root))
     if not cfg_path.exists():
         cfg_path.write_text(DEFAULT_CONFIG, encoding="utf-8")
         created.append(str(cfg_path))
@@ -434,8 +440,13 @@ def doctor_cmd(args: argparse.Namespace) -> Result:
 def render_cmd(args: argparse.Namespace) -> Result:
     cfg = _cfg(args)
     pptx = Path(args.pptx)
+    if pptx.suffix.lower() in pipeline.FORMATS or pptx.is_dir():
+        raise EnvError(f"render takes a built .pptx, not {pptx.name}; run `deck-builder check {pptx} --render` "
+                       "to build and render a deck in one step")
     if not pptx.is_file():
         raise EnvError(f"not found: {pptx}")
+    if pptx.suffix.lower() != ".pptx":
+        raise EnvError(f"render takes a .pptx file, not {pptx.suffix or 'a file with no extension'}")
     r = Result(command="render", data={"input": str(pptx)})
     _render_into(r, pptx, cfg, args.backend, _pages(args.slides), args.dpi)
     flagged = ", ".join(str(f["slide"]) for f in r.data["flagged_slides"]) or "none"
@@ -501,7 +512,7 @@ def inspect_cmd(args: argparse.Namespace) -> Result:
 
 def check(args: argparse.Namespace) -> Result:
     cfg = _cfg(args)
-    path = Path(args.deck)
+    path = pipeline.deck_path(Path(args.deck))
     r = Result(command="check", data={"input": str(path)})
     if not args.render:
         _validated(path, cfg, r, args.brand)
@@ -524,7 +535,7 @@ def default_output(path: Path, deck: Deck | None, cfg: cfgmod.Config) -> Path:
     """
     if deck is not None and deck.meta.get("output"):
         return path.parent / str(deck.meta["output"])
-    name = path.parent.name if path.stem == "deck" else path.stem
+    name = path.resolve().parent.name if path.stem == "deck" else path.stem
     out_dir = cfg.workspace / "out" if cfg.found else path.parent
     return out_dir / f"{name}.pptx"
 
@@ -547,10 +558,13 @@ def _build_one(path: Path, cfg: cfgmod.Config, args: argparse.Namespace, out: Pa
 
 def build(args: argparse.Namespace) -> Result:
     cfg = _cfg(args)
-    path = Path(args.deck)
+    path = pipeline.deck_path(Path(args.deck))
     r = Result(command="build", data={"input": str(path)})
     if not args.data:
-        done = _build_one(path, cfg, args, Path(args.output) if args.output else None, None, r)
+        out = Path(args.output) if args.output else None
+        if out is not None and (out.is_dir() or args.output.endswith(("/", os.sep))):
+            out = out / default_output(path, None, cfg).name  # -o a folder: the default name inside it
+        done = _build_one(path, cfg, args, out, None, r)
         if done:
             r.data.update(done)
             r.summary = f"{'ok' if r.ok else 'failed'} build {done['output']}: {done['slides']} slides, {_tally(r)}"

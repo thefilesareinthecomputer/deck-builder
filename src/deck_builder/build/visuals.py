@@ -40,6 +40,11 @@ def _take_geometry(ph: Any) -> tuple[int, int, int, int]:
     return geo
 
 
+def _alt(frame: Any, text: str) -> None:
+    """Alt text on a chart or table, for screen readers; images get theirs from the deck."""
+    frame._element.nvGraphicFramePr.cNvPr.set("descr", text[:1].upper() + text[1:])
+
+
 def fill_chart(slide: Any, ph: Any, spec: Chart, brand: Brand) -> None:
     ct = CHART_TYPES[spec.type]
     data = CategoryChartData(number_format=spec.number_format)
@@ -47,9 +52,12 @@ def fill_chart(slide: Any, ph: Any, spec: Chart, brand: Brand) -> None:
     for sr in spec.series:
         data.add_series(sr.name, sr.values)
     if hasattr(ph, "insert_chart"):
-        chart = ph.insert_chart(ct, data).chart
+        frame = ph.insert_chart(ct, data)
     else:
-        chart = slide.shapes.add_chart(ct, *_take_geometry(ph), data).chart
+        frame = slide.shapes.add_chart(ct, *_take_geometry(ph), data)
+    chart = frame.chart
+    _alt(frame, f"{spec.type.replace('-', ' ')} chart{': ' + spec.title if spec.title else ''} of "
+                f"{', '.join(s.name for s in spec.series)} by {', '.join(map(str, spec.categories))}")
 
     tok = {**CHART_DEFAULTS, **(brand.tokens.get("chart") or {})}
     names = spec.colors or tok.get("colors") or []
@@ -109,7 +117,9 @@ def fill_table(slide: Any, ph: Any, spec: Table, brand: Brand) -> None:
         frame = ph.insert_table(nrows, ncols)
     else:
         frame = slide.shapes.add_table(nrows, ncols, *_take_geometry(ph))
+    _alt(frame, f"table with columns {', '.join(spec.header)}, {len(spec.rows)} row{'s' * (len(spec.rows) != 1)}")
     table = frame.table
+    table.horz_banding = False  # only the token fills band rows; the default style's bands don't
     tok = {**TABLE_DEFAULTS, **(brand.tokens.get("table") or {})}
     code_font = (brand.tokens.get("text") or {}).get("code_font", CODE_FONT_DEFAULT)
     row_h = Pt(tok.get("row_height", max(tok["font_size"], tok["header_font_size"]) * tok["row_height_factor"]))
@@ -139,6 +149,8 @@ def fill_table(slide: Any, ph: Any, spec: Table, brand: Brand) -> None:
             if fill:
                 cell.fill.solid()
                 cell.fill.fore_color.rgb = fill
+            elif r:
+                cell.fill.background()  # no fill, so the default style's accent tint doesn't show through
 
 
 def fill_picture(slide: Any, ph: Any, path: Path, alt: str, crop: bool) -> tuple[int, int, int, int]:

@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Any
 
 from deck_builder import template as tpl
+from deck_builder.brand import inspect as brand_inspect
 from deck_builder.brand.registry import Brand
 from deck_builder.errors import Issue
 
@@ -27,6 +28,52 @@ def color_refs(brand: Brand) -> list[tuple[str, str]]:
             if fs.get("color"):
                 refs.append((f"tokens.yaml layouts.{lname}.{fname}.color", str(fs["color"])))
     return refs
+
+
+def luminance(hexv: str) -> float:
+    """WCAG 2.2 relative luminance of a 6-digit hex color."""
+    def channel(v: int) -> float:
+        c = v / 255
+        return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+    r, g, b = (channel(int(hexv[i:i + 2], 16)) for i in (0, 2, 4))
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def contrast(a: str, b: str) -> float:
+    hi, lo = sorted((luminance(a), luminance(b)), reverse=True)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+# (foreground slot, background slot, minimum): text needs 4.5:1 (WCAG 1.4.3); the dark title, section and
+# closing layouts put lt1 text on dk2.
+TEXT_PAIRS = (("dk1", "lt1", 4.5), ("dk1", "lt2", 4.5), ("lt1", "dk2", 4.5), ("hlink", "lt1", 4.5))
+GRAPHIC_MIN = 3.0  # icons and chart series against the background (WCAG 1.4.11)
+
+
+def contrast_issues(brand: Brand) -> list[Issue]:
+    """LOW_CONTRAST warnings from the template's theme colors and the colors icons and charts use."""
+    assert brand.template is not None
+    slots = brand_inspect.theme(brand.template)["colors"]
+    pairs = [(f"{fg} on {bg}", slots.get(fg), slots.get(bg), lo) for fg, bg, lo in TEXT_PAIRS]
+    icon_ref = (brand.meta.get("icons") or {}).get("default_color")
+    chart_refs = (brand.tokens.get("chart") or {}).get("colors") or []
+    graphics = [("icon color", icon_ref)] if icon_ref else []
+    if chart_refs:
+        graphics += [("chart color", ref) for ref in chart_refs]
+    else:  # no token colors: charts take the theme accents in order
+        graphics += [("chart color", f"accent{n}") for n in range(1, 7)]
+    seen = set()
+    for what, ref in graphics:
+        hexv = slots.get(str(ref)) or brand.color(str(ref))
+        if hexv and hexv not in seen:
+            seen.add(hexv)
+            pairs.append((f"{what} {ref} on lt1", hexv, slots.get("lt1"), GRAPHIC_MIN))
+    out = []
+    for label, fg, bg, lo in pairs:
+        if fg and bg and (ratio := contrast(fg, bg)) < lo:
+            out.append(Issue("LOW_CONTRAST", f"{label} (#{fg} on #{bg}) is {ratio:.2f}:1; needs {lo}:1",
+                             severity="warning", actual=round(ratio, 2), limit=lo))
+    return out
 
 
 def check_kit(brand: Brand) -> list[Issue]:
@@ -60,7 +107,7 @@ def check_kit(brand: Brand) -> list[Issue]:
     icons = brand.meta.get("icons") or {}
     if icons and not (brand.path / icons["dir"]).is_dir():
         out.append(Issue("MISSING_IMAGE", f"icons dir {icons['dir']} not found"))
-    return out
+    return out + contrast_issues(brand)
 
 
 def _field_summary(fs: dict[str, Any]) -> str:

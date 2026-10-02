@@ -47,7 +47,7 @@ The LLM never writes PowerPoint XML or python-pptx code and never positions shap
 | Part | Location | Contains |
 |---|---|---|
 | Engine | `src/deck_builder/` | Python package and the `deck-builder` CLI. No brand or client content. |
-| Claude Code layer | `CLAUDE.md`, `.claude/skills/`, `.claude/agents/` | Onboarding instructions, three skills, one subagent. No code. |
+| Claude Code layer | `AGENTS.md` (which `CLAUDE.md` imports), `.claude/skills/`, `.claude/agents/` | Onboarding instructions, three skills, three subagents. No code. |
 | Workspace | `workspace/` (gitignored) | The user's brands, decks, output and cache |
 | Examples | `src/deck_builder/data/` | The neutral example brand source and fictional example decks, copied into the workspace by `init` and used by tests |
 
@@ -209,7 +209,7 @@ A brand is any directory under a `brand_paths` entry that contains a `brand.yaml
 |---|---|
 | `brand list [--json]` | Every brand found: slug, name, version, path, valid or not |
 | `brand show <slug> [--json]` | The compact contract: layouts, their fields, kinds and budgets, palette names, logo and icon ids. This is what the LLM reads before writing a deck. |
-| `brand check <slug> [--json]` | Schemas valid; every `template_layout` exists in the template; every field `idx` exists on its layout; every logo and icon file exists |
+| `brand check <slug> [--json]` | Schemas valid; every `template_layout` exists in the template; every field `idx` exists on its layout; every logo and icon file exists; color pairs meet WCAG 2.2 contrast, as `LOW_CONTRAST` warnings (4.5:1 for dk1 on lt1 and lt2, lt1 on dk2, hlink on lt1; 3:1 for the icon color and chart series colors on lt1) |
 | `brand init <slug> --from brand.yaml` | Generates `template.potx`, `tokens.yaml` and recolored assets from `brand.yaml` ([section 5.5](#55-brand-generation)) |
 | `brand adopt <slug> --template FILE` | Wraps an existing template: copies it in, writes a starter `tokens.yaml` from `inspect`, and a `brand.yaml` skeleton with the template's theme colors and fonts filled in |
 
@@ -343,7 +343,8 @@ Format references (`deck-md`, `workbook`, `brand-yaml`, `tokens-yaml`, `workflow
 ### 9.1 Output
 
 - Exit `0` success, `1` validation issues, `2` usage or environment errors.
-- Human output is terse: one summary line on success, one line per issue: `error BUDGET_CHARS deck.md:23 slide 4 body: 433 chars, budget 420`.
+- Human output is terse: one summary line on success, one line per issue: `error BUDGET_CHARS deck.md:23 slide 4 body: 433 chars, budget 420`. When there are errors, one more line names `deck-builder explain` for each error code.
+- A `<deck>` argument is a `.md`, `.xlsx` or `.csv` file, or a folder holding `deck.md`, `deck.xlsx` or `deck.csv` (tried in that order). `build -o` takes a `.pptx` path, or a folder (existing, or ending in `/`) to write the default name into.
 - `--json` prints one object: `ok`, `command`, `input`, `output`, `slides`, `issues[]` (`severity`, `code`, `file`, `line`, `slide`, `field`, `message`, `actual`, `limit`), plus command-specific keys (`backend`, `render_dir`, `slide_png`, `flagged_slides` as `{slide, codes}`, `contact_sheets`, `manifest`, `content_sha256`). An environment error (exit 2) puts `error` and, where one applies, `code` in the object.
 - All issues are collected before exiting.
 
@@ -351,7 +352,7 @@ Format references (`deck-md`, `workbook`, `brand-yaml`, `tokens-yaml`, `workflow
 
 A stable, documented enum. Skills key fixes off codes, never off message text.
 
-`PARSE`, `SPEC_VERSION`, `SCHEMA`, `UNKNOWN_BRAND`, `BRAND_DUPLICATE`, `BRAND_INVALID`, `TEMPLATE_MISMATCH`, `UNKNOWN_LAYOUT`, `UNKNOWN_FIELD`, `MISSING_FIELD`, `KIND_MISMATCH`, `BUDGET_CHARS`, `BUDGET_BULLETS`, `BUDGET_BULLET_CHARS`, `BUDGET_LEVEL`, `TABLE_SHAPE`, `CHART_SHAPE`, `UNKNOWN_ASSET`, `ASSET_FORMAT`, `ASSET_LOW_RES`, `MISSING_IMAGE`, `BANNED_PATTERN`, `MAX_SLIDES`, `UNKNOWN_TOKEN`, `CSV_NO_SHEETS`, `CONVERT_LOSSY`, `OVERFLOW_MEASURED`, `EMPTY_PLACEHOLDER`, `MISSING_FONT`, `OFFICE_REPAIR`, `RENDER_UNVERIFIED`, `SKILL_CONFLICT`. `ASSET_LOW_RES`, `MISSING_FONT`, `RENDER_UNVERIFIED` and `SKILL_CONFLICT` are warnings; the rest are errors.
+`PARSE`, `SPEC_VERSION`, `SCHEMA`, `UNKNOWN_BRAND`, `BRAND_DUPLICATE`, `BRAND_INVALID`, `TEMPLATE_MISMATCH`, `UNKNOWN_LAYOUT`, `UNKNOWN_FIELD`, `MISSING_FIELD`, `KIND_MISMATCH`, `BUDGET_CHARS`, `BUDGET_BULLETS`, `BUDGET_BULLET_CHARS`, `BUDGET_LEVEL`, `TABLE_SHAPE`, `CHART_SHAPE`, `UNKNOWN_ASSET`, `ASSET_FORMAT`, `ASSET_LOW_RES`, `MISSING_IMAGE`, `BANNED_PATTERN`, `MAX_SLIDES`, `UNKNOWN_TOKEN`, `CSV_NO_SHEETS`, `CONVERT_LOSSY`, `LOW_CONTRAST`, `OVERFLOW_MEASURED`, `EMPTY_PLACEHOLDER`, `MISSING_FONT`, `OFFICE_REPAIR`, `RENDER_UNVERIFIED`, `SKILL_CONFLICT`. `ASSET_LOW_RES`, `LOW_CONTRAST`, `MISSING_FONT`, `RENDER_UNVERIFIED` and `SKILL_CONFLICT` are warnings; the rest are errors.
 
 **R-9.1** Every code's cause and fix live in one table in the engine (`errors.CODES`). `docs/issue-codes.md` is generated from it by `deck-builder docs codes`, and every code is exercised by at least one test. AC: a test compares the committed file with fresh output, and a test asserts each code appears in a test file.
 
@@ -384,7 +385,7 @@ python-pptx output isn't byte-stable on its own: zip entry timestamps and the ch
 python-pptx can't measure rendered text. Three layers, cheapest first:
 
 1. **Budgets.** Characters, bullets, bullet length and nesting per field. Always on.
-2. **Measured.** After rendering, `pdftotext -bbox-layout` gives every word's position. Each word is assigned to the nearest text shape whose text contains it, words inside charts and tables are left out, and any assigned word more than 3 pt outside its shape raises `OVERFLOW_MEASURED` with the overrun in points and the field name from the manifest. Exact on PowerPoint's PDF; a close proxy on LibreOffice's. The assignment is a heuristic: text that overflows into a neighboring shape containing the same words can go unreported.
+2. **Measured.** After rendering, `pdftotext -bbox-layout` gives every word's position. Each word is assigned to the nearest text shape whose text contains it, words inside charts and tables are left out, and any assigned word more than 3 pt outside its shape raises `OVERFLOW_MEASURED`. On the top and bottom edges the tolerance is the larger of 3 pt and 15% of the tallest word box, because a word box spans the font's full ascent and descent, which runs well past the ink in tall-metric fonts such as Avenir Next. The issue gives the overrun in points and the field name from the manifest. Exact on PowerPoint's PDF; a close proxy on LibreOffice's. The assignment is a heuristic: text that overflows into a neighboring shape containing the same words can go unreported.
 3. **Font metrics.** Pre-render wrapping with Pillow and the brand font files. Deferred past v0.1.0.
 
 Autofit stays off in generated templates.
@@ -428,9 +429,9 @@ Headless, with a throwaway user profile per run and a 300 s timeout. Only render
 
 ## 13. Claude Code layer
 
-### 13.1 CLAUDE.md
+### 13.1 AGENTS.md
 
-Short. States the division of labor, that all deck work goes through the CLI, and the onboarding trigger: if no `deck-builder.toml` resolves, run the `deck-onboard` skill before anything else.
+`CLAUDE.md` holds only `@AGENTS.md`, so Claude Code and other agent tools read the same file. Short. States the division of labor, that all deck work goes through the CLI, and the onboarding trigger: if no `deck-builder.toml` resolves, run the `deck-onboard` skill before anything else.
 
 ### 13.2 Skills
 
@@ -469,7 +470,7 @@ Nothing in the engine assumes Claude. Any agent that can run a shell command and
 
 ## 14. Onboarding
 
-Triggered by `CLAUDE.md` on first use, or by asking for it.
+Triggered by `AGENTS.md` on first use, or by asking for it.
 
 1. `deck-builder doctor`: Python dependencies, poppler, LibreOffice, PowerPoint and its automation permission. Offers the install command for anything missing and waits for the user.
 2. `deck-builder init`.
@@ -487,7 +488,7 @@ Triggered by `CLAUDE.md` on first use, or by asking for it.
 
 ```
 deck-builder/
-  pyproject.toml  uv.lock  README.md  SPEC.md  LICENSE  CHANGELOG.md  CLAUDE.md
+  pyproject.toml  uv.lock  README.md  SPEC.md  LICENSE  CHANGELOG.md  AGENTS.md  CLAUDE.md
   .gitignore  .github/workflows/ci.yml
   src/deck_builder/
     __init__.py  __main__.py  cli.py  commands.py  config.py  errors.py  model.py  pipeline.py

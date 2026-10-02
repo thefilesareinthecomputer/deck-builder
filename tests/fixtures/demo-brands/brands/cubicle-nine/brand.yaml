@@ -1,0 +1,44 @@
+spec_version: 1
+name: Cubicle Nine Systems
+slug: cubicle-nine
+version: 1.0.0
+description: Fictional deck-builder test brand
+palette:
+  primary: "293D59"
+  accent: "E89445"
+  ink: "1E293B"
+  muted: "68778A"
+  surface: "EEF2F5"
+  background: "FFFFFF"
+theme_colors:
+  dk1: ink
+  lt1: background
+  dk2: primary
+  lt2: surface
+  accent1: primary
+  accent2: accent
+  accent3: muted
+  accent4: "293D59"
+  accent5: "E89445"
+  accent6: "68778A"
+  hlink: accent
+  folHlink: muted
+fonts:
+  heading: {family: "Avenir Next", fallback: Arial}
+  body: {family: "Arial", fallback: Arial}
+logos:
+  primary: assets/logo.png
+  mono: assets/logo-mono.png
+icons:
+  dir: assets/icons
+  default_color: accent
+  source: Original fixture artwork
+voice:
+  - An earnest office systems company with a tidy, measured voice.
+lint:
+  max_slides: 40
+  banned_patterns: ["—"]
+generate:
+  slide_size: "16:9"
+  layout_set: full
+  logo_on_master: primary
