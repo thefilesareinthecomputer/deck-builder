@@ -122,3 +122,42 @@ def test_import_of_a_built_status_table_gives_back_the_decks_own_cell_text(ws, c
     imported = markdown.parse(ws / "imported" / "deck.md")[0]
     table = imported.slides[0].fields["table"]
     assert table.rows == [["Warehouse lease", "Green", "Oct"], ["Card stock order", "Purple", "Nov"]]
+
+
+# ---------------------------------------------------------------- contrast and color_refs
+
+
+def low_contrast(out):
+    return [i for i in out["issues"] if i["code"] == "LOW_CONTRAST"]
+
+
+def test_the_default_status_set_passes_contrast_against_every_table_fill(ws, capsys):
+    set_table_tokens(ws, status=STATUS, band_fill="F2F2F2", row_fill="FFFFFF")
+    code, out = cli_json(ws, "brand", "check", "stock", capsys=capsys)
+    assert code == 0, out["issues"]
+    assert [i for i in low_contrast(out) if i["message"].startswith("table status")] == []
+
+
+def test_a_light_status_color_warns_low_contrast_on_the_background(ws, capsys):
+    set_table_tokens(ws, status={"Amber": "FFD966"})
+    code, out = cli_json(ws, "brand", "check", "stock", capsys=capsys)
+    assert code == 0  # a warning, not an error
+    issue = next(i for i in low_contrast(out) if i["message"].startswith("table status Amber"))
+    assert issue["message"] == "table status Amber on background (#FFD966 on #FFFFFF) is 1.37:1; needs 3.0:1"
+    assert issue["limit"] == 3.0
+
+
+def test_a_status_color_that_only_fails_against_band_fill_is_labeled_band_fill(ws, capsys):
+    set_table_tokens(ws, status={"Red": "B91C1C"}, band_fill="B91C1C")
+    code, out = cli_json(ws, "brand", "check", "stock", capsys=capsys)
+    assert code == 0
+    issues = [i for i in low_contrast(out) if i["message"].startswith("table status")]
+    assert len(issues) == 1
+    assert issues[0]["message"].startswith("table status Red on band_fill")
+
+
+def test_an_unknown_status_palette_name_is_unknown_asset(ws, capsys):
+    set_table_tokens(ws, status={"Green": "not-a-color"})
+    code, out = cli_json(ws, "brand", "check", "stock", capsys=capsys)
+    assert code == 1
+    assert any(i["code"] == "UNKNOWN_ASSET" and "table.status.Green" in i["message"] for i in out["issues"])

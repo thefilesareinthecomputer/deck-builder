@@ -21,6 +21,8 @@ def color_refs(brand: Brand) -> list[tuple[str, str]]:
         for k, v in (brand.tokens.get(section) or {}).items():
             if k == "colors":
                 refs += [(f"tokens.yaml {section}.colors", str(c)) for c in v]
+            elif k == "status":
+                refs += [(f"tokens.yaml {section}.status.{sk}", str(sv)) for sk, sv in v.items()]
             elif k.endswith(("_color", "_fill", "_text")) or k == "text":
                 refs.append((f"tokens.yaml {section}.{k}", str(v)))
     for lname, ls in (brand.tokens.get("layouts") or {}).items():
@@ -51,7 +53,8 @@ GRAPHIC_MIN = 3.0  # icons and chart series against the background (WCAG 1.4.11)
 
 
 def contrast_issues(brand: Brand) -> list[Issue]:
-    """LOW_CONTRAST warnings from the template's theme colors and the colors icons and charts use."""
+    """LOW_CONTRAST warnings from the template's theme colors, the colors icons and charts use, and
+    each table status color against every fill it can sit on (its row, its band, and the background)."""
     assert brand.template is not None
     slots = brand_inspect.theme(brand.template)["colors"]
     pairs = [(f"{fg} on {bg}", slots.get(fg), slots.get(bg), lo) for fg, bg, lo in TEXT_PAIRS]
@@ -68,6 +71,17 @@ def contrast_issues(brand: Brand) -> list[Issue]:
         if hexv and hexv not in seen:
             seen.add(hexv)
             pairs.append((f"{what} {ref} on lt1", hexv, slots.get("lt1"), GRAPHIC_MIN))
+    table_tok = brand.tokens.get("table") or {}
+    backgrounds = [("row_fill", table_tok.get("row_fill")), ("band_fill", table_tok.get("band_fill")),
+                   ("background", "lt1")]
+    for key, ref in (table_tok.get("status") or {}).items():
+        hexv = slots.get(str(ref)) or brand.color(str(ref))
+        if not hexv:
+            continue
+        for bg_name, bg_ref in backgrounds:
+            bg_hex = (slots.get(str(bg_ref)) or brand.color(str(bg_ref))) if bg_ref else None
+            if bg_hex:
+                pairs.append((f"table status {key} on {bg_name}", hexv, bg_hex, GRAPHIC_MIN))
     out = []
     for label, fg, bg, lo in pairs:
         if fg and bg and (ratio := contrast(fg, bg)) < lo:
