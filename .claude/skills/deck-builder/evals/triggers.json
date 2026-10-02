@@ -1,0 +1,9 @@
+[
+  {"name": "make-deck-from-notes", "query": "turn the meeting notes in notes/q3.md into a 10-slide deck for the leadership review", "should_trigger": true, "why": "creating a deck from notes is the core job"},
+  {"name": "xlsx-for-team", "query": "convert my deck.md into a spreadsheet so the team can edit the slide text", "should_trigger": true, "why": "md to workbook convert path"},
+  {"name": "bulk-per-client", "query": "make one pitch deck per row in clients.csv using our template", "should_trigger": true, "why": "bulk mode"},
+  {"name": "fix-overflow", "query": "slide 4 text is running off the box in the deck we built, fix it", "should_trigger": true, "why": "fixing a built deck goes through the content, not the pptx"},
+  {"name": "read-existing-pptx", "query": "pull all the text out of this vendor's pptx so I can quote it", "should_trigger": false, "why": "reading someone else's pptx is extraction, not building"},
+  {"name": "brand-colors", "query": "set up a new brand kit with our hex colors and fonts", "should_trigger": false, "why": "brand setup belongs to deck-brand"},
+  {"name": "unrelated-excel", "query": "write a formula that sums column C when column A is blank", "should_trigger": false, "why": "plain spreadsheet help"}
+]

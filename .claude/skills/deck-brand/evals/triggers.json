@@ -1,0 +1,8 @@
+[
+  {"name": "new-brand-hex", "query": "set up a brand for our decks, primary is 1F3A5F and accent E07A2F, fonts are Inter", "should_trigger": true, "why": "creating a brand kit from colors and fonts"},
+  {"name": "adopt-client-template", "query": "here's the client's PowerPoint template, make it usable for building decks", "should_trigger": true, "why": "brand adopt path"},
+  {"name": "add-layout", "query": "we need a quote layout in our brand kit", "should_trigger": true, "why": "layout set change"},
+  {"name": "tune-budgets", "query": "the body text budgets in tokens.yaml are too tight after the test render, loosen them", "should_trigger": true, "why": "budget tuning after a render"},
+  {"name": "write-slides", "query": "write the slides for the Q3 review deck", "should_trigger": false, "why": "slide content belongs to deck-builder"},
+  {"name": "logo-design", "query": "design a new logo for my bakery", "should_trigger": false, "why": "graphic design is out of scope"}
+]

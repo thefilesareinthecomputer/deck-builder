@@ -1,0 +1,7 @@
+[
+  {"name": "just-cloned", "query": "I just cloned this, how do I get started?", "should_trigger": true, "why": "first run in a clone"},
+  {"name": "set-it-up", "query": "set up deck-builder on this machine", "should_trigger": true, "why": "explicit setup ask"},
+  {"name": "doctor-missing", "query": "doctor says poppler is missing, what do I do", "should_trigger": true, "why": "missing tool reported by doctor"},
+  {"name": "build-deck", "query": "build the deck in workspace/decks/q3/deck.md", "should_trigger": false, "why": "routine build belongs to deck-builder"},
+  {"name": "python-setup", "query": "how do I install python 3.12 with pyenv", "should_trigger": false, "why": "generic environment question"}
+]
