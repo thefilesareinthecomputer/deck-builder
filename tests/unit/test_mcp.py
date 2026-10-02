@@ -247,6 +247,21 @@ def test_the_clones_own_filenames_are_refused_even_inside_the_workspace(server, 
     assert "part of this clone's own files" in refused(server, "check", deck=str(p))
 
 
+@pytest.mark.parametrize("name", ["claude.md", "Agents.md", "Deck-Builder.toml"])
+def test_the_clones_own_filenames_are_refused_regardless_of_case(server, ws, name):
+    p = ws / "decks" / name
+    p.write_text("x", encoding="utf-8")
+    assert "part of this clone's own files" in refused(server, "check", deck=str(p))
+
+
+@pytest.mark.parametrize("rel", [".Claude/settings.json", ".GIT/config", "Src/deck_builder/cli.py"])
+def test_the_clones_own_folders_are_refused_regardless_of_case(server, ws, rel):
+    p = ws / rel
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text("x", encoding="utf-8")
+    assert "part of this clone's own files" in refused(server, "check", deck=str(p))
+
+
 def test_example_decks_from_init_check_and_build_through_mcp(tmp_path):
     """The clone layout: deck-builder.toml beside src/, .claude/ and AGENTS.md, workspace a subfolder."""
     from deck_builder.cli import main as cli_main
