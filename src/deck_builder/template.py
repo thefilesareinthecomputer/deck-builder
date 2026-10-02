@@ -7,12 +7,23 @@ from pathlib import Path
 from typing import Any
 
 from pptx import Presentation
+from pptx.opc.constants import RELATIONSHIP_TYPE as RT
 
 from deck_builder.errors import EnvError
 
 POTX_CT = b"application/vnd.openxmlformats-officedocument.presentationml.template.main+xml"
 PPTX_CT = b"application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"
 MAX_UNPACKED = 200 * 2**20  # a template that unpacks larger than this is refused (zip bombs)
+
+VBA_RELTYPE = "http://schemas.microsoft.com/office/2006/relationships/vbaProject"
+OBJECT_RELTYPES = {
+    RT.OLE_OBJECT: "an embedded OLE object",
+    RT.CONTROL: "an ActiveX control",
+    RT.VIDEO: "an embedded video",
+    RT.AUDIO: "an embedded audio clip",
+    RT.MEDIA: "embedded media",
+    VBA_RELTYPE: "a VBA project",
+}
 
 
 def open_template(path: Path) -> Any:
@@ -52,6 +63,24 @@ def layouts(prs: Any) -> dict[tuple[str | None, str], Any]:
 
 def find_layout(prs_layouts: dict[tuple[str | None, str], Any], name: str, master: str | None = None) -> Any:
     return prs_layouts.get((master, name))
+
+
+def sanitize(prs: Any) -> list[str]:
+    """Drop every relationship in prs where is_external is true, or where reltype is a key of
+    OBJECT_RELTYPES, across every part package.iter_parts() visits. save() later writes only parts
+    still reachable from the package root, so a dropped relationship's target goes with it unless
+    something else still points there. Returns one string per relationship dropped.
+    """
+    removed: list[str] = []
+    for part in list(prs.part.package.iter_parts()):
+        for rid, rel in list(part.rels.items()):
+            if rel.is_external:
+                removed.append(f"{part.partname}: external relationship to {rel.target_ref}")
+                part.drop_rel(rid)
+            elif rel.reltype in OBJECT_RELTYPES:
+                removed.append(f"{part.partname}: {OBJECT_RELTYPES[rel.reltype]} ({rel.target_part.partname})")
+                part.drop_rel(rid)
+    return removed
 
 
 def remove_all_slides(prs: Any) -> None:

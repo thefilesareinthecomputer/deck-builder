@@ -413,6 +413,36 @@ def notes_pptx(path: Path, notes: str) -> Path:
     return path
 
 
+def link_pptx(path: Path, address: str) -> Path:
+    prs = Presentation()
+    slide = prs.slides.add_slide(prs.slide_layouts[1])
+    slide.shapes.title.text = "Links"
+    box = slide.placeholders[1].text_frame
+    box.text = "see docs"
+    run = box.paragraphs[0].runs[0]
+    run.hyperlink.address = address
+    prs.save(str(path))
+    return path
+
+
+@pytest.mark.parametrize("address", ["https://example.com/docs", "mailto:a@example.com", "HTTP://example.com"])
+def test_a_safe_scheme_hyperlink_is_kept_on_import(ws, capsys, tmp_path, address):
+    src = link_pptx(tmp_path / "safe.pptx", address)
+    code, out = cli_json(ws, "import", str(src), str(ws / "imp"), "--brand", "stock", capsys=capsys)
+    assert code == 0, out
+    text = Path(out["output"]).read_text()
+    assert f"({address})" in text
+
+
+@pytest.mark.parametrize("address", ["javascript:alert(1)", "file:///etc/passwd", "\\\\evil\\share\\a"])
+def test_an_unsafe_scheme_hyperlink_becomes_plain_text_on_import(ws, capsys, tmp_path, address):
+    src = link_pptx(tmp_path / "unsafe.pptx", address)
+    code, out = cli_json(ws, "import", str(src), str(ws / "imp"), "--brand", "stock", capsys=capsys)
+    assert code == 0, out
+    text = Path(out["output"]).read_text()
+    assert address not in text and "see docs" in text
+
+
 def test_notes_with_heading_like_lines_round_trip_as_one_slide(ws, capsys, tmp_path):
     src = notes_pptx(tmp_path / "danger.pptx", DANGEROUS_NOTES)
     code, out = cli_json(ws, "import", str(src), str(ws / "imp"), "--brand", "stock", capsys=capsys)

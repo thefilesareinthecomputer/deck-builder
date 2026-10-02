@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from deck_builder import config as cfgmod
+from deck_builder import confine
 from deck_builder.brand import registry
 from deck_builder.brand.registry import Brand
 from deck_builder.errors import EnvError, Issue
@@ -33,7 +34,9 @@ def deck_path(path: Path) -> Path:
             raise EnvError(f"{path} has more than one deck file ({', '.join(p.name for p in found)}); "
                            "pass the deck file itself, or remove the extra copy", code="AMBIGUOUS_DECK")
         if found:
-            return found[0]
+            # the folder argument was already checked; the file found inside it can still be an
+            # existing symlink pointing outside, so confine it here too (a no-op outside MCP).
+            return confine.guard(found[0], "the deck file")
         raise EnvError(f"no {', '.join(DECK_FILES)} in {path}; pass the deck file itself")
     if not path.is_file():
         raise EnvError(f"deck not found: {path}")

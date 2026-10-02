@@ -53,6 +53,26 @@ def _asset_id(ref: str) -> str | None:
     return None if not aid or "/" in aid or "\\" in aid or ".." in aid else aid
 
 
+def confined(path: Path, root: Path) -> bool:
+    """Whether path resolves inside root, following symlinks - the test every asset read must pass
+    before an existence test, hash or image decode, not only when check reports ASSET_OUTSIDE."""
+    return path.resolve().is_relative_to(root.resolve())
+
+
+def resolve_asset_confined(ref: str, brand: Brand, deck_dir: Path) -> tuple[Path | None, str | None]:
+    """resolve_asset, plus the confinement check _check_asset applies: a brand: reference must stay
+    inside the brand's kit, anything else inside the deck's folder. Callers that only inventory or
+    hash a resolved asset (assets.py, the importer's known-asset scan) must go through this, not
+    resolve_asset directly, so a path that escapes is refused before it's opened."""
+    path, err = resolve_asset(ref, brand, deck_dir)
+    if err or path is None:
+        return None, err
+    root = brand.path if ref.startswith("brand:") else deck_dir
+    if not confined(path, root):
+        return None, "ASSET_OUTSIDE"
+    return path, None
+
+
 def resolve_asset(ref: str, brand: Brand, deck_dir: Path) -> tuple[Path | None, str | None]:
     """A reference -> (file path, error code or None)."""
     if ref.startswith("brand:logo/"):
@@ -325,15 +345,14 @@ def _check_asset(name: str, ref: str, brand: Brand, deck_dir: Path, at: dict[str
     if re.match(r"^[a-z][a-z0-9+.-]*://", ref, re.IGNORECASE):
         return [Issue("MISSING_IMAGE", f"{ref!r} is a web address; images must be local files, so download it "
                       "into the deck folder and use its path", field=name, **at)]
-    path, err = resolve_asset(ref, brand, deck_dir)
-    if err:
-        return [Issue(err, f"{ref!r} isn't defined in brand {brand.slug!r}", field=name, **at)]
-    assert path is not None
-    root = brand.path if ref.startswith("brand:") else deck_dir
-    if not path.resolve().is_relative_to(root.resolve()):  # resolve() follows symlinks
+    path, err = resolve_asset_confined(ref, brand, deck_dir)
+    if err == "ASSET_OUTSIDE":
         where = f"brand {brand.slug!r}'s kit" if ref.startswith("brand:") else "the deck's folder"
         return [Issue("ASSET_OUTSIDE", f"{ref!r} is outside {where}; copy the image into it and use that path",
                       field=name, **at)]
+    if err:
+        return [Issue(err, f"{ref!r} isn't defined in brand {brand.slug!r}", field=name, **at)]
+    assert path is not None
     if path.suffix.lower() == ".svg":
         return [Issue("ASSET_FORMAT", f"{ref!r} is SVG; convert it to PNG", field=name, **at)]
     if path.suffix.lower() not in IMAGE_EXT:

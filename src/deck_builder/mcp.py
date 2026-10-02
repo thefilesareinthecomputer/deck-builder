@@ -23,7 +23,7 @@ from typing import Any, TextIO
 
 import jsonschema
 
-from deck_builder import __version__
+from deck_builder import __version__, confine, doctor
 from deck_builder import config as cfgmod
 from deck_builder.errors import EXIT_ENV, EnvError
 
@@ -163,11 +163,20 @@ class Server:
     # -- confinement
 
     def _off_limits(self, full: Path) -> bool:
-        """This clone's own files: refused no matter what the workspace or brand_paths allow."""
-        if full.name in {"AGENTS.md", "CLAUDE.md", "deck-builder.toml"}:
+        """This clone's own files: refused no matter what the workspace or brand_paths allow.
+
+        Compared case-insensitively: on the default case-insensitive, case-preserving macOS volume,
+        `full` can spell a name or folder in different case than written here (`claude.md`, `Src/`,
+        `.Claude/`) and still name the same file or folder.
+        """
+        if full.name.casefold() in {"agents.md", "claude.md", "deck-builder.toml"}:
             return True
-        return any(full == d or full.is_relative_to(d) for d in
-                   (self.root / ".claude", self.root / ".git", self.root / "src"))
+        parts = tuple(p.casefold() for p in full.parts)
+        for d in (self.root / ".claude", self.root / ".git", self.root / "src"):
+            dparts = tuple(p.casefold() for p in d.parts)
+            if parts[: len(dparts)] == dparts:
+                return True
+        return False
 
     def _path(self, arg: Arg, value: str) -> str:
         if arg.path == SLUG_OR_ROOT and jsonschema.Draft202012Validator(SLUG).is_valid(value):
@@ -232,7 +241,10 @@ class Server:
             return _text(f"refused: {err.getvalue().strip().splitlines()[-1] if err.getvalue() else 'bad arguments'}",
                          error=True)
         try:
-            with contextlib.redirect_stdout(sys.stderr):  # stdout belongs to the protocol
+            # Checking an argument path doesn't confine what a command derives from it afterward (a
+            # manifest beside a build output, a render folder beside a .pptx, a slug appended to a
+            # brand path, ...); guard() catches those for the whole call, wherever the engine derives one.
+            with contextlib.redirect_stdout(sys.stderr), confine.scoped(self.workspace, *self.brands):
                 result = self.cli.run(self.handlers[args.command], args)
         except Exception as e:  # an engine bug: report it, keep serving
             return _text(f"internal error: {type(e).__name__}: {e}", error=True)
@@ -257,7 +269,8 @@ class Server:
             return _result(mid, {
                 "protocolVersion": asked if asked in PROTOCOLS else PROTOCOLS[0],
                 "capabilities": {"tools": {"listChanged": False}},
-                "serverInfo": {"name": "deck-builder", "version": __version__},
+                "serverInfo": {"name": "deck-builder", "version": __version__,
+                               "editable": doctor.editable_install()},
                 "instructions": (
                     f"deck-builder tools, confined to the workspace at {self.workspace} (brand tools also reach "
                     "the configured brand_paths folders); relative paths resolve against the folder holding "

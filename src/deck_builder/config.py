@@ -39,13 +39,17 @@ def _resolve(root: Path, p: str) -> Path:
     return q if q.is_absolute() else (root / q)
 
 
-def _widens_reach(full: Path, root: Path) -> str | None:
-    """A reason this brand_paths entry would widen the MCP server's reach, or None if it's fine."""
+def _widens_reach(full: Path, root: Path, *, allow_root: bool = False) -> str | None:
+    """A reason this config value would widen the MCP server's reach, or None if it's fine.
+
+    allow_root: the config folder itself is fine (some setups use workspace = "."); brand_paths has
+    no such case, since a brand kit folder is never the config folder.
+    """
     if full == Path.home().resolve():
         return "the user's home folder"
     if full.parent == full:  # a filesystem root such as / or C:\
         return "the filesystem root"
-    if full == root or full in root.parents:
+    if full in root.parents or (full == root and not allow_root):
         return "the config folder or one of its ancestors"
     return None
 
@@ -56,6 +60,14 @@ def _brand_path(root: Path, path: Path, entry: str) -> Path:
     if reason is not None:
         raise EnvError(f"{path}: brand_paths entry {entry!r} resolves to {reason}; use a folder dedicated to "
                        "brand kits")
+    return full
+
+
+def _workspace(root: Path, path: Path, entry: str) -> Path:
+    full = _resolve(root, entry)
+    reason = _widens_reach(full.resolve(), root, allow_root=True)
+    if reason is not None:
+        raise EnvError(f"{path}: workspace {entry!r} resolves to {reason}; use a folder dedicated to this project")
     return full
 
 
@@ -98,7 +110,7 @@ def load(explicit: str | None = None, cwd: Path | None = None) -> Config:
     except tomllib.TOMLDecodeError as e:
         raise EnvError(f"{path}: invalid TOML: {e}") from e
     root = path.parent.resolve()
-    ws = _resolve(root, str(raw.get("workspace", "workspace")))
+    ws = _workspace(root, path, str(raw.get("workspace", "workspace")))
     brand_paths = [_brand_path(root, path, str(p)) for p in raw.get("brand_paths", [str(ws / "brands")])]
     r = raw.get("render", {}) or {}
     render = RenderConfig(

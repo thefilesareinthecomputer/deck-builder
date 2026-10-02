@@ -15,7 +15,7 @@ from typing import Any
 import yaml
 from PIL import Image as PILImage
 
-from deck_builder import __version__, docs, doctor, importer, pipeline, skills, validate
+from deck_builder import __version__, confine, docs, doctor, importer, pipeline, skills, validate
 from deck_builder import assets as asset_inventory
 from deck_builder import config as cfgmod
 from deck_builder import template as tpl
@@ -341,7 +341,9 @@ def _kit_dir(args: argparse.Namespace, cfg: cfgmod.Config) -> Path:
     if not args.slug or not re.fullmatch(r"[a-z0-9][a-z0-9-]*", args.slug):
         raise EnvError("a brand slug is lowercase letters, digits and hyphens, e.g. `acme` or `acme-2026`")
     root = Path(args.out) if args.out else cfg.brand_paths[0]
-    target = root / args.slug
+    # the slug is appended after root was checked; that folder name can already be an existing
+    # symlink pointing outside every allowed root (a no-op outside an MCP call).
+    target = confine.guard(root / args.slug, "the kit folder")
     if (target / "brand.yaml").exists() and not args.force:
         replaced = "template, tokens.yaml and brand.yaml" if args.action == "adopt" else "template.potx and tokens.yaml"
         raise EnvError(f"{target} already holds a brand kit; --force replaces its {replaced}, discarding tuned "
@@ -365,10 +367,12 @@ def _adopt(args: argparse.Namespace, cfg: cfgmod.Config, r: Result) -> Result:
     target.mkdir(parents=True, exist_ok=True)
     written = f"template{src.suffix.lower()}"
     slides_removed = 0
+    sanitized: list[str] = []
     if src.suffix.lower() == ".pptx":
         prs = tpl.open_template(src)
         slides_removed = len(prs.slides)
         tpl.remove_all_slides(prs)  # slides, their notes and their media stop being saved
+        sanitized = tpl.sanitize(prs)
         prs.save(str(target / written))
     else:
         shutil.copyfile(src, target / written)
@@ -385,10 +389,11 @@ def _adopt(args: argparse.Namespace, cfg: cfgmod.Config, r: Result) -> Result:
     for i in kit.check_kit(b):
         r.add(i)
     r.data.update({"slug": args.slug, "path": str(target), "layouts": b.layout_names(),
-                   "slides_removed": slides_removed})
+                   "slides_removed": slides_removed, "sanitized": sanitized})
     removed = f", {slides_removed} slide(s) removed" if slides_removed else ""
+    cleaned = f", {len(sanitized)} external/embedded item(s) removed" if sanitized else ""
     r.summary = (f"{'ok' if r.ok else 'failed'} brand adopt {args.slug}: {len(b.layout_names())} layouts "
-                 f"at {target}{removed}, {_tally(r)}")
+                 f"at {target}{removed}{cleaned}, {_tally(r)}")
     return r
 
 
@@ -517,7 +522,12 @@ def doctor_cmd(args: argparse.Namespace) -> Result:
     cfg = _cfg(args)
     checks = doctor.run(cfg, args.powerpoint)
     backend = doctor.render_backend(checks)
-    editable = doctor.editable_install()
+    mcp_check = next((c for c in checks if c.name == "agent tools (mcp)"), None)
+    # Prefer what the spawned `deck-builder mcp` process reports about itself - that's the install
+    # actually serving the agents' tools, which this doctor process need not match. Fall back to this
+    # process's own distribution only when the probe couldn't tell (deck-builder missing, no config).
+    editable = mcp_check.editable if mcp_check is not None and mcp_check.editable is not None \
+        else doctor.editable_install()
     r = Result(command="doctor", data={"checks": [c.as_dict() for c in checks], "render_backend": backend,
                                        "can_build": all(c.status == "ok" for c in checks[:7]),
                                        "editable_install": editable})
@@ -558,6 +568,7 @@ def import_cmd(args: argparse.Namespace) -> Result:
     if not brand.valid:
         raise EnvError(f"brand {brand.slug!r} is invalid; run `deck-builder brand check {brand.slug}`")
     imp = importer.import_pptx(src, brand, _cache_dir(cfg))
+    confine.guard(out, "the import output folder")
     out.mkdir(parents=True, exist_ok=True)
     report = out / "import-report.md"
     colliding = [p for p in ([report] if report.is_file() else [])
@@ -565,13 +576,15 @@ def import_cmd(args: argparse.Namespace) -> Result:
     if colliding and not args.force:
         raise EnvError(f"{', '.join(str(p) for p in colliding)} exist; pass --force to replace them")
     if imp.assets:
-        (out / "assets").mkdir(exist_ok=True)
+        assets_dir = confine.guard(out / "assets", "the import assets folder")
+        assets_dir.mkdir(exist_ok=True)
         for name, blob in imp.assets.items():
-            (out / "assets" / name).write_bytes(blob)
-    deck_md = out / "deck.md"
+            confine.guard(assets_dir / name, "an imported asset").write_bytes(blob)
+    deck_md = confine.guard(out / "deck.md", "the imported deck")
     deck_md.write_text(md_writer.write(imp.deck), encoding="utf-8")
     back, back_issues = markdown_parser.parse(deck_md)
     mismatched = [n for n, (a, b) in enumerate(zip(imp.deck.slides, back.slides, strict=False), start=1) if a != b]
+    confine.guard(report, "the import report")
     report.write_text(importer.report_md(src, brand, bool(args.adopt), imp, mismatched), encoding="utf-8")
     if back_issues or len(back.slides) != len(imp.deck.slides) or mismatched:
         if back_issues:
@@ -630,6 +643,9 @@ def assets_cmd(args: argparse.Namespace) -> Result:
     for it in items:
         if it.get("unknown"):
             r.add(Issue("UNKNOWN_ASSET", f"{it['id']} isn't defined in brand {brand.slug!r}"))
+        elif it.get("outside"):
+            where = f"brand {brand.slug!r}'s kit" if str(it["id"]).startswith("brand:") else "the deck's folder"
+            r.add(Issue("ASSET_OUTSIDE", f"{it['id']} resolves outside {where}"))
         elif it.get("missing"):
             r.add(Issue("MISSING_IMAGE", f"{it['id']}: {it['path']} not found"))
     lines = []

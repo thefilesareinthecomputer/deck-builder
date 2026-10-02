@@ -22,6 +22,7 @@ class Check:
     status: str  # ok | missing | optional | unverified
     detail: str
     fix: str = ""
+    editable: bool | None = None  # agent_tools only: whether the probed `deck-builder mcp` process is editable
 
     def as_dict(self) -> dict[str, Any]:
         return {k: v for k, v in self.__dict__.items() if v}
@@ -69,7 +70,13 @@ def mcp_command() -> list[str] | None:
 
 
 def agent_tools(cfg: cfgmod.Config) -> Check:
-    """The deck agents have no shell: they reach the engine only through `deck-builder mcp`."""
+    """The deck agents have no shell: they reach the engine only through `deck-builder mcp`.
+
+    `deck-builder` on PATH can be a different install than the one running this `doctor` command
+    (this process might be `uv run` inside the clone's venv while PATH resolves a `uv tool install`
+    elsewhere, or the reverse): spawn it and ask its own `initialize` reply whether *that* process is
+    editable, rather than trusting editable_install()'s read of this process's own distribution.
+    """
     name = "agent tools (mcp)"
     cmd = mcp_command()
     if cmd is None:
@@ -83,10 +90,12 @@ def agent_tools(cfg: cfgmod.Config) -> Check:
     try:
         proc = subprocess.run([*cmd, "--config", str(cfg.path), "mcp"], capture_output=True, text=True, timeout=60,
                               input="".join(json.dumps(m) + "\n" for m in msgs))
-        tools_ = json.loads(proc.stdout.splitlines()[-1])["result"]["tools"]
+        replies = [json.loads(ln) for ln in proc.stdout.splitlines()]
+        tools_ = replies[1]["result"]["tools"]
+        editable = bool(replies[0]["result"]["serverInfo"].get("editable"))
     except (OSError, subprocess.TimeoutExpired, ValueError, KeyError, IndexError):
         return Check(name, "missing", "`deck-builder mcp` didn't answer tools/list", install_hint())
-    return Check(name, "ok", f"`deck-builder mcp` answers with {len(tools_)} tools")
+    return Check(name, "ok", f"`deck-builder mcp` answers with {len(tools_)} tools", editable=editable)
 
 
 def run(cfg: cfgmod.Config, test_powerpoint: bool) -> list[Check]:

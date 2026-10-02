@@ -25,17 +25,30 @@ def _image_entry(asset_id: str, cls: str, path: Path, base: Path) -> dict[str, A
 
 
 def inventory_brand(brand: Any) -> list[dict[str, Any]]:
-    """Every asset a brand declares: palette colors, fonts, logos, icons."""
+    """Every asset a brand declares: palette colors, fonts, logos, icons.
+
+    logos: and icons: dir come straight from brand.yaml, so each is confined to the kit before it's
+    opened, hashed or decoded - the same boundary `check` enforces for a deck's own asset references.
+    """
+    from deck_builder.validate import confined
+
     out: list[dict[str, Any]] = []
     for name, hexv in (brand.meta.get("palette") or {}).items():
         out.append({"id": name, "class": "color", "value": str(hexv).lstrip("#").upper()})
     for role, font in (brand.meta.get("fonts") or {}).items():
         out.append({"id": role, "class": "font", "value": font.get("family"), "fallback": font.get("fallback")})
     for lid, rel in (brand.meta.get("logos") or {}).items():
-        out.append({**_image_entry(f"brand:logo/{lid}", "logo", brand.path / rel, brand.path)})
+        full = brand.path / str(rel)
+        if not confined(full, brand.path):
+            out.append({"id": f"brand:logo/{lid}", "class": "logo", "outside": True})
+            continue
+        out.append({**_image_entry(f"brand:logo/{lid}", "logo", full, brand.path)})
     icons = brand.meta.get("icons") or {}
-    if icons.get("dir") and (brand.path / icons["dir"]).is_dir():
-        for p in sorted((brand.path / icons["dir"]).glob("*.png")):
+    icons_dir = brand.path / str(icons["dir"]) if icons.get("dir") else None
+    if icons_dir is not None and confined(icons_dir, brand.path) and icons_dir.is_dir():
+        for p in sorted(icons_dir.glob("*.png")):
+            if not confined(p, brand.path):  # a symlink inside icons_dir pointing outside the kit
+                continue
             entry = _image_entry(f"brand:icon/{p.stem}", "icon", p, brand.path)
             if icons.get("source"):
                 entry["source"] = icons["source"]
@@ -46,7 +59,7 @@ def inventory_brand(brand: Any) -> list[dict[str, Any]]:
 def inventory_deck(deck: Any, brand: Any, deck_dir: Path) -> list[dict[str, Any]]:
     """Every asset a deck references, with the slides that use it."""
     from deck_builder.model import Icon, Image
-    from deck_builder.validate import resolve_asset
+    from deck_builder.validate import resolve_asset_confined
 
     used: dict[str, list[int]] = {}
     for n, s in enumerate(deck.slides, start=1):
@@ -57,10 +70,12 @@ def inventory_deck(deck: Any, brand: Any, deck_dir: Path) -> list[dict[str, Any]
                 used.setdefault(val.strip(), []).append(n)
     out = []
     for ref, slides in sorted(used.items()):
-        path, err = resolve_asset(ref, brand, deck_dir)
+        path, err = resolve_asset_confined(ref, brand, deck_dir)
         cls = "logo" if ref.startswith("brand:logo/") else "icon" if ref.startswith("brand:icon/") else "image"
         if err or path is None:
-            out.append({"id": ref, "class": cls, "unknown": True, "slides": slides})
+            entry: dict[str, Any] = {"id": ref, "class": cls, "slides": slides}
+            entry["outside" if err == "ASSET_OUTSIDE" else "unknown"] = True
+            out.append(entry)
             continue
         out.append({**_image_entry(ref, cls, path, brand.path if ref.startswith("brand:") else deck_dir),
                     "slides": slides})

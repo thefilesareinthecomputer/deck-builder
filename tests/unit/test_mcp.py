@@ -11,7 +11,7 @@ from PIL import Image
 from pptx import Presentation
 from test_check import GOOD
 
-from conftest import write_deck
+from conftest import make_kit, write_deck
 from deck_builder import config as cfgmod
 from deck_builder import mcp
 from deck_builder.qa import tools as qa_tools
@@ -247,6 +247,21 @@ def test_the_clones_own_filenames_are_refused_even_inside_the_workspace(server, 
     assert "part of this clone's own files" in refused(server, "check", deck=str(p))
 
 
+@pytest.mark.parametrize("name", ["claude.md", "Agents.md", "Deck-Builder.toml"])
+def test_the_clones_own_filenames_are_refused_regardless_of_case(server, ws, name):
+    p = ws / "decks" / name
+    p.write_text("x", encoding="utf-8")
+    assert "part of this clone's own files" in refused(server, "check", deck=str(p))
+
+
+@pytest.mark.parametrize("rel", [".Claude/settings.json", ".GIT/config", "Src/deck_builder/cli.py"])
+def test_the_clones_own_folders_are_refused_regardless_of_case(server, ws, rel):
+    p = ws / rel
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text("x", encoding="utf-8")
+    assert "part of this clone's own files" in refused(server, "check", deck=str(p))
+
+
 def test_example_decks_from_init_check_and_build_through_mcp(tmp_path):
     """The clone layout: deck-builder.toml beside src/, .claude/ and AGENTS.md, workspace a subfolder."""
     from deck_builder.cli import main as cli_main
@@ -320,6 +335,73 @@ def test_render_takes_only_files_the_engine_built(server, ws):
     built = ws / "out" / "decks.pptx"
     built.write_bytes(built.read_bytes() + b"tampered")
     assert "isn't the file its manifest records" in refused(server, "render", pptx="out/decks.pptx")
+
+
+# ---------------------------------------------------------------- confinement: derived paths (symlinked children)
+
+
+def test_build_refuses_when_the_manifest_sidecar_is_a_symlink_out(server, ws, tmp_path_factory):
+    outside = tmp_path_factory.mktemp("outside-manifest")
+    planted = outside / "planted.manifest.json"
+    write_deck(ws, GOOD)
+    (ws / "out").mkdir()
+    (ws / "out" / "decks.manifest.json").symlink_to(planted)
+    err, out = call(server, "build", deck="decks/deck.md")
+    assert err and "resolves outside" in out["error"]
+    assert not planted.exists()
+    assert not (ws / "out" / "decks.pptx").exists()
+
+
+@pytest.mark.skipif(qa_tools.soffice() is None or bool(qa_tools.poppler_missing()), reason="needs LibreOffice")
+def test_render_refuses_when_the_render_folder_is_a_symlink_out(server, ws, tmp_path_factory):
+    outside = tmp_path_factory.mktemp("outside-render")
+    (outside / "deck.pdf").write_text("not a real pdf")
+    write_deck(ws, GOOD)
+    assert not call(server, "build", deck="decks/deck.md")[0]
+    (ws / "out" / "decks.render").symlink_to(outside)
+    err, out = call(server, "render", pptx="out/decks.pptx")
+    assert err and "resolves outside" in out["error"]
+    assert (outside / "deck.pdf").read_text() == "not a real pdf"
+
+
+def test_brand_adopt_refuses_when_the_slug_is_a_symlink_out(server, ws, tmp_path_factory):
+    outside = tmp_path_factory.mktemp("outside-kit")
+    (ws / "brands" / "evil").symlink_to(outside)
+    Presentation().save(str(ws / "client.pptx"))
+    err, out = call(server, "brand_adopt", slug="evil", template="client.pptx")
+    assert err and "resolves outside" in out["error"]
+    assert not any(outside.iterdir())
+
+
+def test_import_refuses_when_the_assets_folder_is_a_symlink_out(server, ws, tmp_path_factory):
+    outside = tmp_path_factory.mktemp("outside-import")
+    (ws / "decks" / "assets").mkdir(parents=True)
+    Image.new("RGB", (800, 600), "#336699").save(ws / "decks" / "assets" / "photo.png")
+    write_deck(ws, "## Photo\nlayout: image\ntitle: Photo\n\n![A photo](assets/photo.png)\n")
+    assert not call(server, "build", deck="decks/deck.md")[0]
+    (ws / "imported").mkdir()
+    (ws / "imported" / "assets").symlink_to(outside)
+    err, out = call(server, "import", pptx="out/decks.pptx", out="imported", brand="stock")
+    assert err and "resolves outside" in out["error"]
+    assert not any(outside.iterdir())
+
+
+def test_check_refuses_a_deck_file_thats_a_symlink_inside_an_allowed_folder(server, ws, tmp_path_factory):
+    outside = tmp_path_factory.mktemp("outside-deck")
+    (outside / "deck.md").write_text(GOOD.lstrip("\n"))
+    (ws / "decks" / "linked-file").mkdir()
+    (ws / "decks" / "linked-file" / "deck.md").symlink_to(outside / "deck.md")
+    err, out = call(server, "check", deck="decks/linked-file")
+    assert err and "resolves outside" in out["error"]
+
+
+def test_brand_list_skips_a_kit_folder_thats_a_symlink_out(server, ws, tmp_path_factory):
+    outside = tmp_path_factory.mktemp("outside-brand")
+    make_kit(outside, slug="evil")
+    (ws / "brands" / "evil").symlink_to(outside / "evil")
+    err, out = call(server, "brand_list")
+    assert not err
+    assert "evil" not in [b["slug"] for b in out["brands"]]
 
 
 def test_help_text_never_reaches_the_protocol_stream(server, capsys):

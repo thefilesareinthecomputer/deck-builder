@@ -10,6 +10,7 @@ from typing import Any
 from pptx import Presentation
 from pptx.enum.shapes import PP_PLACEHOLDER
 
+from deck_builder import confine
 from deck_builder.brand.registry import Brand
 from deck_builder.build.deck import manifest_path
 from deck_builder.errors import EnvError, Issue
@@ -78,6 +79,9 @@ def render(pptx: Path, backend: str, dpi: int, batch: int, pages: list[int] | No
            brand: Brand | None) -> Rendered:
     """PDF, slide PNGs and contact sheets in <deck>.render/, plus measured overflow, empty placeholders and fonts."""
     out_dir = pptx.with_name(pptx.stem + ".render")
+    # out_dir sits beside pptx and can already be an existing symlink; confine it (and so what render
+    # deletes inside it) before touching it. A no-op outside an MCP call.
+    confine.guard(out_dir, "the render folder")
     if out_dir.exists():
         # only ever touch a folder this command made (it holds deck.pdf, or nothing), and in it only the files
         # render writes, so anything else kept there survives
