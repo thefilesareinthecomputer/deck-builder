@@ -29,7 +29,7 @@ def test_no_command_prints_help_and_exits_2(capsys):
 
 
 def test_unbuilt_command_reports_not_implemented_as_json(capsys):
-    code, out, _ = run(capsys, "doctor", "--json")
+    code, out, _ = run(capsys, "skills", "install", "--json")
     assert code == EXIT_ENV
     payload = json.loads(out)
     assert payload["ok"] is False

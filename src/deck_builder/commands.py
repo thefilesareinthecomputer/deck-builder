@@ -15,7 +15,7 @@ import yaml
 
 from deck_builder import assets as asset_inventory
 from deck_builder import config as cfgmod
-from deck_builder import docs, pipeline, validate
+from deck_builder import docs, doctor, pipeline, validate
 from deck_builder.brand import generate, kit, registry, schema
 from deck_builder.brand import inspect as brand_inspect
 from deck_builder.brand.registry import Brand
@@ -377,6 +377,22 @@ def _pages(spec: str | None) -> list[int] | None:
         return sorted({int(x) for x in spec.split(",") if x.strip()})
     except ValueError as e:
         raise EnvError("--slides takes slide numbers separated by commas, e.g. 3,7") from e
+
+
+def doctor_cmd(args: argparse.Namespace) -> Result:
+    cfg = _cfg(args)
+    checks = doctor.run(cfg, args.powerpoint)
+    backend = doctor.render_backend(checks)
+    r = Result(command="doctor", data={"checks": [c.as_dict() for c in checks], "render_backend": backend,
+                                       "can_build": all(c.status == "ok" for c in checks[:7])})
+    if not r.data["can_build"]:
+        r.ok, r.exit_code = False, 2
+    lines = [f"{c.status:<10} {c.name:<22} {c.detail}" + (f"\n{'':<10} fix: {c.fix}" if c.fix else "")
+             for c in checks]
+    lines.append(f"build: {'ready' if r.data['can_build'] else 'not ready'}; "
+                 f"render: {backend or 'not available (install poppler and LibreOffice)'}")
+    r.summary = "\n".join(lines)
+    return r
 
 
 def render_cmd(args: argparse.Namespace) -> Result:
