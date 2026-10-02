@@ -59,7 +59,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
     p = add("inspect", "list a template's layouts and placeholders", commands.inspect_cmd)
     p.add_argument("template")
     p.add_argument("--yaml", action="store_true", help="print a starter layouts block for tokens.yaml")
-    p = add("assets", "inventory a brand's or a deck's assets")
+    p = add("assets", "inventory a brand's or a deck's assets", commands.assets_cmd)
     p.add_argument("target")
     p = add("check", "validate a deck without building it", commands.check)
     p.add_argument("deck")

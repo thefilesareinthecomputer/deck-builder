@@ -12,6 +12,7 @@ from typing import Any
 
 import yaml
 
+from deck_builder import assets as asset_inventory
 from deck_builder import config as cfgmod
 from deck_builder import docs, pipeline, validate
 from deck_builder.brand import generate, kit, registry, schema
@@ -276,6 +277,37 @@ def _adopt(args: argparse.Namespace, cfg: cfgmod.Config, r: Result) -> Result:
     r.data.update({"slug": args.slug, "path": str(target), "layouts": b.layout_names()})
     r.summary = (f"{'ok' if r.ok else 'failed'} brand adopt {args.slug}: {len(b.layout_names())} layouts "
                  f"at {target}, {_tally(r)}")
+    return r
+
+
+def assets_cmd(args: argparse.Namespace) -> Result:
+    cfg = _cfg(args)
+    target = Path(args.target)
+    r = Result(command="assets")
+    if target.suffix.lower() in pipeline.FORMATS:
+        loaded = pipeline.load_deck(target)
+        brand = pipeline.brand_for(loaded.deck, target, cfg)
+        items = asset_inventory.inventory_deck(loaded.deck, brand, target.parent)
+        r.data.update({"deck": str(target), "brand": brand.slug})
+    else:
+        brand = registry.get(cfg, args.target)
+        items = asset_inventory.inventory_brand(brand)
+        r.data["brand"] = brand.slug
+    r.data["assets"] = items
+    for it in items:
+        if it.get("unknown"):
+            r.add(Issue("UNKNOWN_ASSET", f"{it['id']} isn't defined in brand {brand.slug!r}"))
+        elif it.get("missing"):
+            r.add(Issue("MISSING_IMAGE", f"{it['id']}: {it['path']} not found"))
+    lines = []
+    for it in items:
+        detail = it.get("value") or it.get("path", "")
+        if "pixels" in it:
+            detail += f" {it['pixels'][0]}x{it['pixels'][1]}"
+        if "slides" in it:
+            detail += f" slides {','.join(map(str, it['slides']))}"
+        lines.append(f"{it['class']:<6} {it['id']:<28} {detail}")
+    r.summary = "\n".join(lines) or "no assets"
     return r
 
 
