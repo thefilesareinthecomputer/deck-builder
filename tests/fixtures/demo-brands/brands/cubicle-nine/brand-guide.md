@@ -1,4 +1,6 @@
-# Cubicle Nine Systems
+# Cubicle 9 Enterprises
+
+Get back to work.
 
 Fictional test brand. All artwork in this folder is original.
 

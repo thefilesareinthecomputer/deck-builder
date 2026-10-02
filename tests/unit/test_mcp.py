@@ -186,8 +186,8 @@ def test_brand_tools(server, ws):
     assert [b["slug"] for b in call(server, "brand_list")[1]["brands"]] == ["stock"]
     assert "layouts" in call(server, "brand_show", slug="stock")[1]
     assert call(server, "brand_check", slug="stock")[1]["ok"]
-    shutil.copytree(DEMO / "brands" / "briarfield-paper", ws / "incoming" / "briarfield-paper")
-    err, out = call(server, "brand_init", slug="briarfield-paper", **{"from": "incoming/briarfield-paper/brand.yaml"})
+    shutil.copytree(DEMO / "brands" / "dumbder-nifftlin", ws / "incoming" / "dumbder-nifftlin")
+    err, out = call(server, "brand_init", slug="dumbder-nifftlin", **{"from": "incoming/dumbder-nifftlin/brand.yaml"})
     assert not err, out
     Presentation().save(str(ws / "client.pptx"))
     err, out = call(server, "brand_adopt", slug="client", template="client.pptx")

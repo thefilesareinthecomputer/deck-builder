@@ -27,7 +27,7 @@ from deck_builder.write import markdown as md_writer
 
 DATA = Path(__file__).resolve().parents[2] / "src" / "deck_builder" / "data" / "decks"
 DEMO = Path(__file__).resolve().parents[1] / "fixtures" / "demo-brands"
-SLUGS = ("briarfield-paper", "cubicle-nine", "afterhours-soap")
+SLUGS = ("dumbder-nifftlin", "cubicle-nine", "soap-club")
 
 # Front-matter keys a .pptx has no place for.
 PPTX_CANT_HOLD = ("spec_version", "default_layout", "slide_level", "template", "tokens", "output")
@@ -339,9 +339,9 @@ def test_import_lists_a_combo_charts_extra_plot_as_unplaced(ws, capsys, tmp_path
 
 
 def test_a_deck_from_another_template_maps_onto_a_brand_by_placeholder_types(ws, capsys, messy):
-    src = DEMO / "brands" / "briarfield-paper" / "brand.yaml"
-    assert cli_json(ws, "brand", "init", "briarfield-paper", "--from", str(src), capsys=capsys)[0] == 0
-    code, out = cli_json(ws, "import", str(messy), str(ws / "rebranded"), "--brand", "briarfield-paper",
+    src = DEMO / "brands" / "dumbder-nifftlin" / "brand.yaml"
+    assert cli_json(ws, "brand", "init", "dumbder-nifftlin", "--from", str(src), capsys=capsys)[0] == 0
+    code, out = cli_json(ws, "import", str(messy), str(ws / "rebranded"), "--brand", "dumbder-nifftlin",
                          capsys=capsys)
     assert code == 0, out
     assert [x["layout"] for x in out["layouts"]] == ["content", "table", "chart", "image"]

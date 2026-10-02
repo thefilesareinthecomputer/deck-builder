@@ -13,7 +13,7 @@ from deck_builder.cli import main
 from deck_builder.qa import tools
 
 DEMO = Path(__file__).resolve().parents[1] / "fixtures" / "demo-brands"
-SLUGS = ("briarfield-paper", "cubicle-nine", "afterhours-soap")
+SLUGS = ("dumbder-nifftlin", "cubicle-nine", "soap-club")
 
 pytestmark = [
     pytest.mark.render,

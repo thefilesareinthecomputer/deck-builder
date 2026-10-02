@@ -1,6 +1,6 @@
 spec_version: 1
-name: Briarfield Paper Co.
-slug: briarfield-paper
+name: Dumbder Nifftlin Paper Co.
+slug: dumbder-nifftlin
 version: 1.0.0
 description: Fictional deck-builder test brand
 palette:
@@ -34,6 +34,7 @@ icons:
   default_color: accent
   source: Original fixture artwork
 voice:
+  - "Dumbder Nifftlin: it's good paper."
   - A regional paper supplier with a practical, established voice.
 lint:
   max_slides: 40

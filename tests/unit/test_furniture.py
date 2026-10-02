@@ -17,7 +17,7 @@ EMU = 914400
 HIDES_MASTER = {"Title", "Section", "Closing"}
 
 
-def init_brand(ws, capsys, slug="briarfield-paper", **generate):
+def init_brand(ws, capsys, slug="dumbder-nifftlin", **generate):
     src = ws / "src" / slug
     shutil.copytree(DEMO / slug, src, dirs_exist_ok=True)  # assets resolve beside the brand.yaml
     if generate:
@@ -52,7 +52,7 @@ def test_the_master_has_a_quiet_number_and_footer_and_no_date(ws, capsys):
         assert lvl.get("algn") == "l" and lvl.find("{*}buNone") is not None
         rpr = lvl.find("{*}defRPr")
         assert (rpr.get("sz"), rpr.get("b")) == ("1000", "0")
-        assert rpr.find("{*}solidFill/{*}srgbClr").get("val") == "6A7971"  # briarfield's muted, 4.58:1
+        assert rpr.find("{*}solidFill/{*}srgbClr").get("val") == "6A7971"  # dumbder-nifftlin's muted, 4.58:1
         assert ph._element.find("{*}spPr/{*}ln") is None and ph._element.find("{*}spPr/{*}solidFill") is None
 
 
@@ -69,7 +69,7 @@ def test_tokens_record_the_furniture_color_choice(ws, capsys):
 
 
 def test_a_muted_color_under_4_5_to_1_falls_back_to_ink(ws, capsys):
-    kit = init_brand(ws, capsys, slug="afterhours-soap")  # muted 8D8180 is 3.76:1 on white
+    kit = init_brand(ws, capsys, slug="soap-club")  # muted 8D8180 is 3.76:1 on white
     assert yaml.safe_load((kit / "tokens.yaml").read_text())["furniture"]["color"] == "ink"
     num = furniture(tpl.open_template(kit / "template.potx").slide_masters[0].placeholders)["SLIDE_NUMBER"]
     assert num.text_frame._txBody.find(".//{*}defRPr/{*}solidFill/{*}srgbClr").get("val") == "211F24"
@@ -88,7 +88,7 @@ def test_the_brand_can_turn_slide_numbers_off(ws, capsys):
 
 DECK = """
 ---
-brand: briarfield-paper
+brand: dumbder-nifftlin
 title: Furniture test
 {extra}---
 
@@ -191,7 +191,7 @@ def test_import_gives_back_the_footer_and_the_off_switch(ws, capsys):
                                        ("slide_numbers: false\n", {"slide_numbers": False})]):
         pptx = build(ws, capsys, extra)
         dest = ws / "imp" / str(n)
-        code, res = cli_json(ws, "import", str(pptx), str(dest), "--brand", "briarfield-paper", capsys=capsys)
+        code, res = cli_json(ws, "import", str(pptx), str(dest), "--brand", "dumbder-nifftlin", capsys=capsys)
         assert code == 0, res
         got = markdown.parse(dest / "deck.md")[0].meta
         assert {k: got.get(k) for k in meta} == meta
@@ -202,7 +202,7 @@ def test_import_gives_back_the_footer_and_the_off_switch(ws, capsys):
 
 def test_brand_show_says_which_layouts_show_numbers_and_footers(ws, capsys):
     init_brand(ws, capsys)
-    code, out = cli_json(ws, "brand", "show", "briarfield-paper", capsys=capsys)
+    code, out = cli_json(ws, "brand", "show", "dumbder-nifftlin", capsys=capsys)
     assert code == 0
     for kind in ("slide_numbers", "footer"):
         assert "content" in out["furniture"][kind]
@@ -220,7 +220,7 @@ def test_check_reports_whether_numbers_and_footer_are_on(ws, capsys, extra, numb
         assert (out["slide_numbers"], out["footer"]) == (numbers, footer)
 
 
-@pytest.mark.parametrize("slug", ["briarfield-paper"])
+@pytest.mark.parametrize("slug", ["dumbder-nifftlin"])
 def test_generation_stays_deterministic(ws, capsys, slug):
     first = (init_brand(ws, capsys, slug) / "template.potx").read_bytes()
     code, out = cli_json(ws, "brand", "init", slug, "--from", str(ws / "src" / slug / "brand.yaml"), "--force",

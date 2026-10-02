@@ -1,6 +1,6 @@
 spec_version: 1
-name: Afterhours Soapworks
-slug: afterhours-soap
+name: Soap Club
+slug: soap-club
 version: 1.0.0
 description: Fictional deck-builder test brand
 palette:
@@ -34,7 +34,8 @@ icons:
   default_color: accent
   source: Original fixture artwork
 voice:
-  - A moody small-batch goods company with blunt, spare language.
+  - "The first rule of Soap Club: you tell everyone about Soap Club."
+  - A moody small-batch soap maker with blunt, spare language.
 lint:
   max_slides: 40
   banned_patterns: ["—"]

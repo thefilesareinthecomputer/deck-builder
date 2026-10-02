@@ -28,8 +28,8 @@ def test_a_brand_with_readable_colors_passes(ws, capsys):
 
 
 def test_a_light_link_color_warns_with_the_pair_ratio_and_minimum(ws, capsys):
-    src = DEMO / "briarfield-paper" / "brand.yaml"
-    code, out = cli_json(ws, "brand", "init", "briarfield-paper", "--from", str(src), capsys=capsys)
+    src = DEMO / "dumbder-nifftlin" / "brand.yaml"
+    code, out = cli_json(ws, "brand", "init", "dumbder-nifftlin", "--from", str(src), capsys=capsys)
     assert code == 0  # a warning, not an error
     issues = low(out)
     assert {i["severity"] for i in issues} == {"warning"}

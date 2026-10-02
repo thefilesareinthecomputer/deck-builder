@@ -1,5 +1,5 @@
 spec_version: 1
-name: Cubicle Nine Systems
+name: Cubicle 9 Enterprises
 slug: cubicle-nine
 version: 1.0.0
 description: Fictional deck-builder test brand
@@ -34,6 +34,7 @@ icons:
   default_color: accent
   source: Original fixture artwork
 voice:
+  - "Cubicle 9 Enterprises: get back to work."
   - An earnest office systems company with a tidy, measured voice.
 lint:
   max_slides: 40

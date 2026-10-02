@@ -25,7 +25,7 @@
 <p align="center">
   <img src="docs/images/showcase.png" width="100%" alt="The same deck built in three brands: a dark green paper supplier set in Georgia, a navy office-systems company set in Avenir Next, and a charcoal soap maker set in Helvetica Neue. Each column shows the title slide, a native column chart and an image slide.">
 </p>
-<p align="center"><sub>One <code>deck.md</code>, rendered in three brands. Every chart is native and every word remains editable.</sub></p>
+<p align="center"><sub>One <code>deck.md</code>, built three times with a different brand. Every chart is native and every word remains editable.</sub></p>
 
 <br>
 
@@ -95,15 +95,17 @@ A deck is a text file. Each `##` heading is one slide, and its `layout:` line pi
 
 ## Write a deck
 
-`key: value` lines under a heading fill the layout's fields, and the rest of the slide fills its body. The three slides below form the first column of the showcase image at the top. They use the `briarfield-paper` demo brand; to try them in the quick-start workspace, change the brand to `neutral` and point the image at a picture in the deck's folder.
+A deck and a brand are separate. The deck holds only content (text, data and image references) and names its brand with one line, `brand: <slug>`. The brand kit holds the whole design: template, fonts, colors, logos and budgets. Change that one line, or pass `--brand <slug>`, and the same content builds in a different design; the image at the top is one deck built that way three times.
+
+`key: value` lines under a heading fill the layout's fields, and the rest of the slide fills its body. The three slides below form the first column of that image. They use the `dumbder-nifftlin` demo brand; to try them in the quick-start workspace, change the brand to `neutral` and point the image at a picture in the deck's folder.
 
 ````markdown
 ---
-brand: briarfield-paper
-title: Briarfield Paper Co. Q3 review
+brand: dumbder-nifftlin
+title: Dumbder Nifftlin Paper Co. Q3 review
 ---
 
-## Briarfield Paper Co. Q3 review
+## Dumbder Nifftlin Paper Co. Q3 review
 layout: title
 subtitle: Volume, delivery and the plan for Q4
 

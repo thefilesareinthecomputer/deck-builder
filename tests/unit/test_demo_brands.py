@@ -6,7 +6,7 @@ import pytest
 from conftest import cli_json
 
 DEMO = Path(__file__).resolve().parents[1] / "fixtures" / "demo-brands"
-SLUGS = ("briarfield-paper", "cubicle-nine", "afterhours-soap")
+SLUGS = ("dumbder-nifftlin", "cubicle-nine", "soap-club")
 
 
 @pytest.fixture(scope="module")
@@ -49,5 +49,5 @@ def test_layouts_deck_uses_every_layout_and_builds_clean_in_all_three_brands(dem
                          "-o", str(demo_ws / "layouts"), capsys=capsys)
     assert code == 0, out["issues"]
     assert [i for i in out["issues"] if i["severity"] == "error"] == []
-    dark = Presentation(str(demo_ws / "layouts" / "afterhours-soap.pptx")).slides[5].slide_layout
+    dark = Presentation(str(demo_ws / "layouts" / "soap-club.pptx")).slides[5].slide_layout
     assert dark.name == "Big Number" and dark._element.get("showMasterSp") == "0"  # big_number: dark

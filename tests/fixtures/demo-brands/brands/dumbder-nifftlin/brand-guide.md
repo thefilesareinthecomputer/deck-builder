@@ -1,4 +1,6 @@
-# Briarfield Paper Co.
+# Dumbder Nifftlin Paper Co.
+
+It's good paper.
 
 Fictional test brand. All artwork in this folder is original.
 

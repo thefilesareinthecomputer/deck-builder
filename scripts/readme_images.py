@@ -19,7 +19,7 @@ from deck_builder.cli import main as cli
 
 REPO = Path(__file__).resolve().parent.parent
 FIXTURES = REPO / "tests" / "fixtures" / "demo-brands"
-BRANDS = ("briarfield-paper", "cubicle-nine", "afterhours-soap")
+BRANDS = ("dumbder-nifftlin", "cubicle-nine", "soap-club")
 ROWS = (1, 5, 7)  # title, chart and image slides of the showcase deck
 SLIDE = (560, 315)
 GAP = 24

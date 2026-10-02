@@ -1,4 +1,6 @@
-# Afterhours Soapworks
+# Soap Club
+
+The first rule of Soap Club: you tell everyone about Soap Club.
 
 Fictional test brand. All artwork in this folder is original.
 
