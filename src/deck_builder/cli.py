@@ -67,6 +67,8 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
     p.add_argument("--render", action="store_true", help="also build, render and measure")
     p.add_argument("--backend", choices=["auto", "powerpoint", "libreoffice"], default=None,
                    help="with --render: default from config: auto prefers LibreOffice, then PowerPoint")
+    p.add_argument("--force", action="store_true",
+                   help="with --render: replace the output even if it was hand-edited after a previous build")
     p = add("build", "build a deck into a .pptx", commands.build)
     p.add_argument("deck", help=deck_help)
     p.add_argument("--brand", help="brand slug (overrides the deck's brand:)")
@@ -74,6 +76,8 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
                                           "(default: <workspace>/out/)")
     p.add_argument("--data", help="bulk mode: one deck per row of this csv or xlsx")
     p.add_argument("--name", help="bulk mode file name pattern, e.g. '{{client}}.pptx'")
+    p.add_argument("--force", action="store_true",
+                   help="replace the output even if it was hand-edited after a previous build")
     p = add("convert", "convert a deck between .md, .xlsx and .csv, losing nothing", commands.convert_cmd)
     p.add_argument("input", help="the deck to convert: .md, .xlsx or .csv")
     p.add_argument("output", help="the file to write; its extension (.md, .xlsx or .csv) picks the format")

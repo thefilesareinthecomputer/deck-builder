@@ -6,6 +6,7 @@ fields and asset references typed, which is what the builder consumes.
 from __future__ import annotations
 
 import copy
+import datetime as dt
 import re
 from pathlib import Path
 from typing import Any
@@ -92,9 +93,33 @@ def _fits(want: str, got: str, value: Value) -> bool:
     return want == "text" and got == "bullets" and isinstance(value, list) and len(value) == 1
 
 
+def _check_front_matter(deck: Deck) -> list[Issue]:
+    """Front matter values that would otherwise crash build, parse.markdown or render with no issue code,
+    such as `dt.date.fromisoformat` on a non-ISO date. Caught here, check fails loudly before build runs."""
+    out: list[Issue] = []
+    at: dict[str, Any] = {"file": _file(deck), "line": 1}
+    meta = deck.meta
+    raw_date = meta.get("date")
+    if raw_date is not None and not isinstance(raw_date, dt.date):
+        try:
+            dt.date.fromisoformat(str(raw_date))
+        except ValueError:
+            out.append(Issue("PARSE", f"front matter date: {raw_date!r} isn't a date PowerPoint can use; "
+                             "write it as YYYY-MM-DD", **at))
+    sv = meta.get("spec_version")
+    if sv is not None and (isinstance(sv, bool) or not isinstance(sv, int)):
+        out.append(Issue("PARSE", f"front matter spec_version: {sv!r} must be a whole number", **at))
+    sl = meta.get("slide_level")
+    if sl is not None and (isinstance(sl, bool) or not isinstance(sl, int) or not 1 <= sl <= 6):
+        out.append(Issue("PARSE", f"front matter slide_level: {sl!r} must be a whole number from 1 to 6", **at))
+    # output: isn't checked here. default_output() already confines and validates it with a clear EnvError
+    # at build time; duplicating that here would need the workspace config this function doesn't have.
+    return out
+
+
 def resolve(deck: Deck, brand: Brand, deck_dir: Path) -> tuple[Deck, list[Issue]]:
     deck = copy.deepcopy(deck)
-    issues: list[Issue] = []
+    issues: list[Issue] = _check_front_matter(deck)
     spec_layouts: dict[str, Any] = brand.tokens.get("layouts") or {}
     lint = brand.meta.get("lint") or {}
     banned = [re.compile(p) for p in lint.get("banned_patterns") or []]

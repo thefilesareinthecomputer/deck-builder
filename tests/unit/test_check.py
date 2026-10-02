@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from conftest import cli_json, codes, make_kit, write_deck
@@ -64,6 +66,48 @@ def test_valid_deck_passes(ws, capsys):
     assert out["ok"] is True
     assert out["slides"] == 7
     assert out["brand"] == "stock"
+
+
+def test_check_render_flags_a_build_time_low_res_warning(ws, capsys, monkeypatch):
+    from deck_builder import commands
+    from deck_builder.qa.render import Rendered
+
+    def fake_render(pptx, backend, dpi, batch, pages, brand):
+        out_dir = pptx.with_name(pptx.stem + ".render")
+        out_dir.mkdir(exist_ok=True)
+        pdf = out_dir / "deck.pdf"
+        pdf.write_bytes(b"%PDF-1.4 stub")
+        return Rendered(backend="stub", out_dir=out_dir, pdf=pdf, slides=[], contact_sheets=[], issues=[])
+
+    monkeypatch.setattr(commands.qa_backends, "choose", lambda requested: "stub")
+    monkeypatch.setattr(commands.qa_render, "render", fake_render)
+    code, out = cli_json(ws, "check", str(write_deck(ws, GOOD)), "--render", capsys=capsys)
+    assert code == 0, out["issues"]  # ASSET_LOW_RES is a warning, build still succeeds
+    assert "ASSET_LOW_RES" in codes(out)
+    flagged = {f["slide"]: f["codes"] for f in out["flagged_slides"]}
+    assert 7 in flagged and "ASSET_LOW_RES" in flagged[7]
+
+
+def test_render_with_a_malformed_manifest_renders_without_a_brand_instead_of_crashing(ws, capsys, monkeypatch):
+    from deck_builder import commands
+    from deck_builder.qa.render import Rendered
+
+    code, out = cli_json(ws, "build", str(write_deck(ws, GOOD)), capsys=capsys)
+    assert code == 0, out["issues"]
+    Path(out["manifest"]).write_text('{"not": "a real manifest"}', encoding="utf-8")
+
+    def fake_render(pptx, backend, dpi, batch, pages, brand):
+        assert brand is None  # a manifest with no brand.slug is treated like no manifest at all
+        out_dir = pptx.with_name(pptx.stem + ".render")
+        out_dir.mkdir(exist_ok=True)
+        pdf = out_dir / "deck.pdf"
+        pdf.write_bytes(b"%PDF-1.4 stub")
+        return Rendered(backend="stub", out_dir=out_dir, pdf=pdf, slides=[], contact_sheets=[], issues=[])
+
+    monkeypatch.setattr(commands.qa_backends, "choose", lambda requested: "stub")
+    monkeypatch.setattr(commands.qa_render, "render", fake_render)
+    code, out = cli_json(ws, "render", out["output"], capsys=capsys)
+    assert code == 0, out
 
 
 def test_human_output_is_one_summary_line(ws, capsys):

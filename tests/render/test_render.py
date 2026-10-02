@@ -103,7 +103,7 @@ def test_a_table_that_overruns_its_area_is_reported(project, capsys):
     code, out = run("--config", cfg(project), "check", str(deck), "--render", capsys=capsys)
     assert code == 1
     flagged = {f["slide"]: f["codes"] for f in out["flagged_slides"]}
-    assert flagged == {1: ["OVERFLOW_MEASURED"]}
+    assert set(flagged) == {1} and "OVERFLOW_MEASURED" in flagged[1]  # TABLE_TALL, from check, flags it too
     issue = next(i for i in out["issues"] if i["code"] == "OVERFLOW_MEASURED")
     assert "Table" in issue["message"]
 

@@ -254,6 +254,16 @@ def chart_value(chart: Any, brand: Brand) -> tuple[Chart | None, str]:
     return value, "" if exact else f"chart type {chart.chart_type.name} imported as {kind}"
 
 
+def _extra_plot_series(chart: Any) -> list[str]:
+    """Series from every plot after the first: a combo chart's extra plots (such as a line layered over
+    a bar plot) would otherwise vanish, since only plots[0] becomes the field's chart."""
+    out = []
+    for plot in chart.plots[1:]:
+        for s in plot.series:
+            out.append(f"{s.name}: {', '.join(str(number(v)) for v in s.values)}")
+    return out
+
+
 # ---------------------------------------------------------------- the importer
 
 
@@ -340,6 +350,11 @@ class Importer:
                 if chart is None:
                     rep.unplaced.append(f"Chart {sh.name!r}: {why}")
                     continue
+                extra = _extra_plot_series(sh.chart)
+                if extra:
+                    rep.skipped.append(f"chart {sh.name!r} has {len(sh.chart.plots)} plots; only the first "
+                                       "is placed")
+                    rep.unplaced.append(f"Chart {sh.name!r} extra plot series (not placed): " + " / ".join(extra))
                 found.append(Found("chart", chart, f"chart {sh.name!r}", box, idx))
                 continue
             if getattr(sh, "has_table", False) and sh.has_table:
@@ -494,7 +509,9 @@ class Importer:
             notes = slide.notes_slide.notes_text_frame.text.strip()
         if rep.unplaced:
             lines = "\n".join(f"- {u}" for u in rep.unplaced)
-            notes = (notes + "\n\n" if notes else "") + f"Unplaced from the original:\n{lines}"
+            # rstrip: an unplaced table's own dump ends with a newline that a reparse would trim anyway,
+            # so trim it here too; otherwise this slide's notes could never round-trip through deck.md.
+            notes = ((notes + "\n\n" if notes else "") + f"Unplaced from the original:\n{lines}").rstrip()
         rep.title = title
         return Slide(title=title, layout=key, fields=fields, notes=notes), rep
 

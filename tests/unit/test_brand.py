@@ -1,8 +1,9 @@
 import json
 
 import yaml
+from test_check import GOOD
 
-from conftest import cli_json, codes
+from conftest import cli_json, codes, write_deck
 from deck_builder.brand import schema
 
 
@@ -49,6 +50,30 @@ def test_brand_check_finds_mapping_and_reference_errors(ws, capsys):
     code, out = cli_json(ws, "brand", "check", "stock", capsys=capsys)
     assert code == 1
     assert sorted(set(codes(out))) == ["MISSING_IMAGE", "TEMPLATE_MISMATCH", "UNKNOWN_ASSET"]
+
+
+def test_brand_check_finds_duplicate_idx_within_a_layout(ws, capsys):
+    kit = ws / "brands" / "stock"
+    tokens = yaml.safe_load((kit / "tokens.yaml").read_text())
+    fields = tokens["layouts"]["content"]["fields"]
+    fields["body"]["idx"] = fields["title"]["idx"]  # title and body now fill/clear the same placeholder
+    (kit / "tokens.yaml").write_text(yaml.safe_dump(tokens))
+    code, out = cli_json(ws, "brand", "check", "stock", capsys=capsys)
+    assert code == 1
+    msg = " ".join(i["message"] for i in out["issues"])
+    assert "content" in msg and "title" in msg and "body" in msg
+
+
+def test_build_refuses_a_kit_with_duplicate_idx(ws, capsys):
+    kit = ws / "brands" / "stock"
+    tokens = yaml.safe_load((kit / "tokens.yaml").read_text())
+    fields = tokens["layouts"]["content"]["fields"]
+    fields["body"]["idx"] = fields["title"]["idx"]
+    (kit / "tokens.yaml").write_text(yaml.safe_dump(tokens))
+    code, out = cli_json(ws, "build", str(write_deck(ws, GOOD)), capsys=capsys)
+    assert code == 1
+    msg = " ".join(i["message"] for i in out["issues"])
+    assert "content" in msg and "title" in msg and "body" in msg
 
 
 def test_schema_errors_are_all_reported(ws, capsys):
