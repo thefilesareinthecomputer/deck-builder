@@ -20,3 +20,14 @@ Three original, fictional companies for testing a presentation builder. Each bra
 Two decks use the brands. `showcase/deck.md` builds into all three with `build --data showcase/brands.csv` and makes the README images. `layouts/deck.md` puts every generated layout but `team` on a slide with realistic content, including the cases that used to look unfinished (a short list, a short table, a comparison, two columns), and the tests build and render it in all three brands. Cubicle Nine is a read-mode brand (decks sent and read on screen) and Afterhours Soapworks uses a dark big-number slide, so the `generate` options are exercised.
 
 The PNGs are ready for image-placement tests; the SVGs allow source editing and rerendering. Fonts are specified by family and fallback, with no font binaries bundled. All names and artwork were made for these fixtures; they refer to no real company or film property.
+
+## The scenario suite
+
+These three brands cover one shape well: a full kit (logo, icons, SVG source, a long guide) skinning
+the same deck three ways. `tests/scenarios/` covers the shapes this fixture set does not: an adopted
+client template with its own renamed layouts, a kit with nothing but palette and fonts, a kit with far
+more icons than any demo brand plus an unrelated `references/` folder, PNG-only vs. PNG-plus-SVG-source
+icons, a long vs. a terse brand guide, decks from `deck.md`, `deck.xlsx` and a bulk CSV, an imported
+`.pptx` with a hidden slide and speaker notes, a 3-slide deck vs. a 40-slide deck, and a deck folder with
+a `source/` folder of grounding files beside one without. Every kit and `.pptx` those scenarios need is
+generated at test time with python-pptx, Pillow and PyYAML, so none of it is checked in here.
