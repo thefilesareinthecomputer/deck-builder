@@ -100,13 +100,28 @@ def codes(payload: dict) -> list[str]:
     return [i["code"] for i in payload["issues"]]
 
 
-def init_designed_demo_brands(root: Path, brands: Path, slugs: tuple[str, ...]) -> None:
-    """Generate each demo brand with `layout_set: designed` in the workspace `init` made at root."""
+# Every designed-set option away from its default: the fixture in demo-brands/options/ is written for these.
+ALL_OPTIONS = {"takeaway": "quote", "icons": {"tile": "circle"}, "process": {"icons": True},
+               "bands": {"label_shape": "rectangle"}}
+# Each brand's own kit for its three decks in demo-brands/decks/<slug>/ (pitch, review, edge): one on the
+# designed defaults, one read-mode with square tiles, rectangle bands and ink emphasis, one with quote
+# takeaways, circle tiles and process icons.
+BRAND_KITS: dict[str, dict] = {
+    "dumbder-nifftlin": {},
+    "cubicle-nine": {"icons": {"tile": "square"}, "bands": {"label_shape": "rectangle"}, "emphasis": "ink"},
+    "soap-club": {"takeaway": "quote", "icons": {"tile": "circle"}, "process": {"icons": True}},
+}
+
+
+def init_designed_demo_brands(root: Path, brands: Path, slugs: tuple[str, ...], options: dict | None = None) -> None:
+    """Generate each demo brand with `layout_set: designed`, plus any generate options, in the workspace
+    `init` made at root."""
     for slug in slugs:
         src = root / "designed-src" / slug
         shutil.copytree(brands / slug, src)
-        text = (src / "brand.yaml").read_text(encoding="utf-8")
-        assert "layout_set: full" in text, slug
-        (src / "brand.yaml").write_text(text.replace("layout_set: full", "layout_set: designed"), encoding="utf-8")
+        meta = yaml.safe_load((src / "brand.yaml").read_text(encoding="utf-8"))
+        assert meta["generate"]["layout_set"] == "full", slug
+        meta["generate"].update({"layout_set": "designed", **(options or {})})
+        (src / "brand.yaml").write_text(yaml.safe_dump(meta, sort_keys=False), encoding="utf-8")
         assert main(["--config", str(root / "deck-builder.toml"), "brand", "init", slug,
                      "--from", str(src / "brand.yaml")]) == 0, slug

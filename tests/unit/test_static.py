@@ -46,9 +46,36 @@ def test_colors_and_sizes_only_come_from_tokens():
         if rel in STYLE_READERS:
             continue
         text = path.read_text()
-        if "RGBColor(" in text or "Pt(" in text:
+        if "RGBColor" in text or "Pt(" in text:  # RGBColor.from_string too, not only the constructor
             offenders.append(rel)
     assert offenders == []
+
+
+AGENTS_DIR = SRC.parents[1] / ".claude" / "agents"
+
+
+def _frontmatter(path: Path) -> dict:
+    import yaml
+
+    return yaml.safe_load(path.read_text().split("---")[1])
+
+
+def test_every_agent_is_installed_mapped_and_reads_the_design_rules():
+    """The agent layer can't drift from the engine: each agent's MCP tools exist, `skills install` links
+    it, `docs agents` maps it, and every agent that writes or judges slides reads `docs design`."""
+    from deck_builder.mcp import TOOLS
+    from deck_builder.skills import AGENTS
+
+    files = sorted(p.name for p in AGENTS_DIR.glob("*.md"))
+    assert files == sorted(AGENTS)
+    role_map = (SRC / "reference" / "agents.md").read_text()
+    for name in files:
+        meta = _frontmatter(AGENTS_DIR / name)
+        tools = [t.strip() for t in meta["tools"].split(",")]
+        mcp = [t.removeprefix("mcp__deck-builder__") for t in tools if t.startswith("mcp__")]
+        assert set(mcp) <= set(TOOLS), name
+        assert f"`{meta['name']}`" in role_map, name
+        assert "docs design" in (AGENTS_DIR / name).read_text() or "`design`" in (AGENTS_DIR / name).read_text(), name
 
 
 def test_yaml_is_only_safe_loaded():

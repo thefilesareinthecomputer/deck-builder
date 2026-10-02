@@ -90,13 +90,30 @@
             "icon_text": {"type": "number", "minimum": 10, "maximum": 36, "description": "icon-row text (default 18)"},
             "table": {"type": "number", "minimum": 8, "maximum": 32, "description": "table text, header included (default 16)"},
             "big_number": {"type": "number", "minimum": 48, "maximum": 200, "description": "the big-number numeral (default 120)"},
-            "kicker": {"type": "number", "minimum": 9, "maximum": 24, "description": "designed set: the section label above a content title (default 14)"},
+            "kicker": {"type": "number", "minimum": 9, "maximum": 24, "description": "designed set: the section label above a content title (default 18)"},
             "lede": {"type": "number", "minimum": 12, "maximum": 32, "description": "designed set: the subtitle line under a content title (default 20)"}
           }
         },
         "mode": {"enum": ["projected", "read"], "description": "projected decks are presented to a room; read decks are sent and read on a screen: smaller type, a 9 in text measure, text from the top (default projected)"},
         "body_anchor": {"enum": ["middle", "top"], "description": "where single-column body text sits in its area (default middle)"},
-        "big_number": {"enum": ["light", "dark"], "description": "the big-number slide on the background color, or on the primary color like a section slide (default light)"}
+        "big_number": {"enum": ["light", "dark"], "description": "the big-number slide on the background color, or on the primary color like a section slide (default light)"},
+        "takeaway": {"enum": ["band", "quote"], "description": "the takeaway line: a full-width band in the primary color, or an italic line in the primary color centered under the content (default band)"},
+        "emphasis": {"enum": ["primary", "ink"], "description": "designed set: the color of **bold** text on cards and bands (default primary)"},
+        "icons": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {"tile": {"enum": ["none", "square", "circle"], "description": "icon-row icons on a primary-color tile, drawn white (default none)"}}
+        },
+        "bands": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {"label_shape": {"enum": ["parallelogram", "rectangle"], "description": "designed set: the label shape on bands layouts (default parallelogram)"}}
+        },
+        "process": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {"icons": {"type": "boolean", "description": "designed set: each process step holds a white icon, with its title under the arrow (default false)"}}
+        }
       }
     }
   }

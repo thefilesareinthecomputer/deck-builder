@@ -12,7 +12,10 @@ def test_brand_inventory_lists_every_class(ws, capsys):
     for a in out["assets"]:
         by_class.setdefault(a["class"], []).append(a["id"])
     assert by_class["logo"] == ["brand:logo/primary"]
-    assert by_class["icon"] == ["brand:icon/check"]
+    assert by_class["icon"][0] == "brand:icon/check"  # the kit's own, then the starter icons it lacks
+    starter = [a for a in out["assets"] if a.get("source") == "deck-builder starter icons"]
+    assert starter and "brand:icon/check" not in {a["id"] for a in starter}
+    assert {a["id"] for a in starter} >= {"brand:icon/arrow", "brand:icon/chart"}
     assert "primary" in by_class["color"]
     logo = next(a for a in out["assets"] if a["class"] == "logo")
     assert logo["pixels"] == [400, 200] and len(logo["sha256"]) == 64

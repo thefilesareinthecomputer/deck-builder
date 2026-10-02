@@ -28,8 +28,17 @@ def test_a_brand_with_readable_colors_passes(ws, capsys):
 
 
 def test_a_light_link_color_warns_with_the_pair_ratio_and_minimum(ws, capsys):
-    src = DEMO / "dumbder-nifftlin" / "brand.yaml"
-    code, out = cli_json(ws, "brand", "init", "dumbder-nifftlin", "--from", str(src), capsys=capsys)
+    import shutil
+
+    import yaml
+
+    src = ws / "light-src"
+    shutil.copytree(DEMO / "dumbder-nifftlin", src)  # with its light tan accent as the link and icon color
+    meta = yaml.safe_load((src / "brand.yaml").read_text())
+    meta["theme_colors"]["hlink"] = "accent"
+    meta["icons"]["default_color"] = "accent"
+    (src / "brand.yaml").write_text(yaml.safe_dump(meta, sort_keys=False))
+    code, out = cli_json(ws, "brand", "init", "dumbder-nifftlin", "--from", str(src / "brand.yaml"), capsys=capsys)
     assert code == 0  # a warning, not an error
     issues = low(out)
     assert {i["severity"] for i in issues} == {"warning"}

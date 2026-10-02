@@ -10,12 +10,21 @@ from deck_builder.qa import backends, fonts
 from deck_builder.qa.render import empty_placeholders, stale_build_check
 
 
-def test_empty_text_field_is_flagged(ws, capsys):
+def test_an_empty_text_field_is_left_out_rather_than_drawn_empty(ws, capsys):
     deck = write_deck(ws, "## Hello\nlayout: title\nsubtitle: ''\n")
     code, out = cli_json(ws, "build", str(deck), capsys=capsys)
     assert code == 0
-    issues = empty_placeholders(Path(out["output"]))
-    assert [(i.code, i.slide) for i in issues] == [("EMPTY_PLACEHOLDER", 1)]
+    assert empty_placeholders(Path(out["output"])) == []
+
+
+def test_an_empty_placeholder_is_flagged(tmp_path):
+    from pptx import Presentation
+
+    prs = Presentation()
+    slide = prs.slides.add_slide(prs.slide_layouts[1])  # title and content; the content left empty
+    slide.shapes.title.text = "Hello"
+    prs.save(str(tmp_path / "x.pptx"))
+    assert [(i.code, i.slide) for i in empty_placeholders(tmp_path / "x.pptx")] == [("EMPTY_PLACEHOLDER", 1)]
 
 
 def test_font_check_reports_fallback_and_substitution(monkeypatch):

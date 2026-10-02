@@ -51,6 +51,9 @@ layouts:
 | `required` | `check` fails when the field is empty |
 | `max_chars` | Characters after inline markup is removed |
 | `max_bullets`, `max_bullet_chars`, `max_level` | Bullet count, per-bullet length, deepest nesting (0 = flat) |
+| `line_chars`, `max_lines` | Characters a line holds and lines the box holds; `check` wraps the text word by word at `line_chars`, adds the space before each bullet, and reports `BUDGET_LINES` past `max_lines`. `brand init` writes both; an adopted kit can leave them out |
+| `emphasis` | A color for `**bold**` runs in the field |
+| `fit`, `fit_max` | Image fields: always fit inside the box, never crop; a fitted image takes at most this share of the box |
 | `max_rows`, `max_cols` | Table limits, header row not counted in rows; `brand init` sets rows to what fits the placeholder at one line per row |
 | `color` | Icon fields: the palette name or hex the icon is recolored to |
 

@@ -539,7 +539,7 @@ def doctor_cmd(args: argparse.Namespace) -> Result:
              for c in checks]
     if editable:
         lines.append(f"{'warning':<10} {'editable install':<22} agents' MCP server runs this clone's src/ live; "
-                     "keep client workspaces outside the clone")
+                     "keep workspaces outside the clone")
     lines.append(f"build: {'ready' if r.data['can_build'] else 'not ready'}; "
                  f"render: {backend or 'not available (install poppler and LibreOffice)'}")
     r.summary = "\n".join(lines)

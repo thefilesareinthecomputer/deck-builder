@@ -59,8 +59,11 @@ db explain <CODE>                   # cause and fix for any issue code
    threshold, or for anything client-facing, get the user's OK before writing slides.
 2. **Write to the budgets** from `brand show`. Choose layouts by content, using the table in
    `docs design`: one number is big-number, a comparison is two-col or comparison, a trend is
-   chart, three parallel actions are icon-row. Don't run table after table or list after list.
-   Put the conclusion of a chart or table slide in `takeaway:`.
+   chart, three parallel actions are icon-row; on a designed-set brand, parallel options are cards,
+   steps are process, and labeled themes are bands. Don't run table after table or list after
+   list. Put the conclusion of a chart or table slide in `takeaway:`. Where the layouts have a
+   `kicker:`, give every content slide one (a front matter `kicker:` sets the deck-wide default),
+   and add a `subtitle:` where the title alone doesn't make the point.
 3. **Fix by code, never by loosening rules.** Cut words, split the slide, change the layout, move
    detail to speaker notes. If a budget looks wrong, say so; the user changes the brand kit.
 4. **Look at flagged slides only.** `check --render --json` returns `flagged_slides` (each with its
@@ -73,13 +76,19 @@ Speaker notes hold the source of every number and anything cut from the slide.
 
 ## Review gate (main agent)
 
-Before any deck reaches the user:
+Before any built deck reaches the user:
 
-1. Run `db check <deck> --json` yourself; it must report no errors.
-2. Read the subagent's report and the manifest (`<deck>.manifest.json` beside the `.pptx`).
-3. Open the flagged slide PNGs and the contact sheets.
-4. Approve, or send the work back naming the slide and the issue code, up to two rounds; after
-   that, report what's unresolved instead.
+1. Run `db check <deck> --render --json` yourself; it must report no errors.
+2. Read the builder's report (when a subagent built it) and the manifest (`<deck>.manifest.json`
+   beside the `.pptx`).
+3. Hand the deck to the `deck-validator-agent`: the deck's path, the brand slug, the `render_dir`
+   from step 1 and the approved storyline. It reads every rendered slide against `docs design`,
+   writes nothing, and returns `VERDICT: PASS` or `SEND BACK` with `severity | slide | field |
+   finding | fix` lines.
+4. On SEND BACK, give its blocker and major findings to the builder (the `deck-builder-agent`, or
+   fix them here), then validate again. Up to two rounds, counted with every other send-back; after
+   that, report what's unresolved instead. Pass its engine or brand findings to the user, since
+   they aren't content fixes.
 
 Then report: output path, slide count, render backend, any slide you're unsure about, and any
 number or source you couldn't verify.

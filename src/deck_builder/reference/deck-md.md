@@ -12,6 +12,9 @@ slide_level: 2                 # heading level that starts a slide (default 2)
 output: ../../out/quarterly-review.pptx   # relative to this file; a .pptx in its folder or in out/
 footer: Confidential           # optional small text after the slide number; no footer without it
 slide_numbers: false           # optional; slide numbers are on by default where the brand has them
+first_slide_number: 21         # optional; an excerpt of a larger deck numbers its slides from here
+kicker: Q3 review              # optional; the section label on every slide whose layout has one and
+                               # that sets none itself (kicker: "" on a slide leaves it blank)
 ---
 
 ## Paper volume grew 12% in Q3         <- one heading = one slide
@@ -20,7 +23,7 @@ subtitle: optional inline field
 
 - Body bullets go to the `body` field  <- free content after the fields
   - Indent two spaces per level
-- **Bold**, *italic*, `code` and [links](https://example.com) are the inline markup
+- **Bold**, *italic*, ***both***, `code` and [links](https://example.com) are the inline markup
 
 ### right                              <- a named field section
 - Content for the `right` field
@@ -47,7 +50,7 @@ Source: the Q3 shipment ledger.
 | text | One paragraph, or a `key: value` field |
 | bullets | `- item` lines; numbered lines also work |
 | image | `![alt text](assets/photo.png)`, or `![alt](brand:logo/primary)`, on its own line in the field's `### name` section (or the body); files inside the deck's folder only. A `key:` line takes only a bare path such as `left-logo: assets/logo.png`, with no alt text |
-| icon | `brand:icon/<id>` as the field value |
+| icon | `brand:icon/<id>` as the field value; an id the kit lacks comes from the engine's starter icons (`brand show` lists both) |
 | table | A pipe table, or a ```` ```table ```` block with `header:` and `rows:` |
 | chart | A ```` ```chart ```` block, below |
 

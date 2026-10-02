@@ -29,13 +29,15 @@ If `uv run deck-builder brand list` reports no config, the user hasn't onboarded
 | A deck from a large body of documents, notes or a knowledge base or vault | `deck-decomposer-agent` subagent writes `outline.md` and a draft `deck.md`; the user co-authors and proofreads before anything is built |
 | Writing, converting, building, rendering decks | `deck-builder` skill |
 | The build loop at or past the delegation threshold above | `deck-builder-agent` subagent, then the review gate in the `deck-builder` skill |
+| Final proofread and sign-off of a built deck, before it's called finished | `deck-validator-agent` subagent, run by the main agent at the review gate; its send-backs count toward the two rounds above |
 
 Subagents can't talk with the user. The main agent holds the conversation, hands each agent the
 decisions it needs, relays the questions they return, and reviews their work before the user sees it.
 
 The subagents have no shell; put their input files inside the workspace before handing off, since
-`deck-builder-agent` and `deck-brand-agent` reach the engine only through the deck-builder MCP server
-(`deck-builder mcp`, which needs the CLI on PATH), and the decomposer runs no commands at all.
+`deck-builder-agent`, `deck-brand-agent` and `deck-validator-agent` reach the engine only through the
+deck-builder MCP server (`deck-builder mcp`, which needs the CLI on PATH), and the decomposer runs no
+commands at all.
 `deck-builder docs agents` maps every CLI command and MCP tool to the one party that owns it, and
 says what each subagent may read and write.
 
@@ -48,4 +50,4 @@ says what each subagent may read and write.
   `claude -p --agent deck-builder-agent --allowedTools mcp__deck-builder "<test prompt>"`.
 - Skills hold no engine logic. When a skill needs something the CLI can't do, tell the user;
   building it under `src/` is a separate task, done only when the user asks, with tests.
-- Example content uses invented companies only. No client material in tracked files.
+- Example content uses invented companies only.

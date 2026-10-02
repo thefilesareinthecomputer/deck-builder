@@ -33,7 +33,9 @@ on those layouts. The `deck-builder` and `deck-brand` skills read this topic bef
 - **Structure from shapes (designed set).** `layout_set: designed` adds layouts that draw their own
   structure: cards with colored label bands, process chevrons in a ramp of the primary color, and
   labeled bands. Every content slide gains a section label (`kicker:`) above the title and a
-  one-line `subtitle:` under it, and comparison panels gain optional logo slots.
+  one-line `subtitle:` under it, and comparison panels gain optional logo slots. **Bold** keywords
+  on cards and bands take the primary color. `generate` options give icons a tile, process steps a
+  white icon each, and the takeaway a quieter italic style (`docs brand-yaml`).
 
 ## Writing a deck that uses them well
 
@@ -53,13 +55,16 @@ on those layouts. The `deck-builder` and `deck-brand` skills read this topic bef
   | A voice from outside the team | `quote` |
   | Rows a reader will look up | `table`, six rows or fewer |
   | A short argument | `content`, four bullets or fewer |
-  | Three or four parallel options, each with a few points (designed set) | `cards-3` or `cards-4` |
-  | Steps in order (designed set) | `process-4` or `process-5` |
-  | Three themes, each with its points (designed set) | `bands-3` |
+  | Two to five parallel options, each with a few points (designed set) | `cards-2` to `cards-5` |
+  | Three to six steps in order (designed set) | `process-3` to `process-6` |
+  | Two to four themes, each with its points (designed set) | `bands-2` to `bands-4` |
+  | The tools or companies a slide is about (designed set) | `logos` |
 
 - **Digestible amounts.** Four bullets or fewer, each two lines at most, and about 40 words on a
   projected slide. Working memory holds about four chunks; the exact limits are convention. Move
-  detail to speaker notes; the slide makes the point and the notes hold the evidence.
+  detail to speaker notes; the slide makes the point and the notes hold the evidence. `check` warns
+  past these limits (`BULLETS_MANY`, `WORDS_MANY` at 60 words) and on more than three slides in a
+  row on one layout (`LAYOUT_RUN`); a read deck skips the text limits.
 - **Notes add, not repeat.** When the deck is presented, don't read the slide aloud: notes that
   repeat the slide word for word make it harder to follow. Reworded points or extra detail help.
 - **Read decks: lines of 45 to 90 characters, about 55 as the target.** A projected slide is limited
@@ -79,8 +84,9 @@ on those layouts. The `deck-builder` and `deck-brand` skills read this topic bef
 - Use vendor and product logos only where the slide is about that product, from the vendor's official
   artwork, unmodified and not recolored, with clear space around it.
 - Use screenshots and photos at their real aspect ratio. The image layouts crop opaque images to fill
-  their box, and fit images with transparent pixels (logos, icons) inside it, so a logo is never cut.
-  Give a logo a transparent background to get the fit.
+  their box, and fit images with transparent pixels (logos, icons) inside it, so a logo is never cut;
+  in a large box a fitted logo takes at most 60% of it. Give a logo a transparent background to get
+  the fit. Logo slots (comparison panels, the `logos` row) always fit, whatever the image.
 
 ## Charts
 
@@ -91,12 +97,31 @@ on those layouts. The `deck-builder` and `deck-brand` skills read this topic bef
 - Eight colors at most in one chart. Color is never the only way to tell series apart: label them.
 - Make the chart's title state what the data shows, and make sure the data shows it.
 
-## Contrast
+## Accessibility: contrast, color blindness and legibility
 
-Contrast is the one rule here backed by a standard (WCAG 2.2). Text needs 4.5:1 against its
-background, or 3:1 at 18 pt and above or 14 pt bold; that 18 pt is a contrast tier, not a size
-minimum. Chart series, lines and icons need 3:1 against their background. Projectors lose contrast,
-so treat 4.5:1 as the floor for body text. `brand check` reports `LOW_CONTRAST` for the pairs a
-generated kit uses.
+These rules come from a standard, WCAG 2.2 level AA, which is also what accessibility law points to
+(US Section 508 cites WCAG 2.0 AA; the 2024 ADA Title II rule and the EU's European Accessibility
+Act cite WCAG 2.1 AA). A deck that meets them reads for people with low vision, with color
+blindness, or using a screen reader.
+
+- **Contrast (SC 1.4.3, 1.4.11).** Text needs 4.5:1 against its background, or 3:1 at 18 pt and
+  above or 14 pt bold; chart series, lines and icons need 3:1. Projectors lose contrast, so treat
+  4.5:1 as the floor for body text. `brand check` reports `LOW_CONTRAST` for every pair a generated
+  kit uses. `brand init` lightens the card, step and band ramp only as far as white labels keep
+  4.5:1, writes a darker shade of the same hue into the chart palette for any brand color under 3:1,
+  and gives chart labels white or ink, whichever reads on the bar or slice under them.
+- **Color blindness (SC 1.4.1).** About 1 in 12 men can't tell some reds from greens. Color is never
+  the only signal: chart series keep a legend or labels (`COLOR_ONLY`), status cells print their word
+  beside the dot, and cards and steps have text labels. `brand check` simulates protanopia,
+  deuteranopia and tritanopia on the chart colors and reports pairs that look alike
+  (`CVD_CONFUSABLE`). The card, step and band ramp varies lightness, which every kind of color vision
+  sees.
+- **Size.** Nothing under 18 pt on a projected deck and nothing under 12 pt on a read deck; `brand
+  check` reports a smaller `generate.type` size as `TYPE_SMALL`. Slide numbers and footers are the
+  only smaller text.
+- **Alt text (SC 1.1.1).** Every image says what it shows in `![alt](path)` (`MISSING_ALT`); charts
+  and tables get alt text from their data, and brand icons are decorative.
+- **Titles (SC 2.4.6).** Every slide has a title, and no two match (`TITLE_DUPLICATE`): a screen
+  reader lists slides by title.
 
 Everything else in this topic is convention or house style: good defaults, not laws.

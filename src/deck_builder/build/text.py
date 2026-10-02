@@ -6,7 +6,8 @@ from typing import Any
 
 from deck_builder.model import Value
 
-INLINE = re.compile(r"\*\*(?P<b>.+?)\*\*|\*(?P<i>.+?)\*|`(?P<c>[^`]+)`|\[(?P<lt>[^\]]+)\]\((?P<lu>[^)]+)\)")
+INLINE = re.compile(r"\*\*\*(?P<bi>.+?)\*\*\*|\*\*(?P<b>.+?)\*\*|\*(?P<i>.+?)\*|`(?P<c>[^`]+)`"
+                    r"|\[(?P<lt>[^\]]+)\]\((?P<lu>[^)]+)\)")
 CODE_FONT_DEFAULT = "Courier New"  # documented default; tokens.yaml text.code_font overrides
 
 
@@ -33,7 +34,9 @@ def add_runs(paragraph: Any, text: str, code_font: str = CODE_FONT_DEFAULT, bold
     for m in INLINE.finditer(text):
         if m.start() > pos:
             _styled_run(paragraph, text[pos : m.start()], bold, italic)
-        if m.group("b") is not None:
+        if m.group("bi") is not None:  # ***bold italic***
+            add_runs(paragraph, m.group("bi"), code_font, bold=True, italic=True)
+        elif m.group("b") is not None:
             add_runs(paragraph, m.group("b"), code_font, bold=True, italic=italic)
         elif m.group("i") is not None:
             add_runs(paragraph, m.group("i"), code_font, bold=bold, italic=True)

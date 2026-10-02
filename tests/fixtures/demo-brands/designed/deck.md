@@ -58,7 +58,7 @@ footer4: +1% volume
 
 ### body1
 - Two district contracts
-- Renewals land in February
+- Renew in February
 
 ### body2
 - Buyers consolidating
@@ -70,7 +70,7 @@ footer4: +1% volume
 
 ### body4
 - Flat demand
-- Smaller, frequent orders
+- Smaller orders
 
 ## How an order moves today
 layout: process-4

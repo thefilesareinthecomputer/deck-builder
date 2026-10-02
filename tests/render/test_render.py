@@ -54,7 +54,8 @@ def test_example_renders_clean_with_libreoffice(project, capsys):
 def test_overflow_is_measured_and_flagged(project, capsys):
     kit = project / "workspace" / "brands" / "neutral"
     tokens = yaml.safe_load((kit / "tokens.yaml").read_text())
-    tokens["layouts"]["content"]["fields"]["body"].update(max_chars=5000, max_bullets=40, max_bullet_chars=500)
+    tokens["layouts"]["content"]["fields"]["body"].update(max_chars=5000, max_bullets=40, max_bullet_chars=500,
+                                                          max_lines=500)  # past every budget, so it overflows
     (kit / "tokens.yaml").write_text(yaml.safe_dump(tokens, sort_keys=False))
     long = "".join(f"- Paper volume note number {i}, which runs on long enough to wrap the line twice over\n"
                    for i in range(16))
@@ -64,7 +65,8 @@ def test_overflow_is_measured_and_flagged(project, capsys):
     code, out = run("--config", cfg(project), "check", str(deck), "--render", capsys=capsys)
     assert code == 1
     flagged = {f["slide"]: f["codes"] for f in out["flagged_slides"]}
-    assert flagged == {2: ["OVERFLOW_MEASURED"]}
+    assert list(flagged) == [2]  # sixteen long bullets also warn as convention: too many bullets and words
+    assert set(flagged[2]) == {"OVERFLOW_MEASURED", "BULLETS_MANY", "WORDS_MANY"}
     issue = next(i for i in out["issues"] if i["code"] == "OVERFLOW_MEASURED")
     assert issue["field"] == "body" and issue["actual"] > 20
 

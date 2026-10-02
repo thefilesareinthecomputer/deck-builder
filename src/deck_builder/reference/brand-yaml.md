@@ -62,6 +62,11 @@ generate:                        # read only by `brand init`
   mode: projected                # projected | read: presented to a room, or sent and read on screen
   body_anchor: middle            # middle | top: where single-column body text sits (read mode: top)
   big_number: light              # light | dark: dark puts the numeral on the primary color (default light)
+  takeaway: band                 # band | quote: a band in the primary color, or an italic line under the content
+  icons: {tile: none}            # none | square | circle: icon-row icons drawn white on a primary-color tile
+  bands: {label_shape: parallelogram}  # parallelogram | rectangle (designed set)
+  process: {icons: false}        # true: each process step holds a white icon, its title under the arrow (designed set)
+  emphasis: primary              # primary | ink: the color of **bold** on cards and bands (designed set)
   type:                          # type sizes in points; leave any key out to keep the mode's size
     title: 32                    # content-slide titles (read: 28)
     title_bold: true
@@ -71,7 +76,7 @@ generate:                        # read only by `brand init`
     icon_text: 18                # (read: 13)
     table: 18                    # table text, header included (read: 12)
     big_number: 120              # (read: 96)
-    kicker: 14                   # designed set: the section label above a content title (read: 11)
+    kicker: 18                   # designed set: the section label above a content title (read: 12)
     lede: 20                     # designed set: the subtitle line under a content title (read: 15)
 ```
 
@@ -96,14 +101,17 @@ master logo changed since the kit was generated.
 | minimal | title, section, content, closing |
 | standard | minimal plus two-col, big-number, chart, table, image, quote |
 | full | standard plus agenda, comparison, image-right, icon-row, team |
-| designed | full plus cards-3, cards-4, process-4, process-5, bands-3; every content slide also takes `kicker:` and `subtitle:`, and comparison takes `left-logo:` and `right-logo:` |
+| designed | full plus cards-2 to cards-5, process-3 to process-6, bands-2 to bands-4 and logos; every content slide also takes `kicker:` and `subtitle:`, and comparison takes `left-logo:` and `right-logo:` |
 
 The designed set's extra layouts are built from shapes rather than loose text. Cards are equal
 columns, each with a colored label band, bullets and a bold footer line. Process steps are chevrons
 in a ramp of the primary color, each with a short label inside and a line of text below. Bands are
 labeled rows that fill the slide, a label on the left and its points on the right. Every card, step
 and band must be filled, since its shape is drawn whether or not it has text: pick `cards-3` for
-three items and `cards-4` for four. A card's footer line is optional. `kicker:` is a
+three items and `cards-4` for four. A card's footer line is optional. The ramp of the primary color
+on cards, steps and bands lightens only as far as white labels keep 4.5:1 contrast, worked out from
+the brand's own colors. `logos` places two to six logos with captions on one row; the build spaces
+the filled slots evenly and fits each logo inside its slot, never cropped. `kicker:` is a
 short section label above the title, and `subtitle:` is one line under it; leave either out and
 nothing is drawn, though the title and body keep their designed-set positions.
 

@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import cli_json, init_designed_demo_brands
+from conftest import ALL_OPTIONS, BRAND_KITS, cli_json, init_designed_demo_brands
 
 DEMO = Path(__file__).resolve().parents[1] / "fixtures" / "demo-brands"
 SLUGS = ("dumbder-nifftlin", "cubicle-nine", "soap-club")
@@ -83,6 +83,58 @@ def test_designed_deck_uses_the_new_layouts_and_builds_clean_in_all_three_brands
     logos = [sh for slide in prs.slides for sh in slide.shapes if sh.shape_type == MSO_SHAPE_TYPE.PICTURE
              and sh._element.nvPicPr.cNvPr.get("descr", "").endswith(" logo")]
     assert len(logos) == 3  # two on the comparison panels, one in image-right
-    for pic in logos:
-        assert (pic.crop_left, pic.crop_right, pic.crop_top, pic.crop_bottom) == (0, 0, 0, 0)
-        assert abs(pic.width / pic.height - 1600 / 368) < 0.01
+    iw, ih = 1600, 368  # every demo logo's canvas; its art sits left of center with transparent margins
+    for pic in logos:  # only the transparent margin is cropped, so the art keeps its own proportions
+        assert pic.crop_right > 0.1
+        shown = ((1 - pic.crop_left - pic.crop_right) * iw) / ((1 - pic.crop_top - pic.crop_bottom) * ih)
+        assert abs(pic.width / pic.height - shown) < 0.02
+
+
+DECKS = sorted((p.parent.parent.name, p.parent.name) for p in (DEMO / "decks").glob("*/*/deck.md"))
+
+
+@pytest.fixture(scope="module")
+def brand_kits(tmp_path_factory):
+    """Each demo brand generated with its own designed-set options (BRAND_KITS), in one workspace."""
+    from deck_builder.cli import main
+
+    root = tmp_path_factory.mktemp("brand-kits")
+    assert main(["init", "--dir", str(root)]) == 0
+    for slug, options in BRAND_KITS.items():
+        init_designed_demo_brands(root, DEMO / "brands", (slug,), options)
+    return root
+
+
+def test_every_brand_has_a_pitch_a_review_and_an_edge_deck():
+    assert [(slug, name) for slug in sorted(BRAND_KITS) for name in ("edge", "pitch", "review")] == DECKS
+
+
+@pytest.mark.parametrize("slug,name", DECKS)
+def test_each_brand_deck_checks_and_builds_clean(brand_kits, slug, name, capsys):
+    """Nine decks, three per brand, each written for its brand's kit: errors fail, and only the edge
+    decks may carry convention warnings, on the slides written to trigger them."""
+    deck = DEMO / "decks" / slug / name / "deck.md"
+    capsys.readouterr()
+    code, out = cli_json(brand_kits, "build", str(deck), "-o", str(brand_kits / "out" / f"{slug}-{name}.pptx"),
+                         capsys=capsys)
+    assert code == 0, out
+    assert [i for i in out["issues"] if i["severity"] == "error"] == []
+    if name != "edge":
+        assert out["issues"] == [], out["issues"]
+
+
+def test_options_deck_builds_clean_with_every_designed_option_in_all_three_brands(tmp_path, capsys):
+    """The options fixture: quote takeaways, circle icon tiles, process icons (some from the starter
+    set), rectangle band labels, bold keywords, the logo row, a deck-wide kicker and first_slide_number."""
+    from deck_builder.cli import main
+
+    assert main(["init", "--dir", str(tmp_path)]) == 0
+    init_designed_demo_brands(tmp_path, DEMO / "brands", SLUGS, ALL_OPTIONS)
+    if not (Path(__file__).resolve().parents[2] / "src" / "deck_builder" / "data" / "icons" / "database.png").is_file():
+        pytest.skip("run scripts/make_starter_icons.py to draw the full starter set")
+    capsys.readouterr()
+    code, out = cli_json(tmp_path, "build", str(DEMO / "options" / "deck.md"),
+                         "--data", str(DEMO / "options" / "brands.csv"), "--name", "{{brand}}.pptx",
+                         "-o", str(tmp_path / "options"), capsys=capsys)
+    assert code == 0, out["issues"]
+    assert [i for i in out["issues"] if i["severity"] == "error"] == []

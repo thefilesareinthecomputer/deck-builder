@@ -17,11 +17,13 @@ from deck_builder.build.visuals import CELL_PAD_EMU, CHAR_EM, TABLE_DEFAULTS, co
 from deck_builder.errors import Issue
 from deck_builder.model import Chart, Deck, Icon, Image, Slide, Table, Value, kind_of
 
+STARTER_ICONS = Path(__file__).resolve().parent / "data" / "icons"  # alpha masks every brand can use
 CHART_TYPES = ("column", "stacked-column", "bar", "stacked-bar", "line", "pie", "doughnut")
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tif", ".tiff"}
 EMU_PER_PT = 12700
 INLINE = [
     (re.compile(r"\[([^\]]+)\]\([^)]+\)"), r"\1"),
+    (re.compile(r"\*\*\*(.+?)\*\*\*"), r"\1"),
     (re.compile(r"\*\*(.+?)\*\*"), r"\1"),
     (re.compile(r"\*(.+?)\*"), r"\1"),
     (re.compile(r"`([^`]+)`"), r"\1"),
@@ -61,20 +63,39 @@ def confined(path: Path, root: Path) -> bool:
 
 def resolve_asset_confined(ref: str, brand: Brand, deck_dir: Path) -> tuple[Path | None, str | None]:
     """resolve_asset, plus the confinement check _check_asset applies: a brand: reference must stay
-    inside the brand's kit, anything else inside the deck's folder. Callers that only inventory or
-    hash a resolved asset (assets.py, the importer's known-asset scan) must go through this, not
-    resolve_asset directly, so a path that escapes is refused before it's opened."""
+    inside the brand's kit (or the engine's starter icons), anything else inside the deck's folder.
+    Callers that only inventory or hash a resolved asset (assets.py, the importer's known-asset scan)
+    must go through this, not resolve_asset directly, so a path that escapes is refused before it's
+    opened."""
     path, err = resolve_asset(ref, brand, deck_dir)
     if err or path is None:
         return None, err
-    root = brand.path if ref.startswith("brand:") else deck_dir
-    if not confined(path, root):
+    roots = [brand.path, STARTER_ICONS] if ref.startswith("brand:icon/") else [
+        brand.path if ref.startswith("brand:") else deck_dir]
+    if not any(confined(path, root) for root in roots):
         return None, "ASSET_OUTSIDE"
     return path, None
 
 
+def starter_icons() -> list[str]:
+    """The ids of the icons every brand has: the engine's starter set, used when a kit has no icon by
+    that id, so a new kit doesn't start with none."""
+    return sorted(p.stem for p in STARTER_ICONS.glob("*.png"))
+
+
+def asset_source(path: Path, ref: str, brand: Brand, deck_dir: Path) -> str:
+    """Where a resolved asset came from, for the manifest: relative to the kit or the deck's folder,
+    or `starter/<id>.png` for a starter icon."""
+    full = path.resolve()
+    if ref.startswith("brand:") and full.is_relative_to(brand.path.resolve()):
+        return full.relative_to(brand.path.resolve()).as_posix()
+    if full.is_relative_to(STARTER_ICONS.resolve()):
+        return f"starter/{full.name}"
+    return full.relative_to(deck_dir.resolve()).as_posix()
+
+
 def resolve_asset(ref: str, brand: Brand, deck_dir: Path) -> tuple[Path | None, str | None]:
-    """A reference -> (file path, error code or None)."""
+    """A reference -> (file path, error code or None). An icon the kit lacks comes from the starter set."""
     if ref.startswith("brand:logo/"):
         lid = _asset_id(ref)
         rel = (brand.meta.get("logos") or {}).get(lid) if lid else None
@@ -83,11 +104,13 @@ def resolve_asset(ref: str, brand: Brand, deck_dir: Path) -> tuple[Path | None, 
         return brand.path / str(rel), None
     if ref.startswith("brand:icon/"):
         iid = _asset_id(ref)
-        icons_dir = (brand.meta.get("icons") or {}).get("dir")
-        if not iid or not icons_dir:
+        if not iid:
             return None, "UNKNOWN_ASSET"
-        p = brand.path / str(icons_dir) / f"{iid}.png"
-        return (p, None) if p.is_file() else (None, "UNKNOWN_ASSET")
+        icons_dir = (brand.meta.get("icons") or {}).get("dir")
+        for p in ([brand.path / str(icons_dir) / f"{iid}.png"] if icons_dir else []) + [STARTER_ICONS / f"{iid}.png"]:
+            if p.is_file():
+                return p, None
+        return None, "UNKNOWN_ASSET"
     if ref.startswith("brand:"):
         return None, "UNKNOWN_ASSET"
     p = Path(ref)
@@ -131,6 +154,13 @@ def _check_front_matter(deck: Deck) -> list[Issue]:
     sl = meta.get("slide_level")
     if sl is not None and (isinstance(sl, bool) or not isinstance(sl, int) or not 1 <= sl <= 6):
         out.append(Issue("PARSE", f"front matter slide_level: {sl!r} must be a whole number from 1 to 6", **at))
+    first = meta.get("first_slide_number")
+    if first is not None and (isinstance(first, bool) or not isinstance(first, int) or first < 1):
+        out.append(Issue("PARSE", f"front matter first_slide_number: {first!r} must be a whole number from 1 up",
+                         **at))
+    kicker = meta.get("kicker")
+    if kicker is not None and not isinstance(kicker, str | int | float):
+        out.append(Issue("PARSE", f"front matter kicker: {kicker!r} must be one line of text", **at))
     # output: isn't checked here. default_output() already confines and validates it with a clear EnvError
     # at build time; duplicating that here would need the workspace config this function doesn't have.
     return out
@@ -152,9 +182,72 @@ def resolve(deck: Deck, brand: Brand, deck_dir: Path) -> tuple[Deck, list[Issue]
         issues.append(Issue("MAX_SLIDES", f"{len(deck.slides)} slides, limit {max_slides}",
                             file=_file(deck), actual=len(deck.slides), limit=max_slides))
 
+    kicker = deck.meta.get("kicker")
     for n, s in enumerate(deck.slides, start=1):
+        fields_of = (spec_layouts.get(s.layout) or {}).get("fields") or {}
+        if isinstance(kicker, str | int | float) and "kicker" in fields_of and "kicker" not in s.fields:
+            s.fields["kicker"] = str(kicker)  # the deck-wide section label, where a slide sets none
         issues += _check_slide(s, n, spec_layouts, prs_layouts, brand, deck_dir, banned)
+    issues += _conventions(deck, brand, spec_layouts)
     return deck, issues
+
+
+# Limits from the design research (`docs design`): convention, not standard, so they warn and never fail.
+MAX_BULLETS, MAX_WORDS, MAX_RUN, MAX_SERIES = 4, 60, 3, 8
+
+
+def _conventions(deck: Deck, brand: Brand, spec_layouts: dict[str, Any]) -> list[Issue]:
+    """Warnings for slides past the design rules' working limits: more than four bullets in a list or
+    60 words on a projected slide, more than three slides in a row on one layout, more than eight series
+    in a chart. A read deck (generate.mode: read) holds more text, so the text limits skip it.
+
+    Also the accessibility checks a deck can fail on its own (WCAG 2.2): an image with no alt text
+    (1.1.1), two slides with the same title (2.4.6, and PowerPoint's own accessibility checker), and a
+    chart whose series or slices are told apart by color alone (1.4.1)."""
+    out: list[Issue] = []
+    projected = ((brand.meta.get("generate") or {}).get("mode", "projected")) != "read"
+    run = 0
+    titles: dict[str, int] = {}
+    for n, s in enumerate(deck.slides, start=1):
+        at: dict[str, Any] = {"file": s.where.file if s.where else None,
+                              "line": s.where.line if s.where else None, "slide": n}
+        key = " ".join(plain(s.title).lower().split())
+        if key and key in titles:
+            out.append(Issue("TITLE_DUPLICATE", f"the same title as slide {titles[key]}: {s.title!r}; a screen "
+                             "reader lists slides by title, so make each one say what its slide shows",
+                             severity="warning", **at))
+        titles.setdefault(key, n)
+        for name, val in s.fields.items():
+            if isinstance(val, Image) and not val.alt.strip():
+                out.append(Issue("MISSING_ALT", f"{val.ref!r} has no alt text; write what it shows in "
+                                 "![alt](path)", field=name, severity="warning", **at))
+            if isinstance(val, Chart) and val.legend is False and not val.labels and \
+                    (len(val.series) > 1 or val.type in ("pie", "doughnut")):
+                out.append(Issue("COLOR_ONLY", "this chart's series are told apart by color alone; turn on "
+                                 "legend: or labels:", field=name, severity="warning", **at))
+        prev = deck.slides[n - 2].layout if n > 1 else None
+        run = run + 1 if s.layout and s.layout == prev else 1
+        if run == MAX_RUN + 1:
+            out.append(Issue("LAYOUT_RUN", f"slides {n - MAX_RUN} to {n} all use {s.layout!r}; vary the layout "
+                             "with the content", severity="warning", **at))
+        fields_of = (spec_layouts.get(s.layout) or {}).get("fields") or {}
+        words = 0
+        for name, val in s.fields.items():
+            if isinstance(val, Chart) and len(val.series) > MAX_SERIES:
+                out.append(Issue("SERIES_MANY", f"{len(val.series)} series; eight is the most a chart's colors keep "
+                                 "apart", field=name, severity="warning", actual=len(val.series), limit=MAX_SERIES,
+                                 **at))
+            if isinstance(val, Table | Chart | Image | Icon):
+                continue
+            words += len(plain(text_of(val)).split())
+            if projected and isinstance(val, list) and len(val) > MAX_BULLETS and \
+                    (fields_of.get(name) or {}).get("kind") == "bullets":
+                out.append(Issue("BULLETS_MANY", f"{len(val)} bullets on a projected slide; four or fewer read "
+                                 "best", field=name, severity="warning", actual=len(val), limit=MAX_BULLETS, **at))
+        if projected and words > MAX_WORDS:
+            out.append(Issue("WORDS_MANY", f"{words} words on a projected slide; move detail to the notes",
+                             severity="warning", actual=words, limit=MAX_WORDS, **at))
+    return out
 
 
 def _file(deck: Deck) -> str | None:
@@ -219,7 +312,8 @@ def _check_slide(s: Slide, n: int, spec_layouts: dict[str, Any], prs_layouts: di
         if s.notes and pat.search(s.notes):
             out.append(Issue("BANNED_PATTERN", f"speaker notes match {pat.pattern!r}", field="notes", **at))
     for name, fs in fspecs.items():
-        if fs.get("required") and name not in s.fields:
+        val = s.fields.get(name)
+        if fs.get("required") and (val is None or (isinstance(val, str) and not val.strip())):
             out.append(Issue("MISSING_FIELD", f"required field {name!r} is empty", field=name, **at))
     return out
 
@@ -236,6 +330,8 @@ def _check_field(name: str, val: Value, fs: dict[str, Any], want: str, brand: Br
         if fs.get("max_chars") and n > fs["max_chars"]:
             out.append(Issue("BUDGET_CHARS", f"{n} chars, budget {fs['max_chars']}", field=name,
                              actual=n, limit=fs["max_chars"], **at))
+    if want in ("text", "bullets") and fs.get("line_chars") and fs.get("max_lines"):
+        out += _check_lines(name, val, fs, want, at)
     if want == "bullets" and isinstance(val, list) and val:
         if fs.get("max_bullets") and len(val) > fs["max_bullets"]:
             out.append(Issue("BUDGET_BULLETS", f"{len(val)} bullets, budget {fs['max_bullets']}", field=name,
@@ -258,6 +354,40 @@ def _check_field(name: str, val: Value, fs: dict[str, Any], want: str, brand: Br
     if isinstance(val, Image | Icon):
         out += _check_asset(name, val.ref, brand, deck_dir, at)
     return out
+
+
+BULLET_GAP_LINES = 0.5 / 1.2  # the space before each bullet, half its size, as a share of a line
+
+
+def _wrapped(text: str, per_line: int) -> int:
+    """Lines a paragraph wraps to at per_line characters, word by word; a word longer than a line breaks."""
+    lines, used = 1, 0
+    for word in text.split():
+        need = len(word) if used == 0 else used + 1 + len(word)
+        if need <= per_line:
+            used = need
+            continue
+        if used:  # the word starts a new line
+            lines += 1
+        while len(word) > per_line:  # a word longer than a line breaks across lines
+            lines += 1
+            word = word[per_line:]
+        used = len(word)
+    return lines
+
+
+def _check_lines(name: str, val: Value, fs: dict[str, Any], want: str, at: dict[str, Any]) -> list[Issue]:
+    """BUDGET_LINES when the text, wrapped at the field's line length, needs more lines than its box
+    holds: a list counts each bullet's own lines and the space before it, which a character count
+    can't see when short lines make every bullet wrap."""
+    items = [t for _, t in val] if isinstance(val, list) else [str(val)]
+    lines = sum(_wrapped(plain(t), int(fs["line_chars"])) for t in items)
+    need = lines + (len(items) * BULLET_GAP_LINES if want == "bullets" else 0.0)
+    if need > fs["max_lines"] + 1e-9:
+        return [Issue("BUDGET_LINES", f"wraps to about {need:.1f} lines at {fs['line_chars']} characters a line; "
+                      f"the box holds {fs['max_lines']:g}", field=name, actual=round(need, 1),
+                      limit=fs["max_lines"], **at)]
+    return []
 
 
 def _check_table(name: str, t: Table, fs: dict[str, Any], brand: Brand, layout: Any,

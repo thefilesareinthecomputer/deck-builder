@@ -21,7 +21,12 @@
         "max_level": {"type": "integer", "minimum": 0},
         "max_rows": {"type": "integer", "minimum": 1},
         "max_cols": {"type": "integer", "minimum": 1},
-        "color": {"$ref": "#/$defs/colorRef"}
+        "color": {"$ref": "#/$defs/colorRef"},
+        "emphasis": {"$ref": "#/$defs/colorRef", "description": "text fields: the color of **bold** runs"},
+        "line_chars": {"type": "integer", "minimum": 1, "description": "text fields: characters a line holds, which check wraps the text at"},
+        "max_lines": {"type": "number", "exclusiveMinimum": 0, "description": "text fields: lines the box holds; check estimates the wrapped text, bullet spacing included, against it"},
+        "fit": {"type": "boolean", "description": "image fields: always fit the image inside the box, never crop it"},
+        "fit_max": {"type": "number", "exclusiveMinimum": 0, "maximum": 1, "description": "image fields: a fitted image takes at most this share of the box"}
       }
     }
   },
@@ -93,6 +98,7 @@
           "master": {"type": ["string", "null"]},
           "heading_field": {"type": "string"},
           "description": {"type": "string"},
+          "row": {"type": "boolean", "description": "the build spaces the filled numbered slots (logo1, caption1 ...) evenly across the row"},
           "fields": {
             "type": "object",
             "minProperties": 1,

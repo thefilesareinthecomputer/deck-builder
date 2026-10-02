@@ -10,5 +10,4 @@ Run in order before tagging. Record the date and the result of each manual step 
 6. On a Mac with PowerPoint: open each example deck and a deck from each generated layout set; none shows a repair prompt.
 7. Onboarding from a fresh clone on a machine with only LibreOffice and poppler: `uv sync`, `doctor`, `init`, `check --render` on the example deck.
 8. `uv tool install` from the tag works, and `deck-builder --version` prints the release version.
-9. No client material in history: `git log -p` holds only invented example content.
-10. Bump the version in `pyproject.toml` and `src/deck_builder/__init__.py`, update `CHANGELOG.md`, tag `vX.Y.Z`.
+9. Bump the version in `pyproject.toml` and `src/deck_builder/__init__.py`, update `CHANGELOG.md`, tag `vX.Y.Z`.

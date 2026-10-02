@@ -30,7 +30,7 @@ def inventory_brand(brand: Any) -> list[dict[str, Any]]:
     logos: and icons: dir come straight from brand.yaml, so each is confined to the kit before it's
     opened, hashed or decoded - the same boundary `check` enforces for a deck's own asset references.
     """
-    from deck_builder.validate import confined
+    from deck_builder.validate import STARTER_ICONS, confined, starter_icons
 
     out: list[dict[str, Any]] = []
     for name, hexv in (brand.meta.get("palette") or {}).items():
@@ -45,6 +45,7 @@ def inventory_brand(brand: Any) -> list[dict[str, Any]]:
         out.append({**_image_entry(f"brand:logo/{lid}", "logo", full, brand.path)})
     icons = brand.meta.get("icons") or {}
     icons_dir = brand.path / str(icons["dir"]) if icons.get("dir") else None
+    own: set[str] = set()
     if icons_dir is not None and confined(icons_dir, brand.path) and icons_dir.is_dir():
         for p in sorted(icons_dir.glob("*.png")):
             if not confined(p, brand.path):  # a symlink inside icons_dir pointing outside the kit
@@ -53,6 +54,11 @@ def inventory_brand(brand: Any) -> list[dict[str, Any]]:
             if icons.get("source"):
                 entry["source"] = icons["source"]
             out.append(entry)
+            own.add(p.stem)
+    for iid in starter_icons():  # the engine's starter set fills in any id the kit doesn't have
+        if iid not in own:
+            entry = _image_entry(f"brand:icon/{iid}", "icon", STARTER_ICONS / f"{iid}.png", STARTER_ICONS)
+            out.append({**entry, "source": "deck-builder starter icons", "path": f"starter/{iid}.png"})
     return out
 
 

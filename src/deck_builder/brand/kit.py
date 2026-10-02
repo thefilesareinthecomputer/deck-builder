@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import hashlib
+import itertools
 import json
+from dataclasses import fields
 from pathlib import Path
 from typing import Any
 
@@ -57,7 +59,94 @@ def contrast(a: str, b: str) -> float:
 # (foreground slot, background slot, minimum): text needs 4.5:1 (WCAG 1.4.3); the dark title, section and
 # closing layouts put lt1 text on dk2.
 TEXT_PAIRS = (("dk1", "lt1", 4.5), ("dk1", "lt2", 4.5), ("lt1", "dk2", 4.5), ("hlink", "lt1", 4.5))
+# Pairs only the generated layouts use, so an adopted template isn't held to them: panel and card
+# headings, footers and bold keywords put dk2 on lt2; the accent kicker and numeral on the dark section
+# and big-number slides are large text (18 pt, or 14 pt bold), which needs 3:1.
+GENERATED_PAIRS = (("dk2", "lt2", 4.5), ("accent2", "dk2", 3.0))
 GRAPHIC_MIN = 3.0  # icons and chart series against the background (WCAG 1.4.11)
+
+# Color vision deficiency, simulated on linear RGB with Machado, Oliveira and Fernandes (2009) at full
+# severity: protanopia and deuteranopia (red-green, about 1 in 12 men) and tritanopia (blue-yellow).
+CVD = {
+    "protanopia": ((0.152286, 1.052583, -0.204868), (0.114503, 0.786281, 0.099216),
+                   (-0.003882, -0.048116, 1.051998)),
+    "deuteranopia": ((0.367322, 0.860646, -0.227968), (0.280085, 0.672501, 0.047413),
+                     (-0.011820, 0.042940, 0.968881)),
+    "tritanopia": ((1.255528, -0.076749, -0.178779), (-0.078411, 0.930809, 0.147602),
+                   (0.004733, 0.691367, 0.303900)),
+}
+CVD_MIN_DELTA = 10.0  # CIE76 difference in Lab under which two chart colors read as one
+TYPE_FLOOR = {"projected": 18.0, "read": 12.0}  # points: the smallest legible size for each mode
+
+
+def _linear(hex_color: str) -> tuple[float, float, float]:
+    out = []
+    for i in (0, 2, 4):
+        c = int(hex_color[i:i + 2], 16) / 255
+        out.append(c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4)
+    return out[0], out[1], out[2]
+
+
+def _lab(rgb: tuple[float, float, float]) -> tuple[float, float, float]:
+    """Linear sRGB to CIE Lab (D65)."""
+    r, g, b = (min(1.0, max(0.0, c)) for c in rgb)
+    x = (0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047
+    y = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    z = (0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883
+
+    def f(t: float) -> float:
+        return t ** (1 / 3) if t > 0.008856 else 7.787 * t + 16 / 116
+
+    return 116 * f(y) - 16, 500 * (f(x) - f(y)), 200 * (f(y) - f(z))
+
+
+def cvd_delta(a: str, b: str, kind: str) -> float:
+    """How different two colors look to someone with this color vision deficiency (CIE76 in Lab)."""
+    m = CVD[kind]
+
+    def sim(hex_color: str) -> tuple[float, float, float]:
+        c = _linear(hex_color)
+        r, g, bl = (sum(m[row][k] * c[k] for k in range(3)) for row in range(3))
+        return r, g, bl
+
+    la, lb = _lab(sim(a)), _lab(sim(b))
+    return float(sum((p - q) ** 2 for p, q in zip(la, lb, strict=True)) ** 0.5)
+
+
+def cvd_issues(brand: Brand) -> list[Issue]:
+    """CVD_CONFUSABLE warnings for chart colors two kinds of reader can't tell apart."""
+    assert brand.template is not None
+    slots = brand_inspect.theme(brand.template)["colors"]
+    refs = (brand.tokens.get("chart") or {}).get("colors") or [f"accent{n}" for n in range(1, 7)]
+    colors = [(str(ref), hexv) for ref in refs if (hexv := slots.get(str(ref)) or brand.color(str(ref)))]
+    out = []
+    for (ra, a), (rb, b) in itertools.combinations(colors, 2):
+        if a.upper() == b.upper():
+            out.append(Issue("CVD_CONFUSABLE", f"chart colors {ra} and {rb} are the same color (#{a}), so two "
+                             "series look the same to everyone", severity="warning", actual=0.0,
+                             limit=CVD_MIN_DELTA))
+            continue
+        for kind in CVD:
+            if (d := cvd_delta(a, b, kind)) < CVD_MIN_DELTA:
+                out.append(Issue("CVD_CONFUSABLE", f"chart colors {ra} (#{a}) and {rb} (#{b}) look alike with "
+                                 f"{kind} (difference {d:.1f}, needs {CVD_MIN_DELTA:.0f})", severity="warning",
+                                 actual=round(d, 1), limit=CVD_MIN_DELTA))
+                break
+    return out
+
+
+def type_issues(brand: Brand) -> list[Issue]:
+    """TYPE_SMALL warnings for generate.type sizes under the legibility floor of the kit's mode."""
+    from deck_builder.brand.layouts import Scale
+
+    gen = brand.meta.get("generate") or {}
+    mode = gen.get("mode", "projected")
+    floor = TYPE_FLOOR.get(mode, TYPE_FLOOR["projected"])
+    scale = Scale.from_meta(gen)
+    return [Issue("TYPE_SMALL", f"generate.type {f.name} is {size:g} pt; a {mode} deck needs {floor:g} pt or more",
+                  severity="warning", actual=size, limit=floor)
+            for f in fields(scale) if isinstance(size := getattr(scale, f.name), int | float)
+            and not isinstance(size, bool) and f.name != "big_number" and size < floor]
 
 
 def contrast_issues(brand: Brand) -> list[Issue]:
@@ -65,7 +154,8 @@ def contrast_issues(brand: Brand) -> list[Issue]:
     each table status color against every fill it can sit on (its row, its band, and the background)."""
     assert brand.template is not None
     slots = brand_inspect.theme(brand.template)["colors"]
-    pairs = [(f"{fg} on {bg}", slots.get(fg), slots.get(bg), lo) for fg, bg, lo in TEXT_PAIRS]
+    text_pairs = TEXT_PAIRS + (GENERATED_PAIRS if brand.tokens.get("generated") else ())
+    pairs = [(f"{fg} on {bg}", slots.get(fg), slots.get(bg), lo) for fg, bg, lo in text_pairs]
     icon_ref = (brand.meta.get("icons") or {}).get("default_color")
     chart_refs = (brand.tokens.get("chart") or {}).get("colors") or []
     graphics = [("icon color", icon_ref)] if icon_ref else []
@@ -129,7 +219,7 @@ def check_kit(brand: Brand) -> list[Issue]:
     icons = brand.meta.get("icons") or {}
     if icons and not (brand.path / icons["dir"]).is_dir():
         out.append(Issue("MISSING_IMAGE", f"icons dir {icons['dir']} not found"))
-    return out + stale_issues(brand) + contrast_issues(brand)
+    return out + stale_issues(brand) + contrast_issues(brand) + cvd_issues(brand) + type_issues(brand)
 
 
 GENERATION_KEYS = ("name", "palette", "theme_colors", "fonts", "generate")  # what brand init reads
@@ -198,6 +288,8 @@ def furniture_layouts(brand: Brand) -> dict[str, list[str]]:
 
 def show(brand: Brand) -> dict[str, Any]:
     """The compact contract an agent needs before writing a deck."""
+    from deck_builder.validate import starter_icons
+
     icons = brand.meta.get("icons") or {}
     icon_ids: list[str] = []
     if icons.get("dir") and (brand.path / icons["dir"]).is_dir():
@@ -218,6 +310,7 @@ def show(brand: Brand) -> dict[str, Any]:
         "palette": sorted((brand.meta.get("palette") or {}).keys()),
         "logos": sorted((brand.meta.get("logos") or {}).keys()),
         "icons": icon_ids,
+        "starter_icons": [i for i in starter_icons() if i not in icon_ids],
         "voice": brand.meta.get("voice") or [],
         "lint": brand.meta.get("lint") or {},
         "furniture": furniture_layouts(brand),
@@ -238,6 +331,9 @@ def show_text(d: dict[str, Any]) -> str:
         lines.append(f"logos: {', '.join('brand:logo/' + x for x in d['logos'])}")
     if d["icons"]:
         lines.append(f"icons: {', '.join('brand:icon/' + x for x in d['icons'])}")
+    if d["starter_icons"]:
+        lines.append(f"starter icons (the engine's, in this brand's icon color): "
+                     f"{', '.join('brand:icon/' + x for x in d['starter_icons'])}")
     for v in d["voice"]:
         lines.append(f"voice: {v}")
     if d["lint"]:

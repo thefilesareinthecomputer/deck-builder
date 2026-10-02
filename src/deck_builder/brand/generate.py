@@ -6,8 +6,10 @@ layout set, and optionally places a logo on the master.
 """
 from __future__ import annotations
 
+import colorsys
 import io
 import re
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 from xml.sax.saxutils import escape
@@ -25,7 +27,7 @@ from pptx.util import Emu
 
 from deck_builder.brand.inspect import estimate_chars
 from deck_builder.brand.kit import contrast
-from deck_builder.brand.layouts import PH, Decor, LayoutDef, Scale, layout_set
+from deck_builder.brand.layouts import PH, Decor, LayoutDef, Scale, Style, layout_set
 from deck_builder.build.normalize import read_parts, rezip
 from deck_builder.template import POTX_CT, PPTX_CT
 
@@ -321,6 +323,44 @@ def add_master_logo(prs: Any, logo: Path, w_in: float, h_in: float) -> None:
 # ---------------------------------------------------------------- tokens
 
 
+def tint(hex_color: str, pct: int) -> str:
+    """A color lightened the way a "tx2@pct" fill draws it (DrawingML lumMod pct, lumOff 100 - pct): in
+    HSL, lightness L becomes L * pct + (100 - pct)."""
+    r, g, b = (int(hex_color[i:i + 2], 16) / 255 for i in (0, 2, 4))
+    hue, lum, sat = colorsys.rgb_to_hls(r, g, b)
+    lum = min(1.0, lum * pct / 100 + (100 - pct) / 100)
+    return "".join(f"{round(c * 255):02X}" for c in colorsys.hls_to_rgb(hue, lum, sat))
+
+
+RAMP_CONTRAST = 4.5  # white label text on every step of a card, chevron or band ramp
+
+
+def ramp_floor(primary: str, label: str) -> int:
+    """The lightest tint of the primary (60 to 100) that keeps the label color at RAMP_CONTRAST on it."""
+    for pct in range(60, 100, 5):
+        if contrast(tint(primary, pct), label) >= RAMP_CONTRAST:
+            return pct
+    return 100
+
+
+GRAPHIC_CONTRAST = 3.0  # bars, lines and slices against the background (WCAG 2.2 SC 1.4.11)
+
+
+def chart_color(name: str, hex_color: str, background: str) -> str:
+    """A chart color as tokens.yaml names it, or, when it has under 3:1 against the background, the
+    darkest-needed shade of the same hue, as hex: the brand's palette stays as it is, and the chart
+    stays readable."""
+    if contrast(hex_color, background) >= GRAPHIC_CONTRAST:
+        return name
+    r, g, b = (int(hex_color[i:i + 2], 16) / 255 for i in (0, 2, 4))
+    hue, lum, sat = colorsys.rgb_to_hls(r, g, b)
+    shade = hex_color
+    while lum > 0 and contrast(shade, background) < GRAPHIC_CONTRAST:
+        lum = max(0.0, lum - 0.01)
+        shade = "".join(f"{round(c * 255):02X}" for c in colorsys.hls_to_rgb(hue, lum, sat))
+    return shade
+
+
 def _mix(a: str, b: str, share: float) -> str:
     """share of color a over color b, as hex."""
     ca, cb = (tuple(int(h[i:i + 2], 16) for i in (0, 2, 4)) for h in (a, b))
@@ -328,6 +368,7 @@ def _mix(a: str, b: str, share: float) -> str:
 
 
 TABLE_ROW_FACTOR = 2.0  # row height as a multiple of the table's font size
+LINE_EM = 0.47  # an average character's width in ems for running text, measured on rendered decks
 
 
 def tokens_for(defs: list[LayoutDef], meta: dict[str, Any], scale: Scale | None = None) -> dict[str, Any]:
@@ -342,36 +383,55 @@ def tokens_for(defs: list[LayoutDef], meta: dict[str, Any], scale: Scale | None 
             return str(ref)
         return fallback if fallback in palette else DEFAULT_SLOT_COLORS[slot]
 
+    theme_names = {"tx1": ("dk1", "ink"), "bg1": ("lt1", "background"), "tx2": ("dk2", "primary")}
+
+    def color_name(theme: str) -> str:  # a layout's theme color as the palette name (or hex) a build resolves
+        return name_for(*theme_names[theme])
+
     layouts: dict[str, Any] = {}
     for ld in defs:
         fields: dict[str, Any] = {}
         for ph in ld.phs:
             kind = KIND_FOR.get(ph.kind) or ("bullets" if ph.bullets else "text")
+            if ph.icon:
+                kind = "icon"
             spec: dict[str, Any] = {"idx": ph.idx, "kind": kind}
-            if kind in ("text", "bullets"):
-                spec["max_chars"] = estimate_chars(ph.w, ph.text_h, ph.size or 18)
+            if kind in ("text", "bullets"):  # from the width text gets: less insets and a list's bullet hang
+                spec["max_chars"] = estimate_chars(ph.text_w, ph.text_h, ph.size or 18)
+            if kind in ("text", "bullets"):  # what check wraps the text against, line by line
+                spec["line_chars"] = max(1, round(ph.text_w * 72 / ((ph.size or 18) * LINE_EM)))
+                spec["max_lines"] = round(ph.text_h * 72 / ((ph.size or 18) * 1.2), 1)
             if kind == "bullets":
                 spec["max_bullets"] = max(2, min(7, int(ph.text_h * 72 / ((ph.size or 18) * 1.2 * 1.5))))
-                spec["max_bullet_chars"] = estimate_chars(ph.w, (ph.size or 18) * 2.4 / 72, ph.size or 18)
+                spec["max_bullet_chars"] = estimate_chars(ph.text_w, (ph.size or 18) * 2.4 / 72, ph.size or 18)
                 spec["max_level"] = 1
             if kind == "table":  # rows that fit the placeholder at one line each, header included
                 spec["max_rows"] = max(3, min(10, int(ph.h * 72 / (s.table * TABLE_ROW_FACTOR)) - 1))
                 spec["max_cols"] = 6
-            if ld.key == "icon-row" and kind == "image":
-                spec["kind"] = "icon"
+            if ph.icon and ph.color:
+                spec["color"] = color_name(ph.color)  # white on a tile or chevron
+            if ph.emphasis:
+                spec["emphasis"] = color_name(ph.emphasis)
+            if ph.fit:
+                spec["fit"] = True
+            if ph.fit_max:
+                spec["fit_max"] = ph.fit_max
             if ph.required:
                 spec["required"] = True
             fields[ph.field] = spec
         entry: dict[str, Any] = {"template_layout": ld.name, "description": ld.description}
         if ld.heading != "title":
             entry["heading_field"] = ld.heading
+        if ld.row:
+            entry["row"] = True
         entry["fields"] = fields
         layouts[ld.key] = entry
     return {
         "spec_version": 1,
         "chart": {"font_size": 12, "text_color": name_for("dk1", "ink"),
-                  "colors": [name_for("accent1", "primary"), name_for("accent2", "accent"),
-                             name_for("accent3", "muted"), name_for("accent4", "accent4")]},
+                  "colors": [chart_color(name_for(slot, role), slots[slot], slots["lt1"])
+                             for slot, role in (("accent1", "primary"), ("accent2", "accent"),
+                                                ("accent3", "muted"), ("accent4", "accent4"))]},
         # A dark header, then white rows split by thin rules: no banding and no vertical lines.
         "table": {"font_size": s.table, "header_font_size": s.table, "row_height_factor": TABLE_ROW_FACTOR,
                   "header_fill": name_for("dk2", "primary"), "header_text": name_for("lt1", "background"),
@@ -413,8 +473,10 @@ def generate(meta: dict[str, Any], source_dir: Path) -> tuple[bytes, dict[str, A
     scale = Scale.from_meta(gen)
     mode = gen.get("mode", "projected")
     anchor = gen.get("body_anchor", "top" if mode == "read" else "middle")  # documents read from the top
+    slots = slot_colors(meta)
+    style = replace(Style.from_meta(gen), ramp_floor=ramp_floor(slots["dk2"], slots["lt1"]))
     defs = layout_set(gen.get("layout_set", "standard"), w_in, h_in, scale, anchor, gen.get("big_number", "light"),
-                      mode)
+                      mode, style)
 
     prs = Presentation()
     prs.slide_width, prs.slide_height = Emu(w_emu), Emu(h_emu)

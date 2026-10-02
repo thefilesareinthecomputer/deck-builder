@@ -8,11 +8,12 @@ from typing import Any
 from PIL import Image as PILImage
 from pptx.chart.data import CategoryChartData
 from pptx.dml.color import RGBColor
-from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION
+from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION, XL_TICK_LABEL_POSITION
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.oxml.xmlchemy import OxmlElement
 from pptx.util import Pt
 
+from deck_builder.brand.kit import contrast
 from deck_builder.brand.registry import Brand
 from deck_builder.build.text import CODE_FONT_DEFAULT, add_runs
 from deck_builder.model import Chart, Table
@@ -132,12 +133,16 @@ def fill_chart(slide: Any, ph: Any, spec: Chart, brand: Brand) -> None:
                     s.format.fill.fore_color.rgb = c
     if not pie and hasattr(plot, "gap_width"):
         plot.gap_width = tok["gap_width"]
+        for s in plot.series:  # without this, LibreOffice draws a negative bar as positive
+            s.invert_if_negative = False
     if not pie:
         plot.vary_by_categories = False  # one color per series, never a rainbow across one series
     _square_corners(chart)
     values = [v for s in spec.series for v in s.values if v is not None]
     if spec.type in ("column", "stacked-column", "bar", "stacked-bar") and values and min(values) >= 0:
         chart.value_axis.minimum_scale = 0  # bars start at zero; a cut axis exaggerates differences
+    if not pie and values and min(values) < 0:  # category names at the edge, not under the negative bars
+        chart.category_axis.tick_label_position = XL_TICK_LABEL_POSITION.LOW
     legend = spec.legend if spec.legend is not None else (pie or len(spec.series) > 1)
     chart.has_legend = bool(legend)
     if legend:
@@ -145,8 +150,24 @@ def fill_chart(slide: Any, ph: Any, spec: Chart, brand: Brand) -> None:
         chart.legend.include_in_layout = False
     if spec.labels:
         plot.has_data_labels = True
+        plot.data_labels.show_value = True  # the doughnut template's own labels have it off
         plot.data_labels.number_format = spec.number_format
         plot.data_labels.number_format_is_linked = False
+        ink = str(text_color or RGBColor(0, 0, 0))
+
+        def readable(fill: Any) -> RGBColor:  # white or ink, whichever reads on this fill
+            return RGBColor.from_string("FFFFFF" if contrast(str(fill), "FFFFFF") >= contrast(str(fill), ink) else ink)
+
+        if spec.type.startswith("stacked-") and colors:  # labels sit on the bars
+            for i, s in enumerate(plot.series):
+                dl = s.data_labels
+                dl.show_value = True
+                dl.number_format = spec.number_format
+                dl.number_format_is_linked = False
+                dl.font.color.rgb = readable(colors[i % len(colors)])
+        if pie and colors:  # labels sit on the slices
+            for i, pt in enumerate(plot.series[0].points):
+                pt.data_label.font.color.rgb = readable(colors[i % len(colors)])
     chart.has_title = bool(spec.title)
     if spec.title:
         chart.chart_title.text_frame.text = spec.title
@@ -266,21 +287,51 @@ def fill_table(slide: Any, ph: Any, spec: Table, brand: Brand) -> None:
                 _rules(cell, rule, r)
 
 
-def fill_picture(slide: Any, ph: Any, path: Path, alt: str, crop: bool) -> tuple[int, int, int, int]:
-    """Crop to fill (photos in picture placeholders) or fit inside (logos, icons, other placeholders).
+def color_bold(ph: Any, hex_color: str) -> None:
+    """**bold** runs in a filled text field take this color (a field's tokens.yaml emphasis), so the
+    keywords on cards and bands read in the primary color."""
+    for p in ph.text_frame.paragraphs:
+        for run in p.runs:
+            if run.font.bold:
+                run.font.color.rgb = RGBColor.from_string(hex_color)
 
-    Returns the placeholder's geometry, used for the low-resolution check.
+
+def _visible(path: Path) -> tuple[int, int, int, int, int, int]:
+    """(image width, height, then the left, top, right, bottom of its visible pixels): a logo drawn on a
+    larger transparent canvas centers by its art, not by its canvas."""
+    with PILImage.open(path) as im:
+        iw, ih = im.size
+        box = im.convert("RGBA").getchannel("A").getbbox() if im.mode in ("RGBA", "LA", "PA", "P") else None
+    left, top, right, bottom = box or (0, 0, iw, ih)
+    return iw, ih, left, top, right, bottom
+
+
+def fill_picture(slide: Any, ph: Any, path: Path, alt: str, crop: bool, share: float = 1.0,
+                 trim: bool = False) -> tuple[tuple[int, int, int, int], Any]:
+    """Crop to fill (photos in picture placeholders) or fit inside (logos, icons, other placeholders).
+    A fitted image takes at most `share` of the box in each direction, centered, so a logo stays modest.
+    With trim, a fitted image's fully transparent margins are cropped away first, so a logo centers by
+    its art; icons don't trim, since an icon set's shared canvas keeps its icons the same size.
+
+    Returns the placeholder's geometry, used for the low-resolution check, and the picture shape.
     """
     geo = (ph.left, ph.top, ph.width, ph.height)
     if crop and hasattr(ph, "insert_picture"):
         pic = ph.insert_picture(str(path))
     else:
         left, top, w, h = _take_geometry(ph)
-        with PILImage.open(path) as im:
-            iw, ih = im.size
-        scale = min(w / iw, h / ih)
-        nw, nh = int(iw * scale), int(ih * scale)
+        if trim:
+            iw, ih, vl, vt, vr, vb = _visible(path)
+        else:
+            with PILImage.open(path) as im:
+                iw, ih = im.size
+            vl, vt, vr, vb = 0, 0, iw, ih
+        scale = min(w / (vr - vl), h / (vb - vt)) * share
+        nw, nh = int((vr - vl) * scale), int((vb - vt) * scale)
         pic = slide.shapes.add_picture(str(path), left + (w - nw) // 2, top + (h - nh) // 2, nw, nh)
+        if (vl, vt, vr, vb) != (0, 0, iw, ih):  # show only the art; the file itself is untouched
+            pic.crop_left, pic.crop_top = vl / iw, vt / ih
+            pic.crop_right, pic.crop_bottom = (iw - vr) / iw, (ih - vb) / ih
     if alt:
         pic._element.nvPicPr.cNvPr.set("descr", alt)
-    return geo
+    return geo, pic

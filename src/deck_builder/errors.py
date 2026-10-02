@@ -103,6 +103,57 @@ CODES: dict[str, tuple[str, str]] = {
         "An image is smaller than its placeholder at 150 DPI and will look soft.",
         "Use a larger source image.",
     ),
+    "BUDGET_LINES": (
+        "A text field, wrapped at its box's line length, needs more lines than the box holds. A list counts each "
+        "bullet's own lines and the space before it, so short lines that make every bullet wrap show here even "
+        "under the character budget.",
+        "Shorten the bullets that wrap so each fits on one line, use fewer bullets, or move detail to the notes.",
+    ),
+    "BULLETS_MANY": (
+        "A list on a projected slide has more than four bullets, past what an audience holds at once. "
+        "A convention from `docs design`, so it warns.",
+        "Cut to the four that make the point, split the slide, or move detail to the speaker notes.",
+    ),
+    "WORDS_MANY": (
+        "A projected slide has more than 60 words; about 40 reads well from the back of a room. "
+        "A convention from `docs design`, so it warns.",
+        "Move detail to the speaker notes, or split the slide.",
+    ),
+    "LAYOUT_RUN": (
+        "More than three slides in a row use the same layout, so the deck reads as a document. "
+        "A convention from `docs design`, so it warns.",
+        "Match each point to the layout that shows it (`docs design` has the table): a number as big-number, "
+        "parallel options as cards or comparison, steps as process.",
+    ),
+    "SERIES_MANY": (
+        "A chart has more than eight series, more than its colors keep apart.",
+        "Group the small series into one, or split the chart.",
+    ),
+    "MISSING_ALT": (
+        "An image has no alt text, so a screen reader has nothing to say for it (WCAG 2.2 SC 1.1.1).",
+        "Write what the image shows between the brackets: `![The new north warehouse](assets/hero.png)`.",
+    ),
+    "TITLE_DUPLICATE": (
+        "Two slides have the same title; a screen reader lists slides by title, and PowerPoint's accessibility "
+        "checker flags it (WCAG 2.2 SC 2.4.6).",
+        "Give each slide a title that says what that slide shows.",
+    ),
+    "COLOR_ONLY": (
+        "A chart's series or slices are told apart by color alone, which people with color blindness can't "
+        "do (WCAG 2.2 SC 1.4.1).",
+        "Leave the legend on (the default for two or more series and for pies) or set `labels: true`.",
+    ),
+    "CVD_CONFUSABLE": (
+        "Two of the brand's chart colors look alike: the same color, or alike to people with a common color "
+        "blindness (protanopia, deuteranopia or tritanopia), simulated on the colors themselves.",
+        "Ask the brand owner to change one of the two colors in tokens.yaml `chart.colors` or the theme "
+        "accents; until then, label the series on charts that use both.",
+    ),
+    "TYPE_SMALL": (
+        "A size in `generate.type` is under the legibility floor for its mode: 18 pt for a projected deck, "
+        "12 pt for a read deck.",
+        "Raise the size in brand.yaml `generate.type` and regenerate the kit with `brand init <slug> --force`.",
+    ),
     "MISSING_IMAGE": (
         "An image path doesn't exist, or the image is a web address.",
         "Fix the path; paths resolve relative to the deck file. Download a web image into the deck folder first.",

@@ -1,7 +1,7 @@
 spec_version: 1
 name: Cubicle 9 Enterprises
 slug: cubicle-nine
-version: 1.0.0
+version: 1.1.0
 description: Fictional deck-builder test brand
 palette:
   primary: "293D59"
@@ -18,10 +18,10 @@ theme_colors:
   accent1: primary
   accent2: accent
   accent3: muted
-  accent4: "293D59"
+  accent4: "8C3B4A"
   accent5: "E89445"
   accent6: "68778A"
-  hlink: accent
+  hlink: primary
   folHlink: muted
 fonts:
   heading: {family: "Avenir Next", fallback: Arial}
@@ -31,7 +31,7 @@ logos:
   mono: assets/logo-mono.png
 icons:
   dir: assets/icons
-  default_color: accent
+  default_color: primary
   source: Original fixture artwork
 voice:
   - "Cubicle 9 Enterprises: get back to work."

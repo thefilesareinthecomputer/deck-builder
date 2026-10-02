@@ -1,7 +1,7 @@
 spec_version: 1
 name: Dumbder Nifftlin Paper Co.
 slug: dumbder-nifftlin
-version: 1.0.0
+version: 1.1.0
 description: Fictional deck-builder test brand
 palette:
   primary: "23443D"
@@ -18,10 +18,10 @@ theme_colors:
   accent1: primary
   accent2: accent
   accent3: muted
-  accent4: "23443D"
+  accent4: "2F6B9A"
   accent5: "C99455"
   accent6: "6A7971"
-  hlink: accent
+  hlink: primary
   folHlink: muted
 fonts:
   heading: {family: "Georgia", fallback: Arial}
@@ -31,7 +31,7 @@ logos:
   mono: assets/logo-mono.png
 icons:
   dir: assets/icons
-  default_color: accent
+  default_color: primary
   source: Original fixture artwork
 voice:
   - "Dumbder Nifftlin: it's good paper."

@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import init_designed_demo_brands
+from conftest import ALL_OPTIONS, BRAND_KITS, init_designed_demo_brands
 from deck_builder.cli import main
 from deck_builder.qa import tools
 
@@ -69,6 +69,53 @@ def test_designed_layouts_render_with_no_flags(designed, slug, capsys):
     cfg, out = designed
     capsys.readouterr()
     code, res = run("--config", cfg, "render", str(out / f"{slug}.pptx"), capsys=capsys)
+    assert code == 0, res["issues"]
+    assert res["flagged_slides"] == []
+
+
+@pytest.fixture(scope="module")
+def options(tmp_path_factory):
+    root = tmp_path_factory.mktemp("options-render")
+    cfg = str(root / "deck-builder.toml")
+    assert main(["init", "--dir", str(root)]) == 0
+    init_designed_demo_brands(root, DEMO / "brands", SLUGS, ALL_OPTIONS)
+    assert main(["--config", cfg, "build", str(DEMO / "options" / "deck.md"), "--data",
+                 str(DEMO / "options" / "brands.csv"), "--name", "{{brand}}.pptx", "-o", str(root / "out")]) == 0
+    return cfg, root / "out"
+
+
+@pytest.mark.parametrize("slug", SLUGS)
+def test_every_designed_option_renders_with_no_flags(options, slug, capsys):
+    """Quote takeaways, icon tiles, process icons, rectangle band labels and the logo row."""
+    cfg, out = options
+    capsys.readouterr()
+    code, res = run("--config", cfg, "render", str(out / f"{slug}.pptx"), capsys=capsys)
+    assert code == 0, res["issues"]
+    assert res["flagged_slides"] == []
+
+
+DECKS = sorted((p.parent.parent.name, p.parent.name) for p in (DEMO / "decks").glob("*/*/deck.md"))
+
+
+@pytest.fixture(scope="module")
+def brand_decks(tmp_path_factory):
+    """The nine brand decks (pitch, review and edge per brand), each built on its brand's own kit."""
+    root = tmp_path_factory.mktemp("brand-decks")
+    cfg = str(root / "deck-builder.toml")
+    assert main(["init", "--dir", str(root)]) == 0
+    for slug, options in BRAND_KITS.items():
+        init_designed_demo_brands(root, DEMO / "brands", (slug,), options)
+    for slug, name in DECKS:
+        assert main(["--config", cfg, "build", str(DEMO / "decks" / slug / name / "deck.md"), "-o",
+                     str(root / "out" / f"{slug}-{name}.pptx")]) == 0, (slug, name)
+    return cfg, root / "out"
+
+
+@pytest.mark.parametrize("slug,name", DECKS)
+def test_each_brand_deck_renders_with_no_flags(brand_decks, slug, name, capsys):
+    cfg, out = brand_decks
+    capsys.readouterr()
+    code, res = run("--config", cfg, "render", str(out / f"{slug}-{name}.pptx"), capsys=capsys)
     assert code == 0, res["issues"]
     assert res["flagged_slides"] == []
 

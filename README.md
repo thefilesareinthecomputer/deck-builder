@@ -143,7 +143,9 @@ Every generated kit follows one design standard, built from presentation researc
 
 Set `generate.mode` in `brand.yaml` by how the deck is used: `projected` (the default) for a room, with nothing under 18 pt, or `read` for decks sent ahead and read on screen, with a 14 pt body on a readable measure. `generate.type` adjusts any size.
 
-`generate.layout_set: designed` adds layouts built from shapes rather than loose text: cards with colored label bands, process chevrons and labeled bands, plus a section label and a subtitle line on every content slide. Images with transparent pixels, such as logos, are fitted inside their box instead of cropped.
+`generate.layout_set: designed` adds layouts built from shapes rather than loose text: two to five cards with colored label bands, three to six process chevrons, two to four labeled bands and a row of logos, plus a section label and a subtitle line on every content slide. Options give icons a tile, process steps an icon each and the takeaway an italic style. Images with transparent pixels, such as logos, are fitted inside their box instead of cropped, and every brand can place the engine's starter icons.
+
+Accessibility follows WCAG 2.2 AA, the standard accessibility law points to. Generated layouts keep projected text at 18 pt or more and white labels at 4.5:1 contrast. `brand check` reports any color pair the kit uses that falls under the WCAG ratios, chart colors that look alike to people with color blindness, and type under the legibility floor; `check` reports a deck's images without alt text, duplicate slide titles and charts told apart by color alone. Colors stay the brand owner's call, so these are warnings. `deck-builder docs design` has the details.
 
 ## Fix up an existing deck
 
@@ -175,7 +177,7 @@ A generated kit is self-contained: `brand init <slug> --force` rebuilds it from 
 | An existing template | `deck-builder brand adopt <slug> --template client.potx` wraps it; a test render then tunes the budgets |
 | Nothing yet | The `neutral` brand that `init` creates |
 
-A deck selects its brand with `brand: <slug>`, and `--brand` overrides it for a single build. Brands resolve from the `brand_paths` in `deck-builder.toml`, so a client kit can live in its own private repository.
+A deck selects its brand with `brand: <slug>`, and `--brand` overrides it for a single build. Brands resolve from the `brand_paths` in `deck-builder.toml`, so a kit can live in any folder.
 
 ## Commands
 
@@ -212,12 +214,9 @@ deck-builder includes skills and agents for Claude Code. Describe the deck you n
 | `deck-decomposer-agent` | Turns a folder of notes into an outline with sources and a draft `deck.md` to co-author |
 | `deck-brand-agent` | Builds or adopts a brand kit and tunes its budgets with a test render |
 | `deck-builder-agent` | Runs the check, build and render loop on a larger deck in its own context |
+| `deck-validator-agent` | Proofreads a built deck against the design and accessibility rules, every slide, and signs it off or sends it back with fixes; read-only |
 
 The agents have no shell access. They reach the engine only through its MCP server (`deck-builder mcp`), confined to the workspace (and the configured `brand_paths` folders for brand tools) and refusing this clone's own `src/`, `.claude/` and `.git/` regardless of those settings; the CLI must be on your PATH (`uv tool install .` from the repository). `deck-builder skills install --yes` makes the skills and agents available in other projects.
-
-> [!NOTE]
-> The engine runs locally, but content an agent reads is sent to Anthropic, as in any Claude Code session. The MCP server confines the engine's own tools; each agent's own Write and Edit tools are limited only by its instructions, not by code, so keep client work outside the clone.
-
 ## Principles
 
 - **Content in, design out.** Decks contain text, data and image references. Layout, typography and color come only from the brand kit, and budgets are never relaxed to make content fit.
@@ -245,6 +244,7 @@ uv run python scripts/readme_images.py # regenerate the images in this README
 | `scripts/readme_images.py` | Builds the showcase deck in the three demo brands and redraws `docs/images/` |
 | `scripts/demo_brand_logos.py` | Redraws the demo brands' logo wordmarks from their SVG sources (macOS fonts) |
 | `scripts/make_example_assets.py` | Draws the neutral brand's logo and icons and the example deck's image |
+| `scripts/make_starter_icons.py` | Draws the engine's starter icons, which any brand can place |
 | `scripts/probe_powerpoint.sh <deck.pptx>` | Tests the PowerPoint render backend on a Mac with PowerPoint |
 
 The three fictional brands in `tests/fixtures/demo-brands/` serve as the test and showcase brands; their names and artwork were created for this repository. Everything under `workspace/` is ignored by git, so decks and brands created there stay out of the repository. Releases follow the [release checklist](docs/release-checklist.md).

@@ -192,19 +192,24 @@ def _fragment_of(t: str, tokens: set[str]) -> bool:
 
 
 def _candidates(t: str, x: float, y: float, shapes: list[TextShape]) -> list[tuple[float, int]]:
-    """The shapes a word could belong to, nearest first (0 when its point is inside the box). Exact
-    token matches win over split-fragment matches; the footer and slide number only ever take a word
-    that's actually inside their own small box, so neither steals overflow from a nearby shape."""
-    exact = [i for i, s in enumerate(shapes) if not s.chart and t in s.tokens]
-    pool = exact or [i for i, s in enumerate(shapes) if not s.chart and _fragment_of(t, s.tokens)]
-    cands = []
-    for i in pool:
-        s = shapes[i]
-        d = s.box.distance(x, y)
-        if s.protected and d != 0:
-            continue
-        cands.append((d, i))
-    return cands
+    """The shapes a word could belong to, nearest first (0 when its point is inside the box). A word
+    inside a shape that holds it, exactly or as a fragment of a word the renderer split, belongs to that
+    shape; otherwise exact token matches win over split-fragment matches. The footer and slide number
+    only ever take a word that's actually inside their own small box, so neither steals overflow from a
+    nearby shape."""
+    def near(pool: list[int]) -> list[tuple[float, int]]:
+        out = []
+        for i in pool:
+            s = shapes[i]
+            d = s.box.distance(x, y)
+            if not (s.protected and d != 0):
+                out.append((d, i))
+        return out
+
+    exact = near([i for i, s in enumerate(shapes) if not s.chart and t in s.tokens])
+    split = near([i for i, s in enumerate(shapes) if not s.chart and t not in s.tokens and _fragment_of(t, s.tokens)])
+    inside = [c for c in exact + split if c[0] == 0]  # "tested" inside the chevron that holds "load-tested"
+    return inside or exact or split
 
 
 def overflow(pptx: Path, pdf: Path, manifest: dict[str, Any] | None = None,

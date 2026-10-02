@@ -43,6 +43,6 @@ Add `--json` to any command for one machine-readable object. Exit codes: 0 succe
 | `scratch/` | Disposable intermediate output | Agents and skills; safe to delete anytime |
 
 `deck-builder init` creates `brands/<slug>/`, `decks/<slug>/`, `out/` and `.cache/`; the rest you
-or an agent create as needed. To keep a brand kit somewhere else, such as its own private repo, add
-its folder to `brand_paths` in `deck-builder.toml`. Keep the workspace itself in its own private git
-repo for history, rather than dated copies beside `deck.md`.
+or an agent create as needed. To keep a brand kit somewhere else, add its folder to `brand_paths` in
+`deck-builder.toml`. For history, keep the workspace in its own git repo rather than dated copies
+beside `deck.md`.
