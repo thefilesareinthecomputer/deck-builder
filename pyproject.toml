@@ -5,6 +5,19 @@ description = "Deterministic, template-driven builder for editable PowerPoint de
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
+keywords = ["powerpoint", "pptx", "presentations", "slides", "markdown", "excel", "templates", "branding", "mcp", "claude-code"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Multimedia :: Graphics :: Presentation",
+    "Topic :: Office/Business :: Office Suites",
+]
 dependencies = [
     "python-pptx>=1.0.2,<1.1",
     "pyyaml>=6.0,<7",
