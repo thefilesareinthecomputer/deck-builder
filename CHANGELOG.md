@@ -30,6 +30,7 @@
 
 - `docs deck-md`: quoting a field value that contains `: `, stray headings, and local images only.
 - `deck-onboard` step 2: working in a folder outside the clone with `init --dir` and `uv run --project`.
+- `MISSING_FONT` means the font isn't installed where the deck rendered. The code text, SPEC and the `deck-brand` and `deck-builder` skills no longer describe it as LibreOffice ignoring a theme font; that was the macOS font-visibility bug fixed above.
 
 ## 0.1.0
 

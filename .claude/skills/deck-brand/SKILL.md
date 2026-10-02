@@ -73,8 +73,8 @@ Budgets in a generated `tokens.yaml` are estimates. Build a test deck with delib
 text in each layout, run `check --render`, and propose tighter or looser budgets per field from
 the `OVERFLOW_MEASURED` results. Change `tokens.yaml` only after the user agrees.
 
-Fonts: `MISSING_FONT` on a LibreOffice render can mean LibreOffice ignored the theme font. Check
-that the font is installed; a PowerPoint render is the reference.
+Fonts: `MISSING_FONT` means the brand font isn't installed on the machine that rendered. Install it
+before tuning budgets, since budgets measured with a substitute font are wrong.
 
 ## Polishing in PowerPoint
 

@@ -425,7 +425,7 @@ Headless, with a throwaway user profile per run and a 300 s timeout. Only render
 
 ### 12.4 Font check
 
-`pdffonts` on the rendered PDF compares embedded fonts with `brand.yaml` fonts. A font rendered with its declared fallback, or with something else, raises the warning `MISSING_FONT`. LibreOffice can render a template's theme font with its own default even when the font is installed, so the warning is a fidelity note under LibreOffice and a real substitution under PowerPoint.
+`pdffonts` on the rendered PDF compares embedded fonts with `brand.yaml` fonts. A font rendered with its declared fallback, or with something else, raises the warning `MISSING_FONT`, which means the font isn't installed where the deck rendered. Headless LibreOffice on macOS sees only its bundled fonts through its own fontconfig, so the LibreOffice backend writes a `fonts.conf` that lists the macOS font folders and sets `FONTCONFIG_FILE` for the run, unless the caller already set one.
 
 ## 13. Claude Code layer
 

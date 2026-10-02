@@ -133,8 +133,8 @@ CODES: dict[str, tuple[str, str]] = {
         "Fill the field or use a layout without it.",
     ),
     "MISSING_FONT": (
-        "The renderer used another font than the brand's, or its fallback. Under LibreOffice this can mean it "
-        "didn't apply the template's theme font even though the font is installed.",
+        "The renderer used another font than the brand's, or its fallback: the font isn't installed where the "
+        "deck rendered.",
         "Install the brand fonts where decks render. Don't change content to fit a substitute font; a "
         "PowerPoint render shows the real fonts.",
     ),

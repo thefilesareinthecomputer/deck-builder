@@ -79,8 +79,8 @@ number or source you couldn't verify.
   `field`, `message`, `actual`, `limit`) plus keys such as `output`, `manifest`, `flagged_slides`.
 - Exit 0 is success, 1 means issues to fix in content, 2 is a usage or environment problem: the
   object then has `error` and sometimes `code` (such as `UNKNOWN_BRAND`).
-- `MISSING_FONT` from a LibreOffice render is often LibreOffice not applying the theme font. Note it
-  in the report; don't change content for it.
+- `MISSING_FONT` means a brand font isn't installed where the deck rendered. Report it to the user;
+  don't change content to fit the substitute font.
 - `RENDER_UNVERIFIED` means the PowerPoint backend hasn't been verified on this Mac yet; say so.
 
 ## Other paths
