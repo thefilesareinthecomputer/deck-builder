@@ -214,7 +214,15 @@ def parse(path: Path, row: dict[str, str] | None = None) -> tuple[Deck, list[Iss
     if isinstance(sv, int) and sv > SPEC_VERSION:
         issues.append(Issue("SPEC_VERSION", f"spec_version {sv}; this engine supports {SPEC_VERSION}",
                             file=name, line=1, actual=sv, limit=SPEC_VERSION))
-    level = int(meta.get("slide_level", 2))
+    raw_level = meta.get("slide_level", 2)
+    try:
+        level = int(raw_level)
+        if isinstance(raw_level, bool) or not 1 <= level <= 6:
+            raise ValueError
+    except (TypeError, ValueError):
+        issues.append(Issue("PARSE", f"front matter slide_level: {raw_level!r} must be a whole number from "
+                            "1 to 6; using 2 to keep reading", file=name, line=1))
+        level = 2
     head = re.compile(r"^" + "#" * level + r"\s+(.*)$")
     sub = re.compile(r"^" + "#" * (level + 1) + r"\s+([\w-]+)\s*$")
 

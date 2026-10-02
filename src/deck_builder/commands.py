@@ -447,9 +447,13 @@ def _render_into(r: Result, pptx: Path, cfg: cfgmod.Config, backend_req: str | N
     mpath = manifest_path(pptx)
     brand = None
     if mpath.is_file():
-        slug = json.loads(mpath.read_text())["brand"]["slug"]
-        with contextlib.suppress(EnvError):
-            brand = registry.get(cfg, slug)
+        try:
+            slug = json.loads(mpath.read_text())["brand"]["slug"]
+        except (OSError, ValueError, KeyError, TypeError):
+            slug = None  # not a manifest this engine wrote; render without brand-specific font checks
+        if slug is not None:
+            with contextlib.suppress(EnvError):
+                brand = registry.get(cfg, slug)
     backend = qa_backends.choose(backend_req or cfg.render.backend)
     out = qa_render.render(pptx, backend, dpi or cfg.render.dpi, cfg.render.contact_batch, pages, brand)
     for i in out.issues:

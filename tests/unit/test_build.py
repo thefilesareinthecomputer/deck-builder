@@ -112,6 +112,17 @@ def test_build_stops_on_check_errors(ws, capsys):
     assert "output" not in out
 
 
+def test_a_non_iso_date_is_a_clean_check_issue_not_a_build_crash(ws, capsys):
+    body = "---\nbrand: stock\ndate: Q3 2026\n---\n\n## A\nlayout: title\n"
+    code, out = cli_json(ws, "check", str(write_deck(ws, body)), capsys=capsys)
+    assert code == 1
+    assert "PARSE" in codes(out)
+    assert any("date" in i["message"] for i in out["issues"])
+    code, out = build(ws, capsys, body)
+    assert code == 1
+    assert "output" not in out
+
+
 def test_bulk_builds_one_deck_per_row(ws, capsys):
     tmpl = write_deck(ws, "---\nbrand: stock\n---\n\n## {{client}} review\nlayout: title\nsubtitle: For {{contact}}\n",
                       name="pitch.md")
