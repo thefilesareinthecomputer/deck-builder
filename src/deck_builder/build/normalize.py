@@ -28,7 +28,8 @@ def _entry(name: str) -> zipfile.ZipInfo:
     return info
 
 
-def _rezip(parts: list[tuple[str, bytes]]) -> bytes:
+def rezip(parts: list[tuple[str, bytes]]) -> bytes:
+    """Write parts in order with fixed timestamps and attributes."""
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as z:
         for name, data in parts:
@@ -36,18 +37,19 @@ def _rezip(parts: list[tuple[str, bytes]]) -> bytes:
     return buf.getvalue()
 
 
-def _read(blob: bytes) -> list[tuple[str, bytes]]:
+def read_parts(blob: bytes) -> list[tuple[str, bytes]]:
     with zipfile.ZipFile(io.BytesIO(blob)) as z:
         return [(i.filename, z.read(i.filename)) for i in z.infolist()]
 
 
-def _fix_dates(xml: bytes, date: str) -> bytes:
+def fix_dates(xml: bytes, date: str) -> bytes:
     return W3C_DATE.sub(lambda m: m.group(1) + date.encode() + m.group(2), xml)
 
 
-def _embedded_workbook(blob: bytes, date: str) -> bytes:
-    parts = [(n, _fix_dates(d, date) if n == "docProps/core.xml" else d) for n, d in _read(blob)]
-    return _rezip(parts)
+def normalize_workbook(blob: bytes, date: str) -> bytes:
+    """Make an .xlsx byte-stable: fixed zip timestamps and fixed created/modified dates."""
+    parts = [(n, fix_dates(d, date) if n == "docProps/core.xml" else d) for n, d in read_parts(blob)]
+    return rezip(parts)
 
 
 def _custom_xml(props: dict[str, str]) -> bytes:
@@ -85,19 +87,19 @@ def _add_custom(parts: list[tuple[str, bytes]], props: dict[str, str]) -> list[t
 def normalize(blob: bytes, date: str, props: dict[str, str]) -> bytes:
     """date is a W3C timestamp, e.g. 2000-01-01T00:00:00Z."""
     parts = []
-    for name, data in _read(blob):
+    for name, data in read_parts(blob):
         if name.startswith("ppt/embeddings/") and name.endswith(".xlsx"):
-            data = _embedded_workbook(data, date)
+            data = normalize_workbook(data, date)
         elif name == "docProps/core.xml":
-            data = _fix_dates(data, date)
+            data = fix_dates(data, date)
         parts.append((name, data))
-    return _rezip(_add_custom(parts, props))
+    return rezip(_add_custom(parts, props))
 
 
 def content_digest(blob: bytes) -> str:
     """A hash of every part's uncompressed bytes, stable across zlib versions and platforms."""
     h = hashlib.sha256()
-    for name, data in sorted(_read(blob)):
+    for name, data in sorted(read_parts(blob)):
         if name.startswith("ppt/embeddings/") and name.endswith(".xlsx"):
             data = content_digest(data).encode()
         h.update(name.encode() + b"\0" + hashlib.sha256(data).digest())

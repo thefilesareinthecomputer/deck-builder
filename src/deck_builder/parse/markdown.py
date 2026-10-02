@@ -86,11 +86,16 @@ def parse_pipe_table(lines: list[str]) -> Table:
     return Table(header=rows[0] if rows else [], rows=rows[1:])
 
 
+def number(v: Any) -> Any:
+    """Whole floats become ints, so 9800 and 9800.0 compare equal across formats."""
+    return int(v) if isinstance(v, float) and v.is_integer() else v
+
+
 def chart_from_spec(spec: dict[str, Any]) -> Chart:
     series = []
     for s in spec.get("series") or []:
         if isinstance(s, dict):
-            series.append(Series(name=str(s.get("name", "")), values=list(s.get("values") or [])))
+            series.append(Series(name=str(s.get("name", "")), values=[number(v) for v in s.get("values") or []]))
     colors = spec.get("colors")
     return Chart(
         type=str(spec.get("type", "column")),

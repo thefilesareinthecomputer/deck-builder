@@ -1,6 +1,7 @@
 """Load a deck from any supported format and resolve its brand. Shared by check, build and convert."""
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -34,6 +35,13 @@ def load_deck(path: Path, row: dict[str, str] | None = None) -> Loaded:
     else:
         raise EnvError(f"unsupported input {path.suffix!r}; use .md, .xlsx or .csv")
     return Loaded(path=path, deck=deck, issues=issues)
+
+
+def content_sha(deck: Deck) -> str:
+    """A hash of the deck's content, the same whichever format it was written in: its canonical markdown."""
+    from deck_builder.write import markdown as md_writer
+
+    return hashlib.sha256(md_writer.write(deck).encode("utf-8")).hexdigest()
 
 
 def brand_for(deck: Deck, deck_path: Path, cfg: cfgmod.Config, override: str | None = None) -> Brand:

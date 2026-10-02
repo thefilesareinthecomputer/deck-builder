@@ -25,7 +25,7 @@ from pptx.util import Emu
 
 from deck_builder.brand.inspect import estimate_chars
 from deck_builder.brand.layouts import PH, LayoutDef, layout_set
-from deck_builder.build.normalize import _read, _rezip
+from deck_builder.build.normalize import read_parts, rezip
 from deck_builder.template import POTX_CT, PPTX_CT
 
 EMU = 914400
@@ -268,7 +268,7 @@ def _finish(blob: bytes) -> bytes:
     """Mark the package as a template, drop the stock thumbnail, fix every date and timestamp."""
     when = "2000-01-01T00:00:00Z"
     parts = []
-    for name, data in _read(blob):
+    for name, data in read_parts(blob):
         if name == "docProps/thumbnail.jpeg":
             continue
         if name == "[Content_Types].xml":
@@ -279,7 +279,7 @@ def _finish(blob: bytes) -> bytes:
             data = re.sub(rb"(<dcterms:(?:created|modified)[^>]*>)[^<]*(</dcterms:(?:created|modified)>)",
                           lambda m: m.group(1) + when.encode() + m.group(2), data)
         parts.append((name, data))
-    return _rezip(parts)  # rewrites every entry with the fixed timestamp
+    return rezip(parts)  # rewrites every entry with the fixed timestamp
 
 
 def generate(meta: dict[str, Any], source_dir: Path) -> tuple[bytes, dict[str, Any]]:

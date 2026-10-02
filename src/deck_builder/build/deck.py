@@ -74,7 +74,10 @@ class Builder:
         entry: dict[str, Any] = {"slide": n, "layout": s.layout, "template_layout": tl, "title": s.title,
                                  "fields": {}}
         used: set[int] = set()
-        for name, val in s.fields.items():
+        # Fill in the layout's declared field order, so the output doesn't depend on input order
+        # (a workbook's columns can order fields differently than the markdown did).
+        for name in [f for f in ls["fields"] if f in s.fields]:
+            val = s.fields[name]
             fs = ls["fields"][name]
             idx, kind = fs["idx"], fs.get("kind", "text")
             at: dict[str, Any] = {"slide": n, "field": name, "file": s.where.file if s.where else None}
@@ -107,8 +110,9 @@ class Builder:
         return entry
 
 
-def build(deck: Deck, brand: Brand, deck_path: Path, out_path: Path, cache_dir: Path,
+def build(deck: Deck, brand: Brand, deck_path: Path, out_path: Path, cache_dir: Path, content_sha: str,
           keep_template_slides: bool = False) -> tuple[dict[str, Any], list[Issue]]:
+    """content_sha identifies the deck's content independent of its file format (see pipeline.content_sha)."""
     assert brand.template is not None
     prs = tpl.open_template(brand.template)
     if not keep_template_slides:
@@ -135,7 +139,7 @@ def build(deck: Deck, brand: Brand, deck_path: Path, out_path: Path, cache_dir: 
         "deck-builder:brand": brand.slug,
         "deck-builder:brand-version": brand.version,
         "deck-builder:template-sha256": template_sha,
-        "deck-builder:input-sha256": input_sha,
+        "deck-builder:content-sha256": content_sha,
     }
     buf = io.BytesIO()
     prs.save(buf)
@@ -146,7 +150,7 @@ def build(deck: Deck, brand: Brand, deck_path: Path, out_path: Path, cache_dir: 
     manifest = {
         "engine": __version__,
         "brand": {"slug": brand.slug, "version": brand.version, "template_sha256": template_sha},
-        "input": {"file": deck_path.name, "sha256": input_sha},
+        "input": {"file": deck_path.name, "sha256": input_sha, "content_sha256": content_sha},
         "output": {"file": out_path.name, "sha256": hashlib.sha256(blob).hexdigest(),
                    "content_sha256": content_digest(blob)},
         "slides": slides,

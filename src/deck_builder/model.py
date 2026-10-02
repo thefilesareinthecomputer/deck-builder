@@ -16,7 +16,7 @@ class Table:
 @dataclass
 class Series:
     name: str
-    values: list[float]
+    values: list[Any]  # numbers; anything else is kept so check can report CHART_SHAPE
 
 
 @dataclass

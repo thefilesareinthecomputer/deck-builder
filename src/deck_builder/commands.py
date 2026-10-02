@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import re
 import shutil
@@ -24,6 +25,9 @@ from deck_builder.errors import CODES, EnvError, Issue, Result
 from deck_builder.model import Deck
 from deck_builder.parse.csvfile import read_rows as read_csv_rows
 from deck_builder.parse.markdown import TOKEN
+from deck_builder.write import csvfile as csv_writer
+from deck_builder.write import markdown as md_writer
+from deck_builder.write import workbook as wb_writer
 
 SAFE = re.compile(r"[^\w.-]+")
 
@@ -93,6 +97,7 @@ def _validated(path: Path, cfg: cfgmod.Config, r: Result, brand_slug: str | None
     resolved, issues = validate.resolve(loaded.deck, brand, path.parent)
     for i in issues:
         r.add(i)
+    r.data["content_sha256"] = pipeline.content_sha(loaded.deck)
     return (resolved if r.ok else None), brand
 
 
@@ -280,6 +285,67 @@ def _adopt(args: argparse.Namespace, cfg: cfgmod.Config, r: Result) -> Result:
     return r
 
 
+def _first_difference(a: Deck, b: Deck) -> str:
+    if a.meta != b.meta:
+        return "front matter differs"
+    if len(a.slides) != len(b.slides):
+        return f"{len(a.slides)} slides became {len(b.slides)}"
+    for n, (x, y) in enumerate(zip(a.slides, b.slides, strict=True), start=1):
+        if x != y:
+            keys = sorted(k for k in set(x.fields) | set(y.fields) if x.fields.get(k) != y.fields.get(k))
+            what = f"fields {', '.join(keys)}" if keys else "title, layout or notes"
+            return f"slide {n}: {what} would change"
+    return "content differs"
+
+
+def convert_cmd(args: argparse.Namespace) -> Result:
+    cfg = _cfg(args)
+    src, dst = Path(args.input), Path(args.output)
+    fmt = pipeline.FORMATS.get(dst.suffix.lower())
+    if fmt is None:
+        raise EnvError(f"can't write {dst.suffix!r}; convert writes .md, .xlsx or .csv")
+    if dst.exists() and not args.force:
+        raise EnvError(f"{dst} exists; pass --force to replace it")
+    r = Result(command="convert", data={"input": str(src), "output": str(dst)})
+    loaded = pipeline.load_deck(src)
+    for i in loaded.issues:
+        r.add(i)
+    if not r.ok:
+        r.summary = f"failed convert {src.name}: fix the parse errors first, {_tally(r)}"
+        return r
+    deck = loaded.deck
+    if fmt == "csv":
+        for reason in csv_writer.lossy_reasons(deck):
+            r.add(Issue("CONVERT_LOSSY", reason, file=src.name))
+        if not r.ok:
+            r.summary = f"failed convert {src.name} -> {dst.name}: CSV would lose content; use .xlsx, {_tally(r)}"
+            return r
+    brand = None
+    with contextlib.suppress(EnvError):  # without a brand, a workbook has no layout dropdown or char counts
+        brand = pipeline.brand_for(deck, src, cfg)
+    if fmt == "markdown":
+        blob = md_writer.write(deck).encode("utf-8")
+    elif fmt == "workbook":
+        blob = wb_writer.write(deck, brand if brand is not None and brand.valid else None)
+    else:
+        blob = csv_writer.write(deck).encode("utf-8")
+    # Prove the conversion lost nothing before writing it: parse the output back and compare.
+    with tempfile.TemporaryDirectory() as tmp:
+        probe = Path(tmp) / f"probe{dst.suffix.lower()}"
+        probe.write_bytes(blob)
+        back = pipeline.load_deck(probe)
+    if back.issues or back.deck != deck:
+        reason = "; ".join(i.message for i in back.issues) or _first_difference(deck, back.deck)
+        r.add(Issue("CONVERT_LOSSY", reason, file=src.name))
+        r.summary = f"failed convert {src.name} -> {dst.name}: {reason}"
+        return r
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    dst.write_bytes(blob)
+    r.data["slides"] = len(deck.slides)
+    r.summary = f"ok convert {src.name} -> {dst}: {len(deck.slides)} slides"
+    return r
+
+
 def assets_cmd(args: argparse.Namespace) -> Result:
     cfg = _cfg(args)
     target = Path(args.target)
@@ -365,7 +431,7 @@ def _build_one(path: Path, cfg: cfgmod.Config, args: argparse.Namespace, out: Pa
     if deck is None or brand is None:
         return None
     out_path = out or default_output(path, deck, cfg)
-    manifest, issues = build_deck(deck, brand, path, out_path, _cache_dir(cfg))
+    manifest, issues = build_deck(deck, brand, path, out_path, _cache_dir(cfg), r.data["content_sha256"])
     for i in issues:
         r.add(i)
     return {"output": str(out_path), "manifest": str(manifest_path(out_path)), "slides": len(manifest["slides"])}
