@@ -11,6 +11,11 @@ Tables are measured too, against their layout placeholder's box rather than thei
 and slide-number placeholders only ever take a word that actually sits inside their own small box, so
 a table's wrapped words never get mistaken for footer overflow, and a list's auto-numbered marker
 ("1.", "2.", a bullet glyph) never gets mistaken for a page number.
+
+A word that matches no shape's token at all is left unassigned rather than discarded for sitting over
+a chart or table, so a shape's own overflowing word is still measured even where it visually spills
+onto a neighboring visual. A renderer that wraps a long, spaceless word mid-word leaves neither
+fragment equal to the source token; each fragment is matched to the shape whose token contains it.
 """
 from __future__ import annotations
 
@@ -33,6 +38,7 @@ TOKEN = re.compile(r"[\w%$€£.,:'-]+", re.UNICODE)
 LIST_MARKER = re.compile(r"^\d+[.)]$")  # an auto-numbered list's own marker, e.g. "1." or "2)"
 BULLET_GLYPHS = {"•", "◦", "‣", "∙", "●", "○", "■", "▪", "▸", "–", "—", "*", "·"}
 PROTECTED_TYPES = {PP_PLACEHOLDER.FOOTER, PP_PLACEHOLDER.SLIDE_NUMBER}
+MIN_FRAGMENT = 3  # a shorter rendered fragment is too ambiguous to trust as a split token
 
 
 @dataclass
@@ -124,19 +130,20 @@ def _is_protected(sh: Any) -> bool:
     return bool(getattr(sh, "is_placeholder", False)) and sh.placeholder_format.type in PROTECTED_TYPES
 
 
-def text_shapes(pptx: Path) -> tuple[float, list[tuple[list[TextShape], list[Box]]]]:
-    """Slide width in points, and per slide: the shapes measured for overflow (text frames and
-    tables), and the boxes of charts, whose own words are left out of the measurement."""
+def text_shapes(pptx: Path) -> tuple[float, list[list[TextShape]]]:
+    """Slide width in points, and per slide the shapes measured for overflow (text frames and
+    tables). A chart's own rendered text (axis labels, data labels) isn't tracked as a shape, so a
+    word that matches none of a slide's shapes is simply left unassigned, whether or not it sits over
+    a chart; a word that does match a shape is assigned to it regardless of what it visually overlaps."""
     prs = Presentation(str(pptx))
     out = []
     for slide in prs.slides:
         layout = slide.slide_layout
-        shapes, visuals = [], []
+        shapes: list[TextShape] = []
         for sh in slide.shapes:
             if sh.left is None or sh.width is None:
                 continue
             if getattr(sh, "has_chart", False):
-                visuals.append(_box(sh))
                 continue
             if getattr(sh, "has_table", False):
                 shapes.append(TextShape(sh.name, _layout_placeholder_box(sh, layout), _table_tokens(sh)))
@@ -145,7 +152,7 @@ def text_shapes(pptx: Path) -> tuple[float, list[tuple[list[TextShape], list[Box
                 continue
             tokens = {norm(t) for t in TOKEN.findall(sh.text_frame.text)} - {""}
             shapes.append(TextShape(sh.name, _box(sh), tokens, protected=_is_protected(sh)))
-        out.append((shapes, visuals))
+        out.append(shapes)
     return prs.slide_width / EMU_PER_PT, out
 
 
@@ -165,6 +172,28 @@ def overshoot(box: Box, words: list[Box]) -> float:
     return max(over, default=0.0)
 
 
+def _fragment_of(t: str, tokens: set[str]) -> bool:
+    """t is a piece of a longer source token: a renderer that wraps a long word mid-word (no space to
+    break on) produces fragments that are each a plain substring of it, none equal to the whole thing."""
+    return len(t) >= MIN_FRAGMENT and any(tok != t and t in tok for tok in tokens)
+
+
+def _candidates(t: str, x: float, y: float, shapes: list[TextShape]) -> list[tuple[float, int]]:
+    """The shapes a word could belong to, nearest first (0 when its point is inside the box). Exact
+    token matches win over split-fragment matches; the footer and slide number only ever take a word
+    that's actually inside their own small box, so neither steals overflow from a nearby shape."""
+    exact = [i for i, s in enumerate(shapes) if t in s.tokens]
+    pool = exact or [i for i, s in enumerate(shapes) if _fragment_of(t, s.tokens)]
+    cands = []
+    for i in pool:
+        s = shapes[i]
+        d = s.box.distance(x, y)
+        if s.protected and d != 0:
+            continue
+        cands.append((d, i))
+    return cands
+
+
 def overflow(pptx: Path, pdf: Path, manifest: dict[str, Any] | None = None,
             visible: list[int] | None = None) -> list[Issue]:
     """`visible` maps PDF page order to real slide numbers (see images.rasterize); default is 1..N, every
@@ -174,7 +203,7 @@ def overflow(pptx: Path, pdf: Path, manifest: dict[str, Any] | None = None,
         visible = list(range(1, len(slides) + 1))
     issues = []
     for n, (page_w, _, words) in zip(visible, pdf_words(pdf), strict=False):
-        shapes, visuals = slides[n - 1]
+        shapes = slides[n - 1]
         scale = page_w / slide_w if slide_w else 1.0
         assigned: dict[int, list[Word]] = {}
         for w in words:
@@ -182,16 +211,7 @@ def overflow(pptx: Path, pdf: Path, manifest: dict[str, Any] | None = None,
                 continue  # a list's own auto-numbered marker or bullet: not in any shape's text
             t = norm(w.text)
             x, y = (c / scale for c in w.center)
-            if any(v.distance(x, y) == 0 for v in visuals):
-                continue  # a chart's own text
-            cands = []
-            for i, s in enumerate(shapes):
-                if t not in s.tokens:
-                    continue
-                d = s.box.distance(x, y)
-                if s.protected and d != 0:
-                    continue  # the footer and slide number only take a word that's actually inside them
-                cands.append((d, i))
+            cands = _candidates(t, x, y, shapes)
             if cands:
                 assigned.setdefault(min(cands)[1], []).append(w)
         for i, ws in assigned.items():
