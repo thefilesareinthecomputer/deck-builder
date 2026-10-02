@@ -1,7 +1,9 @@
 # brand.yaml: the brand's standards
 
 What a person decides about the brand. `deck-builder brand init <slug> --from brand.yaml` generates the
-template and `tokens.yaml` from it; `deck-builder schema brand` prints the full schema.
+template and `tokens.yaml` from it. `--force` regenerates both again from `brand.yaml`, replacing
+any change made outside it, including tuned budgets and edits made in PowerPoint.
+`deck-builder schema brand` prints the full schema.
 
 ```yaml
 spec_version: 1
