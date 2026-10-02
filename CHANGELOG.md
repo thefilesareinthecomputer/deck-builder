@@ -12,6 +12,8 @@ All notable changes to this project are listed here. The format follows [Keep a 
 
 ### Added
 
+- `generate.mode: projected | read` in `brand.yaml`. Projected (the default) keeps every size at 18 pt or more, tables included. Read is for decks sent ahead and read on screen: 28 pt titles, a 14 pt body on a 9 in measure, 12 pt tables, text from the top.
+- Table columns are at least as wide as their longest word, so no word breaks mid-word, and `TABLE_TALL` estimates with the same widths the build uses.
 - `generate.type` in `brand.yaml` sets the type scale (title, title weight, subtitle, body, two-column, icon text, table, big number), and character budgets are computed from it. `generate.body_anchor: top` keeps body text at the top; `generate.big_number: dark` puts the big number on the primary color.
 - An optional `takeaway:` field on content, two-column, chart and table slides: one sentence in a full-width band in the primary color at the bottom. Nothing is drawn when it's left out, and `import` gives it back only from a matching placeholder.
 - `tests/fixtures/demo-brands/layouts/`: every generated layout with realistic content, built and rendered in all three demo brands. Two demo brands exercise `generate.type` and `big_number: dark`.
