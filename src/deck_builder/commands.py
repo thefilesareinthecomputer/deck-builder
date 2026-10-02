@@ -692,7 +692,8 @@ def _build_one(path: Path, cfg: cfgmod.Config, args: argparse.Namespace, out: Pa
     if deck is None or brand is None:
         return None
     out_path = out or default_output(path, deck, cfg)
-    manifest, issues = build_deck(deck, brand, path, out_path, _cache_dir(cfg), r.data["content_sha256"])
+    manifest, issues = build_deck(deck, brand, path, out_path, _cache_dir(cfg), r.data["content_sha256"],
+                                  force=getattr(args, "force", False))
     for i in issues:
         r.add(i)
     return {"output": str(out_path), "manifest": str(manifest_path(out_path)), "slides": len(manifest["slides"]),
