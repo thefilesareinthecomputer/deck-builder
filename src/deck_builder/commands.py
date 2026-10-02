@@ -202,7 +202,7 @@ brand_paths = ["workspace/brands"]
 default_brand = "neutral"
 
 [render]
-backend = "auto"     # auto prefers PowerPoint, then LibreOffice
+backend = "auto"     # auto prefers LibreOffice, then PowerPoint
 dpi = 96
 contact_batch = 20   # slides per contact sheet
 """
@@ -615,7 +615,7 @@ def check(args: argparse.Namespace) -> Result:
     done = _build_one(path, cfg, args, None, None, r)
     if done:
         r.data.update(done)
-        _render_into(r, Path(done["output"]), cfg, None, None)
+        _render_into(r, Path(done["output"]), cfg, args.backend, None)
     flagged = ", ".join(str(f["slide"]) for f in r.data.get("flagged_slides", [])) or "none"
     r.summary = (f"{'ok' if r.ok else 'failed'} check --render {path.name}: {r.data['slides']} slides, "
                  f"flagged {flagged}, {_tally(r)}")

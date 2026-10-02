@@ -33,6 +33,18 @@ def test_font_check_passes_when_the_family_is_used(monkeypatch):
     assert fonts.check(Path("x.pdf"), {"fonts": {"heading": {"family": "Inter"}}}) == []
 
 
+def test_auto_backend_prefers_libreoffice_over_unverified_powerpoint(monkeypatch):
+    monkeypatch.setattr(backends.tools, "soffice", lambda: "/usr/bin/soffice")
+    monkeypatch.setattr(backends.tools, "powerpoint", lambda: True)
+    assert backends.choose("auto") == "libreoffice"
+
+
+def test_auto_backend_falls_back_to_powerpoint_without_libreoffice(monkeypatch):
+    monkeypatch.setattr(backends.tools, "soffice", lambda: None)
+    monkeypatch.setattr(backends.tools, "powerpoint", lambda: True)
+    assert backends.choose("auto") == "powerpoint"
+
+
 class FakeProc:
     def __init__(self, returncode=0, stdout="", stderr=""):
         self.returncode, self.stdout, self.stderr = returncode, stdout, stderr
