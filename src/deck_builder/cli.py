@@ -1,0 +1,134 @@
+"""The deck-builder command line. One surface for people and agents.
+
+Human output is terse: one line per issue, then one summary line. `--json` prints one object.
+Exit codes: 0 success, 1 validation issues, 2 usage or environment errors.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from collections.abc import Callable
+
+from deck_builder import __version__, docs
+from deck_builder.errors import CODES, EXIT_ENV, EnvError, Issue, Result
+
+Handler = Callable[[argparse.Namespace], Result]
+
+
+def _not_implemented(name: str) -> Handler:
+    def run(args: argparse.Namespace) -> Result:
+        r = Result(command=name, ok=False, exit_code=EXIT_ENV)
+        r.issues.append(Issue("NOT_IMPLEMENTED", f"`{name}` isn't built in {__version__} yet"))
+        return r
+
+    return run
+
+
+def _docs(args: argparse.Namespace) -> Result:
+    r = Result(command="docs")
+    if not args.topic:
+        r.data["topics"] = docs.topics()
+        r.summary = "\n".join(f"{k:<12} {v}" for k, v in docs.topics().items())
+        return r
+    text = docs.read(args.topic)  # raises EnvError on an unknown topic
+    r.data["topic"] = args.topic
+    r.data["text"] = text
+    r.summary = text.rstrip("\n")
+    return r
+
+
+def _explain(args: argparse.Namespace) -> Result:
+    code = args.code.upper()
+    if code not in CODES:
+        raise EnvError(f"unknown issue code {args.code!r}; `deck-builder docs codes` lists them")
+    cause, fix = CODES[code]
+    r = Result(command="explain", data={"code": code, "cause": cause, "fix": fix})
+    r.summary = f"{code}\ncause: {cause}\nfix:   {fix}"
+    return r
+
+
+def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
+    ap = argparse.ArgumentParser(
+        prog="deck-builder",
+        description="Build branded, editable PowerPoint decks from markdown or spreadsheets.",
+    )
+    ap.add_argument("--version", action="version", version=f"deck-builder {__version__}")
+    ap.add_argument("--config", help="config file (default: nearest deck-builder.toml)")
+    sub = ap.add_subparsers(dest="command", metavar="<command>")
+    handlers: dict[str, Handler] = {}
+
+    def add(name: str, help_: str, handler: Handler | None = None) -> argparse.ArgumentParser:
+        p = sub.add_parser(name, help=help_, description=help_)
+        p.add_argument("--json", action="store_true", help="print one JSON object")
+        handlers[name] = handler or _not_implemented(name)
+        return p
+
+    p = add("docs", "print a reference topic; no topic lists them", _docs)
+    p.add_argument("topic", nargs="?")
+    p = add("explain", "print the cause and fix for an issue code", _explain)
+    p.add_argument("code")
+
+    add("init", "create the workspace, config and neutral example brand")
+    add("doctor", "check dependencies, render backends and permissions")
+    p = add("brand", "list, show, check, init or adopt brand kits")
+    p.add_argument("action", choices=["list", "show", "check", "init", "adopt"])
+    p.add_argument("slug", nargs="?")
+    p.add_argument("--from", dest="from_", metavar="BRAND_YAML")
+    p.add_argument("--template")
+    p = add("inspect", "list a template's layouts and placeholders")
+    p.add_argument("template")
+    p.add_argument("--yaml", action="store_true", help="print a starter layouts block for tokens.yaml")
+    p = add("assets", "inventory a brand's or a deck's assets")
+    p.add_argument("target")
+    p = add("check", "validate a deck without building it")
+    p.add_argument("deck")
+    p.add_argument("--render", action="store_true", help="also build, render and measure")
+    p = add("build", "build a deck into a .pptx")
+    p.add_argument("deck")
+    p.add_argument("-o", "--output")
+    p.add_argument("--data", help="bulk mode: one deck per row of this csv or xlsx")
+    p.add_argument("--name", help="bulk mode file name pattern, e.g. '{{client}}.pptx'")
+    p = add("convert", "convert a deck between .md, .xlsx and .csv")
+    p.add_argument("input")
+    p.add_argument("output")
+    p = add("render", "render a .pptx to PDF, slide PNGs and contact sheets")
+    p.add_argument("pptx")
+    p.add_argument("--backend", choices=["auto", "powerpoint", "libreoffice"], default=None)
+    p.add_argument("--slides", help="comma-separated slide numbers")
+    p = add("schema", "print a JSON Schema")
+    p.add_argument("name", choices=["brand", "tokens", "manifest"])
+    p = add("skills", "link this repo's skills and agent into another Claude Code setup")
+    p.add_argument("action", choices=["install"])
+    p.add_argument("--target")
+    p.add_argument("--yes", action="store_true")
+    return ap, handlers
+
+
+def emit(result: Result, as_json: bool) -> None:
+    if as_json:
+        print(json.dumps(result.as_dict(), indent=None, sort_keys=False, default=str))
+        return
+    for issue in result.issues:
+        print(issue.human(), file=sys.stderr if issue.severity == "error" else sys.stdout)
+    if result.summary:
+        print(result.summary)
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap, handlers = build_parser()
+    args = ap.parse_args(argv)
+    if not args.command:
+        ap.print_help()
+        return EXIT_ENV
+    as_json = bool(getattr(args, "json", False))
+    try:
+        result = handlers[args.command](args)
+    except EnvError as e:
+        result = Result(command=args.command, ok=False, exit_code=EXIT_ENV)
+        if as_json:
+            result.data["error"] = str(e)
+        else:
+            print(f"error: {e}", file=sys.stderr)
+    emit(result, as_json)
+    return result.exit_code
