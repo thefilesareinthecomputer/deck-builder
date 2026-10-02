@@ -25,7 +25,10 @@ uv run deck-builder doctor
 
 `doctor` lists each requirement as `ok`, `missing`, `optional` or `unverified`, with the install
 command after `fix:`, and ends with whether building is ready and which renderer will be used.
-If `uv` itself is missing, point them to https://docs.astral.sh/uv/ first. Offer the install
+If `uv` is missing, offer two paths and let them pick: install uv (https://docs.astral.sh/uv/, one
+command), or skip it with `pipx install .` (or `pip install .` in a virtual environment; Python
+3.11 or later). Without uv, run `deck-builder doctor` instead, and use `deck-builder` wherever a
+step below says `uv run deck-builder`; the step 2 install is then already done. Offer the install
 command for anything missing and wait for the user to run it or approve it. What each tool is for:
 
 | Tool | Needed for |
@@ -57,7 +60,8 @@ from the clone (it creates the folder if needed). Then work from that folder wit
 `uv run --project <clone> deck-builder ...`; the CLI finds that folder's `deck-builder.toml`.
 
 Then install the CLI on their PATH, with their OK: `uv tool install <clone>` (the most common
-setup; `--editable` only for someone changing the engine). The subagents have no shell and run
+setup; `--editable` only for someone changing the engine). Without uv, use `pipx install <clone>`,
+or `pip install <clone>` in a virtual environment; any Python 3.11 or later works. The subagents have no shell and run
 the engine through `deck-builder mcp`, so they need it. Confirm with `deck-builder doctor`: the
 `agent tools (mcp)` row should be `ok`. To use the skills in their other Claude Code projects too,
 run `deck-builder skills install` from the clone, show them the plan it prints, and rerun with

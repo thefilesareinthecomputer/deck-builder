@@ -60,7 +60,9 @@ deck-builder skills install --yes     # optional: the skills and agents in every
 | **As a skill in your other Claude Code projects** | `deck-builder skills install --yes`, after the tool | The three skills and three agents, linked into `~/.claude` |
 | **From the clone**, to try it or work on it | `uv run deck-builder ...` | No install; a Claude Code session opened in the clone has the skills |
 
-After a `git pull`, update with `uv tool install --reinstall .`. To work on the engine itself, install with `--editable` so the tool runs the clone's source.
+**No uv?** Any Python 3.11 or later works the same way: `pipx install .`, or `pip install .` inside a virtual environment, puts the same `deck-builder` command on your PATH, and `deck-builder skills install --yes` follows as above.
+
+After a `git pull`, update with `uv tool install --reinstall .` (or `pipx install --force .`). To work on the engine itself, install with `--editable` so the tool runs the clone's source.
 
 ## Quick start
 
@@ -132,6 +134,12 @@ caption: "Opened in August: same-day delivery for the northern accounts."
 ````
 
 Field values are YAML, so quote any value that contains `: `. `deck-builder brand show <slug>` lists a brand's layouts, fields and character budgets. The [full showcase deck](tests/fixtures/demo-brands/showcase/deck.md) builds into all three brands with a single `build --data` command.
+
+## Design
+
+Every generated kit follows one design standard, built from presentation research and documented in `deck-builder docs design`. Titles are bold sentences in the same place on every slide. Short content sits at the optical center instead of hugging the top. Comparisons sit on tinted panels, tables are quiet (a dark header, thin rules, right-aligned figures, no word ever broken), bar charts start at zero, and an optional `takeaway:` band states each slide's conclusion. One short accent rule is the only decoration.
+
+Set `generate.mode` in `brand.yaml` by how the deck is used: `projected` (the default) for a room, with nothing under 18 pt, or `read` for decks sent ahead and read on screen, with a 14 pt body on a readable measure. `generate.type` adjusts any size.
 
 ## Fix up an existing deck
 
