@@ -101,15 +101,18 @@ def test_workbook_resaved_by_libreoffice_builds_identically(project, capsys, tmp
     resaved_dir = tmp_path / "resaved"
     resaved_dir.mkdir()
     profile = (tmp_path / "lo").as_uri()
-    subprocess.run([tools.soffice(), f"-env:UserInstallation={profile}", "--headless", "--convert-to", "xlsx",
-                    "--outdir", str(resaved_dir), str(xlsx)], check=True, capture_output=True, timeout=300)
+    lo = subprocess.run([tools.soffice(), f"-env:UserInstallation={profile}", "--headless", "--convert-to", "xlsx",
+                         "--outdir", str(resaved_dir), str(xlsx)], check=True, capture_output=True, text=True,
+                        timeout=300)
     resaved = resaved_dir / "deck.xlsx"
+    # soffice exits 0 without writing anything when it can't load the file, e.g. Calc isn't installed
+    assert resaved.exists(), f"LibreOffice wrote no workbook (is Calc installed?): {lo.stdout} {lo.stderr}"
     shutil.copytree(src.parent / "assets", resaved_dir / "assets")  # a symlink out of the folder is refused
     capsys.readouterr()
     outs = []
     for p in (src, resaved):
         code, out = run("--config", cfg(project), "build", str(p), "-o", str(tmp_path / f"{p.parent.name}.pptx"),
                         capsys=capsys)
-        assert code == 0, out["issues"]
+        assert code == 0, out
         outs.append(Path(out["output"]).read_bytes())
     assert outs[0] == outs[1]

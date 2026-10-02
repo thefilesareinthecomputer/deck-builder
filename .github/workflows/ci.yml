@@ -48,10 +48,10 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
       - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e  # v6
-      - name: LibreOffice, poppler and metric-compatible fonts
+      - name: LibreOffice (Impress renders decks, Calc re-saves workbooks), poppler and metric-compatible fonts
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libreoffice-impress poppler-utils fonts-liberation
+          sudo apt-get install -y --no-install-recommends libreoffice-impress libreoffice-calc poppler-utils fonts-liberation
       - run: uv sync --locked
       - name: Render tier (build, render, measure, re-save round trip)
         run: uv run pytest -m render
