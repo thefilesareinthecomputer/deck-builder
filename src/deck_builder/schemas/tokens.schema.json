@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "deck-builder/tokens.schema.json",
+  "title": "tokens.yaml",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["layouts"],
+  "$defs": {
+    "colorRef": {"type": "string", "minLength": 1},
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["idx", "kind"],
+      "properties": {
+        "idx": {"type": "integer", "minimum": 0},
+        "kind": {"enum": ["text", "bullets", "table", "chart", "image", "icon"]},
+        "required": {"type": "boolean"},
+        "max_chars": {"type": "integer", "minimum": 1},
+        "max_bullets": {"type": "integer", "minimum": 1},
+        "max_bullet_chars": {"type": "integer", "minimum": 1},
+        "max_level": {"type": "integer", "minimum": 0},
+        "max_rows": {"type": "integer", "minimum": 1},
+        "max_cols": {"type": "integer", "minimum": 1},
+        "color": {"$ref": "#/$defs/colorRef"}
+      }
+    }
+  },
+  "properties": {
+    "spec_version": {"const": 1},
+    "text": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {"code_font": {"type": "string"}}
+    },
+    "chart": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "font": {"type": "string"},
+        "font_size": {"type": "number", "exclusiveMinimum": 0},
+        "text_color": {"$ref": "#/$defs/colorRef"},
+        "gridlines": {"type": "boolean"},
+        "gridline_color": {"$ref": "#/$defs/colorRef"},
+        "gap_width": {"type": "integer", "minimum": 0},
+        "line_width": {"type": "number", "exclusiveMinimum": 0},
+        "colors": {"type": "array", "items": {"$ref": "#/$defs/colorRef"}}
+      }
+    },
+    "table": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "font": {"type": "string"},
+        "font_size": {"type": "number", "exclusiveMinimum": 0},
+        "header_font_size": {"type": "number", "exclusiveMinimum": 0},
+        "row_height": {"type": "number", "exclusiveMinimum": 0},
+        "row_height_factor": {"type": "number", "exclusiveMinimum": 0},
+        "header_fill": {"$ref": "#/$defs/colorRef"},
+        "header_text": {"$ref": "#/$defs/colorRef"},
+        "row_fill": {"$ref": "#/$defs/colorRef"},
+        "band_fill": {"$ref": "#/$defs/colorRef"},
+        "text": {"$ref": "#/$defs/colorRef"}
+      }
+    },
+    "layouts": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {"pattern": "^[a-z][a-z0-9-]*$"},
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["template_layout", "fields"],
+        "properties": {
+          "template_layout": {"type": "string", "minLength": 1},
+          "master": {"type": ["string", "null"]},
+          "heading_field": {"type": "string"},
+          "description": {"type": "string"},
+          "fields": {
+            "type": "object",
+            "minProperties": 1,
+            "propertyNames": {"pattern": "^[a-z][a-z0-9_-]*$"},
+            "additionalProperties": {"$ref": "#/$defs/field"}
+          }
+        }
+      }
+    }
+  }
+}

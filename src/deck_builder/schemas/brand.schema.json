@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "deck-builder/brand.schema.json",
+  "title": "brand.yaml",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["spec_version", "name", "slug", "version", "palette"],
+  "$defs": {
+    "hex": {"type": "string", "pattern": "^#?[0-9A-Fa-f]{6}$"},
+    "colorRef": {"type": "string", "minLength": 1},
+    "font": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["family"],
+      "properties": {
+        "family": {"type": "string", "minLength": 1},
+        "fallback": {"type": "string"},
+        "files": {"type": "array", "items": {"type": "string"}}
+      }
+    }
+  },
+  "properties": {
+    "spec_version": {"const": 1},
+    "name": {"type": "string", "minLength": 1},
+    "slug": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+    "version": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
+    "description": {"type": "string"},
+    "palette": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {"pattern": "^[a-z][a-z0-9-]*$"},
+      "additionalProperties": {"$ref": "#/$defs/hex"}
+    },
+    "theme_colors": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "dk1": {"$ref": "#/$defs/colorRef"}, "lt1": {"$ref": "#/$defs/colorRef"},
+        "dk2": {"$ref": "#/$defs/colorRef"}, "lt2": {"$ref": "#/$defs/colorRef"},
+        "accent1": {"$ref": "#/$defs/colorRef"}, "accent2": {"$ref": "#/$defs/colorRef"},
+        "accent3": {"$ref": "#/$defs/colorRef"}, "accent4": {"$ref": "#/$defs/colorRef"},
+        "accent5": {"$ref": "#/$defs/colorRef"}, "accent6": {"$ref": "#/$defs/colorRef"},
+        "hlink": {"$ref": "#/$defs/colorRef"}, "folHlink": {"$ref": "#/$defs/colorRef"}
+      }
+    },
+    "fonts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {"heading": {"$ref": "#/$defs/font"}, "body": {"$ref": "#/$defs/font"}}
+    },
+    "logos": {"type": "object", "additionalProperties": {"type": "string"}},
+    "icons": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dir"],
+      "properties": {
+        "dir": {"type": "string"},
+        "default_color": {"$ref": "#/$defs/colorRef"},
+        "source": {"type": "string"}
+      }
+    },
+    "voice": {"type": "array", "items": {"type": "string"}},
+    "lint": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_slides": {"type": "integer", "minimum": 1},
+        "banned_patterns": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "generate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "slide_size": {"enum": ["16:9", "4:3"]},
+        "layout_set": {"enum": ["minimal", "standard", "full"]},
+        "logo_on_master": {"type": "string"}
+      }
+    }
+  }
+}

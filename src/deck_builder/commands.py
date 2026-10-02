@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import tempfile
 from pathlib import Path
@@ -9,6 +10,7 @@ from typing import Any
 
 from deck_builder import config as cfgmod
 from deck_builder import docs, pipeline, validate
+from deck_builder.brand import kit, registry, schema
 from deck_builder.brand.registry import Brand
 from deck_builder.build.deck import build as build_deck
 from deck_builder.build.deck import manifest_path
@@ -78,12 +80,64 @@ def _validated(path: Path, cfg: cfgmod.Config, r: Result, brand_slug: str | None
     r.data["brand"] = brand.slug
     for p in brand.problems:
         r.add(Issue("BRAND_INVALID", f"brand {brand.slug!r}: {p}"))
+    for e in brand.schema_errors:
+        r.add(Issue("SCHEMA", f"brand {brand.slug!r}: {e}"))
     if not brand.valid:
         return None, brand
     resolved, issues = validate.resolve(loaded.deck, brand, path.parent)
     for i in issues:
         r.add(i)
     return (resolved if r.ok else None), brand
+
+
+def schema_cmd(args: argparse.Namespace) -> Result:
+    data = schema.load(args.name)
+    r = Result(command="schema", data={"schema": data})
+    r.summary = json.dumps(data, indent=2)
+    return r
+
+
+def brand_cmd(args: argparse.Namespace) -> Result:
+    cfg = _cfg(args)
+    r = Result(command=f"brand {args.action}")
+    if args.action == "list":
+        brands, issues = registry.discover(cfg)
+        for i in issues:
+            r.add(i)
+        rows = [{"slug": b.slug, "name": b.name, "version": b.version, "path": str(b.path), "valid": b.valid}
+                for b in brands.values()]
+        r.data["brands"] = rows
+        if not cfg.found:
+            r.data["config"] = None
+            r.summary = "no deck-builder.toml found; run `deck-builder init` (or the deck-onboard skill)"
+        else:
+            lines = [f"{x['slug']:<16} {x['version']:<8} {'ok' if x['valid'] else 'INVALID':<8} {x['path']}"
+                     for x in rows]
+            r.summary = "\n".join(lines) or f"no brands under {', '.join(map(str, cfg.brand_paths))}"
+        return r
+    if args.action in ("show", "check"):
+        if not args.slug:
+            raise EnvError(f"brand {args.action} needs a slug; `deck-builder brand list` shows them")
+        b = registry.get(cfg, args.slug)
+        if args.action == "show":
+            if not b.valid:
+                for i in kit.check_kit(b):
+                    r.add(i)
+                r.summary = f"brand {b.slug!r} is invalid; run `deck-builder brand check {b.slug}`"
+                return r
+            d = kit.show(b)
+            r.data.update(d)
+            r.summary = kit.show_text(d)
+            return r
+        for i in kit.check_kit(b):
+            r.add(i)
+        r.data["slug"] = b.slug
+        r.summary = f"{'ok' if r.ok else 'failed'} brand check {b.slug}: {_tally(r)}"
+        return r
+    r.ok = False
+    r.exit_code = 2
+    r.issues.append(Issue("NOT_IMPLEMENTED", f"`brand {args.action}` isn't built yet"))
+    return r
 
 
 def check(args: argparse.Namespace) -> Result:

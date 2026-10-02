@@ -48,7 +48,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
 
     add("init", "create the workspace, config and neutral example brand")
     add("doctor", "check dependencies, render backends and permissions")
-    p = add("brand", "list, show, check, init or adopt brand kits")
+    p = add("brand", "list, show, check, init or adopt brand kits", commands.brand_cmd)
     p.add_argument("action", choices=["list", "show", "check", "init", "adopt"])
     p.add_argument("slug", nargs="?")
     p.add_argument("--from", dest="from_", metavar="BRAND_YAML")
@@ -75,7 +75,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
     p.add_argument("pptx")
     p.add_argument("--backend", choices=["auto", "powerpoint", "libreoffice"], default=None)
     p.add_argument("--slides", help="comma-separated slide numbers")
-    p = add("schema", "print a JSON Schema")
+    p = add("schema", "print a JSON Schema", commands.schema_cmd)
     p.add_argument("name", choices=["brand", "tokens", "manifest"])
     p = add("skills", "link this repo's skills and agent into another Claude Code setup")
     p.add_argument("action", choices=["install"])

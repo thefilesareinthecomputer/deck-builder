@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "deck-builder/manifest.schema.json",
+  "title": "<deck>.manifest.json",
+  "type": "object",
+  "required": ["engine", "brand", "input", "output", "slides"],
+  "properties": {
+    "engine": {"type": "string"},
+    "brand": {
+      "type": "object",
+      "required": ["slug", "version", "template_sha256"],
+      "properties": {
+        "slug": {"type": "string"}, "version": {"type": "string"}, "template_sha256": {"type": "string"}
+      }
+    },
+    "input": {"type": "object", "required": ["file", "sha256"]},
+    "output": {"type": "object", "required": ["file", "sha256", "content_sha256"]},
+    "slides": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["slide", "layout", "template_layout", "fields"],
+        "properties": {
+          "slide": {"type": "integer"},
+          "layout": {"type": "string"},
+          "template_layout": {"type": "string"},
+          "title": {"type": "string"},
+          "notes_chars": {"type": "integer"},
+          "fields": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "required": ["idx", "kind"],
+              "properties": {
+                "idx": {"type": "integer"},
+                "kind": {"type": "string"},
+                "chars": {"type": "integer"},
+                "asset": {
+                  "type": "object",
+                  "required": ["ref", "sha256"],
+                  "properties": {"ref": {"type": "string"}, "sha256": {"type": "string"}}
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

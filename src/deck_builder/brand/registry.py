@@ -8,6 +8,7 @@ from typing import Any
 
 import yaml
 
+from deck_builder.brand import schema
 from deck_builder.config import Config
 from deck_builder.errors import EnvError, Issue
 
@@ -22,7 +23,8 @@ class Brand:
     meta: dict[str, Any] = field(default_factory=dict)  # brand.yaml
     tokens: dict[str, Any] = field(default_factory=dict)  # tokens.yaml
     template: Path | None = None
-    problems: list[str] = field(default_factory=list)
+    problems: list[str] = field(default_factory=list)  # missing files, unreadable YAML
+    schema_errors: list[str] = field(default_factory=list)
 
     @property
     def name(self) -> str:
@@ -34,7 +36,7 @@ class Brand:
 
     @property
     def valid(self) -> bool:
-        return not self.problems
+        return not self.problems and not self.schema_errors
 
     def color(self, ref: str | None) -> str | None:
         """A palette name or a hex value -> 6-digit uppercase hex; None if unknown."""
@@ -75,7 +77,9 @@ def load_kit(path: Path) -> Brand:
     slug = str(meta.get("slug") or path.name)
     if meta and slug != path.name:
         problems.append(f"slug {slug!r} doesn't match folder name {path.name!r}")
-    return Brand(slug=slug, path=path, meta=meta, tokens=tokens, template=template, problems=problems)
+    schema_errors = (schema.errors("brand", meta) if meta else []) + (schema.errors("tokens", tokens) if tokens else [])
+    return Brand(slug=slug, path=path, meta=meta, tokens=tokens, template=template, problems=problems,
+                 schema_errors=schema_errors)
 
 
 def discover(cfg: Config) -> tuple[dict[str, Brand], list[Issue]]:
@@ -115,4 +119,4 @@ def explicit(template: Path, tokens: Path) -> Brand:
     if not template.is_file():
         problems.append(f"template not found: {template}")
     return Brand(slug="(explicit)", path=tokens.parent, meta={}, tokens=data, template=template,
-                 problems=problems)
+                 problems=problems, schema_errors=schema.errors("tokens", data) if data else [])
