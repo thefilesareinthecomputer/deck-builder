@@ -25,7 +25,7 @@ PANEL_PAD = 0.3
 
 @dataclass(frozen=True)
 class Scale:
-    """Type sizes in points. Defaults are sized for a projected 16:9 deck."""
+    """Type sizes in points. Defaults are sized for a projected 16:9 deck: nothing under 18 pt."""
 
     title: float = 32
     title_bold: bool = True
@@ -33,14 +33,25 @@ class Scale:
     body: float = 24
     two_col: float = 20
     icon_text: float = 18
-    table: float = 16
+    table: float = 18
     big_number: float = 120
 
     @classmethod
     def from_meta(cls, gen: dict[str, Any]) -> Scale:
-        given = gen.get("type") or {}
+        """The mode's preset, then any sizes generate.type sets."""
+        given = {**MODES[gen.get("mode", "projected")], **(gen.get("type") or {})}
         known = {f.name for f in fields(cls)}
         return cls(**{k: v for k, v in given.items() if k in known})
+
+
+# A projected deck is watched from across a room; a read deck is sent ahead and read on a screen, like
+# the leave-behind decks consultancies hand over: smaller type, more on a slide, text from the top.
+MODES: dict[str, dict[str, Any]] = {
+    "projected": {},
+    "read": {"title": 28, "subtitle": 18, "body": 14, "two_col": 13, "icon_text": 13, "table": 12,
+             "big_number": 96},
+}
+READ_MEASURE = 9.0  # inches: a read deck's single-column body, about 90 characters a line at 14 pt
 
 
 @dataclass
@@ -133,7 +144,7 @@ def _takeaway(g: Grid) -> PH:
               color="bg1", fill="tx2", inset=0.2)
 
 
-def _defs(g: Grid, s: Scale, body_anchor: str, big_number: str) -> dict[str, LayoutDef]:
+def _defs(g: Grid, s: Scale, body_anchor: str, big_number: str, mode: str = "projected") -> dict[str, LayoutDef]:
     mid = g.h * 0.36
     two = g.cols(2)
     three = g.cols(3)
@@ -143,6 +154,7 @@ def _defs(g: Grid, s: Scale, body_anchor: str, big_number: str) -> dict[str, Lay
     # Bodies end above the takeaway band, so short middle-anchored content centers at the optical
     # center, a little above the middle of the slide, rather than low in the body area.
     single_h = BODY_END - BODY_Y
+    measure = min(g.cw, READ_MEASURE) if mode == "read" else g.cw  # line length for one column of text
     caption = max(14.0, s.two_col - 2)
     d: dict[str, LayoutDef] = {}
 
@@ -164,7 +176,7 @@ def _defs(g: Grid, s: Scale, body_anchor: str, big_number: str) -> dict[str, Lay
     ], background="tx2", hide_master=True, decor=[rule(g.m + 0.1, mid - 0.45)]))
     add(LayoutDef("content", "Content", "A title and up to six bullets", [
         _title(g, s),
-        PH("body", "body", 1, g.m, BODY_Y, g.cw, single_h, size=s.body, bullets=True, anchor=single, lift=lift),
+        PH("body", "body", 1, g.m, BODY_Y, measure, single_h, size=s.body, bullets=True, anchor=single, lift=lift),
         _takeaway(g),
     ]))
     add(LayoutDef("closing", "Closing", "Last slide: a thank-you or call to action and contact line", [
@@ -243,7 +255,7 @@ def _defs(g: Grid, s: Scale, body_anchor: str, big_number: str) -> dict[str, Lay
     ], decor=panels))
     add(LayoutDef("agenda", "Agenda", "The deck's sections, in order", [
         _title(g, s),
-        PH("body", "body", 1, g.m, BODY_Y, g.cw, single_h, size=s.body + 4, bullets=True, numbered=True,
+        PH("body", "body", 1, g.m, BODY_Y, measure, single_h, size=s.body + 4, bullets=True, numbered=True,
            anchor=single, lift=lift),
     ]))
     team = [_title(g, s)]
@@ -265,6 +277,6 @@ SETS = {
 
 
 def layout_set(name: str, width_in: float, height_in: float, scale: Scale | None = None,
-               body_anchor: str = "middle", big_number: str = "light") -> list[LayoutDef]:
-    defs = _defs(Grid(width_in, height_in), scale or Scale(), body_anchor, big_number)
+               body_anchor: str = "middle", big_number: str = "light", mode: str = "projected") -> list[LayoutDef]:
+    defs = _defs(Grid(width_in, height_in), scale or Scale(), body_anchor, big_number, mode)
     return [defs[k] for k in SETS[name]]

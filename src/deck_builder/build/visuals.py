@@ -175,17 +175,35 @@ def numeric_columns(spec: Table) -> list[bool]:
     return out
 
 
-def column_widths(spec: Table, total: int) -> list[int]:
-    """Column widths in EMU that follow content length, so long names wrap less and short codes take less.
+CHAR_EM = 0.55  # an average character's width in ems, for sizing table columns before rendering
+CELL_PAD_EMU = 2 * 91440 + 45720  # the cell's left and right insets, and a little air
 
-    A column's weight is its longest cell in characters, the bold header counted a little wider, plus room
-    for cell padding and a status dot, capped at 33 so one long cell can't squeeze the others. The last
-    column takes the rounding remainder, so the widths sum to total.
+
+def column_widths(spec: Table, total: int, font_size: float = 14) -> list[int]:
+    """Column widths in EMU that follow content, so words never break mid-word and long names wrap less.
+
+    Each column first gets room for its longest single word at the table's size (the bold header counted
+    a little wider, a status dot included), so "November" never splits. What's left goes by content length:
+    a column's weight is its longest cell in characters, capped at 33 so one long cell can't squeeze the
+    others. When even the longest words don't fit, every column shrinks in proportion. The last column
+    takes the rounding remainder, so the widths sum to total.
     """
+    def word_emu(chars: float) -> int:
+        return int(chars * font_size * CHAR_EM * 12700) + CELL_PAD_EMU
+
     ncols = len(spec.header)
-    weights = [min(33, 3 + max(6, round(len(spec.header[c]) * 1.15), *(len(row[c]) for row in spec.rows)))
-               for c in range(ncols)]
-    widths = [total * w // sum(weights) for w in weights]
+    mins = []
+    for c in range(ncols):
+        longest = max([len(w) * 1.1 for w in spec.header[c].split()] +
+                      [len(w) + 2 for row in spec.rows for w in row[c].split()] + [1.0])
+        mins.append(word_emu(longest))
+    if sum(mins) >= total:
+        widths = [total * m // sum(mins) for m in mins]
+    else:
+        weights = [min(33, max(6, round(len(spec.header[c]) * 1.15), *(len(row[c]) for row in spec.rows)))
+                   for c in range(ncols)]
+        spare = total - sum(mins)
+        widths = [m + spare * w // sum(weights) for m, w in zip(mins, weights, strict=True)]
     widths[-1] = total - sum(widths[:-1])
     return widths
 
@@ -206,7 +224,7 @@ def fill_table(slide: Any, ph: Any, spec: Table, brand: Brand) -> None:
     for r in range(nrows):
         table.rows[r].height = row_h
     frame.height = row_h * nrows
-    for c, width in enumerate(column_widths(spec, frame.width)):
+    for c, width in enumerate(column_widths(spec, frame.width, max(tok["font_size"], tok["header_font_size"]))):
         table.columns[c].width = width
     numeric = numeric_columns(spec)
     header_text, body_text = _rgb(brand, tok.get("header_text")), _rgb(brand, tok.get("text"))

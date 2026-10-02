@@ -95,7 +95,32 @@ def test_default_type_scale_is_sized_for_projection(ws, capsys, tmp_path):
     assert 'tIns="45720" bIns="594360"' in content  # lifted 0.3 in to the optical center
     assert '<a:buClr><a:schemeClr val="tx2"/></a:buClr>' in content  # bullets in the primary color
     assert "buAutoNum" in _layout_xml(kit, "Agenda")
-    assert tokens["table"]["font_size"] == 16 and tokens["table"]["header_font_size"] == 16
+    assert tokens["table"]["font_size"] == 18 and tokens["table"]["header_font_size"] == 18  # projected floor
+
+
+def test_read_mode_sets_document_sizes_a_measure_and_top_placement(ws, capsys, tmp_path):
+    kit, tokens = _kit(ws, capsys, tmp_path, layout_set="full", mode="read")
+    content = _layout_xml(kit, "Content")
+    assert 'sz="2800"' in content and 'sz="1400"' in content and 'anchor="t"' in content
+    assert tokens["table"]["font_size"] == 12
+    from lxml import etree
+
+    body = next(p for p in open_template(kit / "template.potx").slide_layouts.get_by_name("Content").placeholders
+                if p.placeholder_format.idx == 1)
+    assert body.width == 9 * 914400  # about 90 characters a line at 14 pt
+    assert etree.tostring(body._element)  # parses
+
+
+def test_table_columns_never_break_a_word():
+    from deck_builder.build.visuals import column_widths
+    from deck_builder.model import Table
+
+    t = Table(header=["Account", "Renewal", "Status"],
+              rows=[["Riverside Community College District Office", "November", "Green"]])
+    widths = column_widths(t, 12 * 914400, 18)
+    assert sum(widths) == 12 * 914400
+    november = 8 * 18 * 0.55 * 12700  # the longest word's estimated width at 18 pt
+    assert widths[1] > november and widths[2] > 5 * 18 * 0.55 * 12700
 
 
 def test_type_scale_and_placement_come_from_brand_yaml(ws, capsys, tmp_path):

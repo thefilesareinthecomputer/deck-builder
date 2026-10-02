@@ -410,8 +410,10 @@ def generate(meta: dict[str, Any], source_dir: Path) -> tuple[bytes, dict[str, A
     w_emu, h_emu = SIZES_EMU[gen.get("slide_size", "16:9")]
     w_in, h_in = w_emu / EMU, h_emu / EMU
     scale = Scale.from_meta(gen)
-    defs = layout_set(gen.get("layout_set", "standard"), w_in, h_in, scale, gen.get("body_anchor", "middle"),
-                      gen.get("big_number", "light"))
+    mode = gen.get("mode", "projected")
+    anchor = gen.get("body_anchor", "top" if mode == "read" else "middle")  # documents read from the top
+    defs = layout_set(gen.get("layout_set", "standard"), w_in, h_in, scale, anchor, gen.get("big_number", "light"),
+                      mode)
 
     prs = Presentation()
     prs.slide_width, prs.slide_height = Emu(w_emu), Emu(h_emu)

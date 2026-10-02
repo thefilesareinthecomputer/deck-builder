@@ -13,14 +13,13 @@ from typing import Any
 
 from deck_builder import template as tpl
 from deck_builder.brand.registry import Brand
-from deck_builder.build.visuals import TABLE_DEFAULTS
+from deck_builder.build.visuals import CELL_PAD_EMU, CHAR_EM, TABLE_DEFAULTS, column_widths
 from deck_builder.errors import Issue
 from deck_builder.model import Chart, Deck, Icon, Image, Slide, Table, Value, kind_of
 
 CHART_TYPES = ("column", "stacked-column", "bar", "stacked-bar", "line", "pie", "doughnut")
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tif", ".tiff"}
 EMU_PER_PT = 12700
-CHAR_WIDTH_FACTOR = 0.5  # an average glyph as a fraction of the font size, for a proportional font
 INLINE = [
     (re.compile(r"\[([^\]]+)\]\([^)]+\)"), r"\1"),
     (re.compile(r"\*\*(.+?)\*\*"), r"\1"),
@@ -260,12 +259,19 @@ def _check_table(name: str, t: Table, fs: dict[str, Any], brand: Brand, layout: 
 
 
 def _wrapped_lines(text: str, col_width_pt: float, font_size_pt: float) -> int:
-    """A rough estimate of how many lines a cell's text wraps to at a column width: no real font
-    metrics at check time, so an average glyph is taken as half the font size wide."""
+    """A rough estimate of how many lines a cell's text wraps to at a column width, word by word: no
+    real font metrics at check time, so an average glyph is taken as CHAR_EM of the font size wide."""
     if not text or col_width_pt <= 0:
         return 1
-    chars_per_line = max(1, int(col_width_pt / (font_size_pt * CHAR_WIDTH_FACTOR)))
-    return max(1, -(-len(text) // chars_per_line))  # ceil division
+    per_line = max(1, int(col_width_pt / (font_size_pt * CHAR_EM)))
+    lines, used = 1, 0
+    for word in text.split():
+        need = len(word) if used == 0 else used + 1 + len(word)
+        if need <= per_line or used == 0:
+            used = need
+        else:
+            lines, used = lines + 1, len(word)
+    return lines
 
 
 def _check_table_height(name: str, t: Table, fs: dict[str, Any], brand: Brand, layout: Any,
@@ -276,16 +282,18 @@ def _check_table_height(name: str, t: Table, fs: dict[str, Any], brand: Brand, l
     ph = next((p for p in layout.placeholders if p.placeholder_format.idx == idx), None)
     if ph is None or ph.width is None or ph.height is None:
         return []
-    width_pt, height_pt = ph.width / EMU_PER_PT, ph.height / EMU_PER_PT
+    height_pt = ph.height / EMU_PER_PT
     tok = {**TABLE_DEFAULTS, **(brand.tokens.get("table") or {})}
-    font_size = tok["font_size"]
+    font_size = max(tok["font_size"], tok["header_font_size"])
     row_h = font_size * tok["row_height_factor"]
-    ncols = len(t.header) or 1
-    col_width = width_pt / ncols
+    if not t.header or any(len(r) != len(t.header) for r in t.rows):
+        return []
+    # the same column widths build gives the table, less each cell's insets
+    widths = [(w - CELL_PAD_EMU) / EMU_PER_PT for w in column_widths(t, int(ph.width), font_size)]
     est_height = 0.0
     for row in [t.header, *t.rows]:
-        longest = max((plain(c) for c in row), key=len, default="")
-        est_height += _wrapped_lines(longest, col_width, font_size) * row_h
+        lines = max(_wrapped_lines(plain(c), w, font_size) for c, w in zip(row, widths, strict=True))
+        est_height += max(row_h, lines * font_size * 1.2 + 7.2)  # a wrapped row grows past its set height
     if est_height > height_pt:
         return [Issue("TABLE_TALL",
                       f"estimated table height {est_height:.0f} pt exceeds its placeholder's {height_pt:.0f} pt",

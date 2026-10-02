@@ -92,6 +92,7 @@
             "big_number": {"type": "number", "minimum": 48, "maximum": 200, "description": "the big-number numeral (default 120)"}
           }
         },
+        "mode": {"enum": ["projected", "read"], "description": "projected decks are presented to a room; read decks are sent and read on a screen: smaller type, a 9 in text measure, text from the top (default projected)"},
         "body_anchor": {"enum": ["middle", "top"], "description": "where single-column body text sits in its area (default middle)"},
         "big_number": {"enum": ["light", "dark"], "description": "the big-number slide on the background color, or on the primary color like a section slide (default light)"}
       }

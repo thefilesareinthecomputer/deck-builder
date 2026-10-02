@@ -74,14 +74,17 @@ layout: table
 layout: table
 takeaway: Three of six renewals need attention before December
 
-| Account | Segment | Annual {{unit}} | Renewal | Owner | Status |
-|---|---|---|---|---|---|
-| Northfield School District | Education | 6,400 | October | Field team north | Green |
-| Harbor County Facilities | Government | 4,900 | November | Field team east | Amber |
-| Linden Medical Group | Healthcare | 3,750 | November | Key accounts | Green |
-| Westmark Office Parks | Commercial | 2,980 | December | Field team west | Red |
-| Riverside Community College | Education | 2,600 | December | Field team north | Green |
-| Cedar Logistics | Commercial | 1,850 | December | Inside sales | Amber |
+| Account | Segment | Annual {{unit}} | Renewal | Status |
+|---|---|---|---|---|
+| Northfield School District | Education | 6,400 | October | Green |
+| Harbor County Facilities | Government | 4,900 | November | Amber |
+| Linden Medical Group | Healthcare | 3,750 | November | Green |
+| Westmark Office Parks | Commercial | 2,980 | December | Red |
+| Riverside Community College | Education | 2,600 | December | Green |
+| Cedar Logistics | Commercial | 1,850 | December | Amber |
+
+Notes:
+Owners by account are in the renewal tracker; five columns keep every row on one line.
 
 ## Two ways to cover the north
 layout: two-col

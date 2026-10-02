@@ -42,6 +42,4 @@ generate:
   slide_size: "16:9"
   layout_set: full
   logo_on_master: primary
-  type:                          # Avenir Next sets wide, so titles and body run a size smaller
-    title: 30
-    body: 22
+  mode: read                     # decks are sent to customers and read on screen, not presented

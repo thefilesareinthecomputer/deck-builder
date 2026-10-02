@@ -7,17 +7,21 @@ on those layouts. The `deck-builder` and `deck-brand` skills read this topic bef
 
 - **One title position.** Every content slide puts its title in the same box, top left, bold, so the eye
   finds it without searching.
-- **Type sized for the room.** The defaults are for a projected deck: 32 pt titles, 24 pt
-  single-column body, 20 pt for two columns, and 16 pt tables so six columns fit. Projected text
-  should stay at 18 pt or more, so for a large room set `generate.type.table: 18`. A deck that is
-  read rather than presented is a different document: set a 10 to 12 pt body in `generate.type`.
+- **Type sized for how the deck is used.** `generate.mode` picks one of two documents. A `projected`
+  deck (the default) is presented to a room: 32 pt titles, 24 pt single-column body, 20 pt for two
+  columns, 18 pt tables, and nothing under 18 pt. A `read` deck is sent ahead and read on a screen,
+  like a consultancy's leave-behind: 28 pt titles, a 14 pt body set to a 9 in measure (about 90
+  characters a line), 13 pt columns, 12 pt tables, and text from the top of the body area.
+  `generate.type` adjusts any single size.
 - **Short content sits at the optical center.** A single-column body is centered in its area, a little
   above the middle of the slide, so three bullets don't hug the top and leave the lower half empty
   (`generate.body_anchor: top` turns this off).
 - **Columns get structure.** Comparison columns sit on tinted panels with the heading inside; two-column
   slides get one thin divider. Nothing floats.
-- **Tables are quiet.** A dark header row, thin rules between rows, no vertical lines, column widths that
-  follow the content, numeric columns right-aligned, and full content width directly under the title.
+- **Tables are quiet.** A dark header row, thin rules between rows, no vertical lines, numeric columns
+  right-aligned, and full content width directly under the title. Every column is at least as wide as
+  its longest word, so no word breaks; the rest of the width follows content length. Five columns of
+  short values fit a projected slide; more than that belongs in a read deck or an appendix.
 - **Charts are native.** Bar and column value axes start at zero, and data labels sit on the data.
 - **An optional takeaway.** Content, two-column, chart and table slides take a `takeaway:` field: one
   sentence in a full-width band in the primary color at the bottom, for the conclusion the slide
