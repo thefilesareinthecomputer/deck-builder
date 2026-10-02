@@ -121,3 +121,29 @@ def test_bulk_builds_one_deck_per_row(ws, capsys):
     assert code == 0, out["issues"]
     names = sorted(Path(o["output"]).name for o in out["outputs"])
     assert names == ["Copperline-Foods.pptx", "Halvorsen-Freight.pptx"]
+
+
+def test_bulk_refuses_case_insensitive_filename_collisions_before_building(ws, capsys):
+    tmpl = write_deck(ws, "---\nbrand: stock\n---\n\n## {{client}} review\nlayout: title\nsubtitle: For {{contact}}\n",
+                      name="pitch.md")
+    data = ws / "decks" / "clients.csv"
+    data.write_text("client,contact\nAcme,Ops lead\nACME,Buyer\n")
+    out_dir = ws / "out" / "clients"
+    code, out = cli_json(ws, "build", str(tmpl), "--data", str(data), "--name", "{{client}}.pptx",
+                         "-o", str(out_dir), capsys=capsys)
+    assert code == 2
+    assert "Acme.pptx" in out["error"] and "1" in out["error"] and "2" in out["error"]
+    assert not out_dir.exists() or not list(out_dir.iterdir())
+
+
+def test_bulk_refuses_an_unresolved_token_in_the_name_pattern(ws, capsys):
+    tmpl = write_deck(ws, "---\nbrand: stock\n---\n\n## {{client}} review\nlayout: title\nsubtitle: For {{contact}}\n",
+                      name="pitch.md")
+    data = ws / "decks" / "clients.csv"
+    data.write_text("client,contact\nHalvorsen Freight,Ops lead\n")
+    out_dir = ws / "out" / "clients"
+    code, out = cli_json(ws, "build", str(tmpl), "--data", str(data), "--name", "{{nope}}.pptx",
+                         "-o", str(out_dir), capsys=capsys)
+    assert code == 2
+    assert "nope" in out["error"]
+    assert not out_dir.exists() or not list(out_dir.iterdir())

@@ -50,6 +50,20 @@ def read_data_rows(path: Path) -> list[dict[str, str]]:
     raise EnvError(f"--data takes .csv or .xlsx, not {path.suffix!r}")
 
 
+def _bulk_name(pattern: str, row: dict[str, str]) -> tuple[str, list[str]]:
+    """A bulk output name for one row, and any {{token}} in pattern that row has no column for."""
+    unresolved: list[str] = []
+
+    def rep(m: re.Match[str]) -> str:
+        key = m.group(1)
+        if key not in row:
+            unresolved.append(key)
+            return SAFE.sub("-", m.group(0))
+        return SAFE.sub("-", str(row[key]))
+
+    return TOKEN.sub(rep, pattern), unresolved
+
+
 def _cfg(args: argparse.Namespace) -> cfgmod.Config:
     return cfgmod.load(getattr(args, "config", None))
 
@@ -691,10 +705,22 @@ def build(args: argparse.Namespace) -> Result:
     rows = read_data_rows(Path(args.data))
     pattern = args.name or "{{_row}}.pptx"
     out_dir = Path(args.output) if args.output else default_output(path, None, cfg).with_suffix("")
+    rows = [{**row, "_row": f"{n:03d}"} for n, row in enumerate(rows, start=1)]
+    names = [_bulk_name(pattern, row) for row in rows]
+    unresolved = [(n, cols) for n, (_, cols) in enumerate(names, start=1) if cols]
+    if unresolved:
+        detail = "; ".join(f"row {n}: {', '.join(sorted(set(cols)))}" for n, cols in unresolved)
+        raise EnvError(f"--name {pattern!r} has a token with no matching column: {detail}")
+    by_name: dict[str, list[int]] = {}
+    for n, (name, _) in enumerate(names, start=1):
+        by_name.setdefault(name.casefold(), []).append(n)
+    dupes = {name: ns for name, ns in by_name.items() if len(ns) > 1}
+    if dupes:
+        detail = "; ".join(f"{names[ns[0] - 1][0]!r} from rows {', '.join(map(str, ns))}" for ns in dupes.values())
+        raise EnvError(f"--name {pattern!r} gives more than one row the same output name: {detail}")
     built = []
     for n, row in enumerate(rows, start=1):
-        row = {**row, "_row": f"{n:03d}"}
-        name = TOKEN.sub(lambda m, row=row: SAFE.sub("-", str(row.get(m.group(1), m.group(0)))), pattern)
+        name, _ = names[n - 1]
         sub = Result(command="build")
         done = _build_one(path, cfg, args, out_dir / name, row, sub)
         for i in sub.issues:
