@@ -92,6 +92,7 @@ subtitle: Volume, delivery and the plan for Q4
 
 ## Cases shipped by month
 layout: chart
+takeaway: The core line grew every month while specialty held flat
 
 ```chart
 type: column
