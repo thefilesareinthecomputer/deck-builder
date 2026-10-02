@@ -14,6 +14,10 @@ EXIT_ENV = 2
 
 # code -> (cause, fix)
 CODES: dict[str, tuple[str, str]] = {
+    "PARSE": (
+        "The input can't be parsed: bad YAML, an unclosed block, a malformed table, or no slides.",
+        "Fix the syntax at the reported line; `deck-builder docs deck-md` shows the format.",
+    ),
     "SPEC_VERSION": (
         "The input declares a spec_version newer than this engine supports.",
         "Upgrade deck-builder, or lower spec_version if the input doesn't use newer features.",

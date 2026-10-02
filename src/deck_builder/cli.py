@@ -10,8 +10,8 @@ import json
 import sys
 from collections.abc import Callable
 
-from deck_builder import __version__, docs
-from deck_builder.errors import CODES, EXIT_ENV, EnvError, Issue, Result
+from deck_builder import __version__, commands
+from deck_builder.errors import EXIT_ENV, EnvError, Issue, Result
 
 Handler = Callable[[argparse.Namespace], Result]
 
@@ -23,29 +23,6 @@ def _not_implemented(name: str) -> Handler:
         return r
 
     return run
-
-
-def _docs(args: argparse.Namespace) -> Result:
-    r = Result(command="docs")
-    if not args.topic:
-        r.data["topics"] = docs.topics()
-        r.summary = "\n".join(f"{k:<12} {v}" for k, v in docs.topics().items())
-        return r
-    text = docs.read(args.topic)  # raises EnvError on an unknown topic
-    r.data["topic"] = args.topic
-    r.data["text"] = text
-    r.summary = text.rstrip("\n")
-    return r
-
-
-def _explain(args: argparse.Namespace) -> Result:
-    code = args.code.upper()
-    if code not in CODES:
-        raise EnvError(f"unknown issue code {args.code!r}; `deck-builder docs codes` lists them")
-    cause, fix = CODES[code]
-    r = Result(command="explain", data={"code": code, "cause": cause, "fix": fix})
-    r.summary = f"{code}\ncause: {cause}\nfix:   {fix}"
-    return r
 
 
 def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
@@ -64,9 +41,9 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
         handlers[name] = handler or _not_implemented(name)
         return p
 
-    p = add("docs", "print a reference topic; no topic lists them", _docs)
+    p = add("docs", "print a reference topic; no topic lists them", commands.docs_cmd)
     p.add_argument("topic", nargs="?")
-    p = add("explain", "print the cause and fix for an issue code", _explain)
+    p = add("explain", "print the cause and fix for an issue code", commands.explain)
     p.add_argument("code")
 
     add("init", "create the workspace, config and neutral example brand")
@@ -81,11 +58,13 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
     p.add_argument("--yaml", action="store_true", help="print a starter layouts block for tokens.yaml")
     p = add("assets", "inventory a brand's or a deck's assets")
     p.add_argument("target")
-    p = add("check", "validate a deck without building it")
+    p = add("check", "validate a deck without building it", commands.check)
     p.add_argument("deck")
+    p.add_argument("--brand", help="brand slug (overrides the deck's brand:)")
     p.add_argument("--render", action="store_true", help="also build, render and measure")
     p = add("build", "build a deck into a .pptx")
     p.add_argument("deck")
+    p.add_argument("--brand", help="brand slug (overrides the deck's brand:)")
     p.add_argument("-o", "--output")
     p.add_argument("--data", help="bulk mode: one deck per row of this csv or xlsx")
     p.add_argument("--name", help="bulk mode file name pattern, e.g. '{{client}}.pptx'")
@@ -107,7 +86,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
 
 def emit(result: Result, as_json: bool) -> None:
     if as_json:
-        print(json.dumps(result.as_dict(), indent=None, sort_keys=False, default=str))
+        print(json.dumps(result.as_dict(), default=str))
         return
     for issue in result.issues:
         print(issue.human(), file=sys.stderr if issue.severity == "error" else sys.stdout)
@@ -128,7 +107,9 @@ def main(argv: list[str] | None = None) -> int:
         result = Result(command=args.command, ok=False, exit_code=EXIT_ENV)
         if as_json:
             result.data["error"] = str(e)
+            if e.code:
+                result.data["code"] = e.code
         else:
-            print(f"error: {e}", file=sys.stderr)
+            print(f"error{' ' + e.code if e.code else ''}: {e}", file=sys.stderr)
     emit(result, as_json)
     return result.exit_code
