@@ -1,8 +1,8 @@
 <h1 align="center">deck-builder</h1>
 
 <p align="center">
-  Branded, fully editable PowerPoint decks from markdown or a spreadsheet,<br>
-  using a real PowerPoint template as the design system.
+  Write slides in markdown or Excel and get fully editable PowerPoint decks in your own brand.<br>
+  The same input always builds the same file, and Claude Code walks you through setup and your first deck.
 </p>
 
 <p align="center">
@@ -28,18 +28,18 @@
 
 <br>
 
-You or an agent write the content, and the engine handles layout, styling and validation. Every slide fills a placeholder in the template, and content that doesn't fit fails a check with a code that says how to fix it.
+You write the content, or an agent does. deck-builder handles layout, styling and validation: every slide fills a placeholder in your template, and anything that doesn't fit fails a check that tells you how to fix it.
 
 <table>
   <tr>
-    <td width="33%" valign="top"><b>Editable output</b><br>Real text in template placeholders, native charts and tables, speaker notes and alt text.</td>
-    <td width="33%" valign="top"><b>Markdown or Excel</b><br><code>deck.md</code> and <code>deck.xlsx</code> convert into each other without loss, and either one builds the deck.</td>
-    <td width="33%" valign="top"><b>Brands as data</b><br>A brand kit is a template plus two YAML files. Generate one from your colors, fonts and logo, or wrap an existing template.</td>
+    <td width="33%" valign="top"><b>Your brand, your template</b><br>Generate a brand kit from your colors, fonts and logo, or wrap the PowerPoint template you already use.</td>
+    <td width="33%" valign="top"><b>Write in markdown or Excel</b><br>Draft in <code>deck.md</code>, hand your team <code>deck.xlsx</code>. They convert into each other without loss, and either one builds the deck.</td>
+    <td width="33%" valign="top"><b>Guided setup</b><br>In Claude Code, onboarding checks your machine, sets up your brand and builds your first deck with you.</td>
   </tr>
   <tr>
-    <td valign="top"><b>Existing decks, made consistent</b><br><code>import</code> turns a .pptx back into <code>deck.md</code>, drops one-off formatting and reports what needs a decision.</td>
-    <td valign="top"><b>Visual QA</b><br>Renders with PowerPoint or LibreOffice, measures where every word landed, and flags only the slides that need a look.</td>
-    <td valign="top"><b>Deterministic and local</b><br>The same input builds the same file, and the engine makes no network calls.</td>
+    <td valign="top"><b>Deterministic builds</b><br>The same input builds the same file every time, and the engine makes no network calls.</td>
+    <td valign="top"><b>Fully editable output</b><br>Real text in template placeholders, native charts and tables, speaker notes and alt text.</td>
+    <td valign="top"><b>Visual QA built in</b><br>Every render measures where each word landed and flags only the slides that need a look.</td>
   </tr>
 </table>
 
@@ -53,12 +53,12 @@ uv run deck-builder init
 uv run deck-builder check workspace/decks/quarterly-review --render
 ```
 
-`init` creates a workspace with a neutral brand and two example decks. `check --render` builds the first one into `workspace/out/quarterly-review.pptx` and renders it, with a contact sheet next to it.
+`init` sets up a workspace with a neutral brand and two example decks, and `check --render` builds and renders the first one. Open `workspace/out/quarterly-review.pptx` to see the result.
 
 To run `deck-builder` from any folder, install it once with `uv tool install --editable .`
 
 > [!TIP]
-> **Using Claude Code?** Open the clone and start a session. Onboarding runs these steps with you, then sets up your own brand.
+> **Using Claude Code?** Open the clone and start a session. Onboarding walks you through these steps, then sets up your own brand.
 
 ## How it works
 
@@ -115,6 +115,8 @@ caption: "Opened in August: same-day delivery for the northern accounts."
 
 Field values are YAML, so quote a value that contains `: `. `deck-builder brand show <slug>` lists a brand's layouts, fields and character budgets. The [full showcase deck](tests/fixtures/demo-brands/showcase/deck.md) builds into all three brands in one command with `build --data`.
 
+To bring in an existing deck, `deck-builder import old.pptx new-deck --brand <slug>` turns it back into `deck.md` and its images, drops one-off formatting and reports anything that needs a decision.
+
 ## Brands
 
 ```
@@ -155,6 +157,8 @@ A `<deck>` is a `.md`, `.xlsx` or `.csv` file, or a folder holding one. Every co
 
 ## Claude Code
 
+deck-builder ships with skills and agents for Claude Code, so you can ask for a deck in plain language, from a brief or a folder of notes, and review the rendered result.
+
 | Piece | Job |
 |---|---|
 | `deck-onboard` skill | Setup, missing tools, choosing a brand path, a first deck |
@@ -164,12 +168,12 @@ A `<deck>` is a `.md`, `.xlsx` or `.csv` file, or a folder holding one. Every co
 | `deck-brand-agent` | Builds or adopts a brand kit and tunes its budgets with a test render |
 | `deck-builder-agent` | Runs the check, build and render loop on a larger deck in its own context |
 
-The agents have no shell. They reach the engine only through its MCP server (`deck-builder mcp`), confined to the workspace, so the CLI has to be on PATH (`uv tool install --editable <clone>`). `deck-builder skills install` adds the skills and agents to `~/.claude` for use in other repos.
+The agents have no shell. They reach the engine only through its MCP server (`deck-builder mcp`), confined to the workspace, so the CLI has to be on PATH (`uv tool install --editable .` from the clone). `deck-builder skills install` adds the skills and agents to `~/.claude` for use in other repos.
 
 > [!NOTE]
 > The engine is local, but what an agent reads goes to Anthropic, as in any Claude Code session. Agents can still write files the session allows, so keep client work outside the clone.
 
-## Rules the engine keeps
+## Principles
 
 - **Content in, design out.** Decks hold text, data and image references. Layout, fonts and colors come only from the brand kit, and budgets aren't loosened to make content fit.
 - **Confined.** A deck reads images only inside its folder, a build writes only the `.pptx` files it made, and bulk data can't add slides or images. Imported decks are untrusted input.
