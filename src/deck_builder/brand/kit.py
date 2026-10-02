@@ -27,6 +27,9 @@ def color_refs(brand: Brand) -> list[tuple[str, str]]:
         for fname, fs in (ls.get("fields") or {}).items():
             if fs.get("color"):
                 refs.append((f"tokens.yaml layouts.{lname}.{fname}.color", str(fs["color"])))
+    furniture_color = (brand.tokens.get("furniture") or {}).get("color")
+    if furniture_color:
+        refs.append(("tokens.yaml furniture.color", str(furniture_color)))
     return refs
 
 

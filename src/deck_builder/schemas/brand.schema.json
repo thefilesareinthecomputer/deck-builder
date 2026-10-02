@@ -75,7 +75,8 @@
       "properties": {
         "slide_size": {"enum": ["16:9", "4:3"]},
         "layout_set": {"enum": ["minimal", "standard", "full"]},
-        "logo_on_master": {"type": "string"}
+        "logo_on_master": {"type": "string"},
+        "slide_numbers": {"type": "boolean", "description": "a slide number on layouts that show the master (default true)"}
       }
     }
   }

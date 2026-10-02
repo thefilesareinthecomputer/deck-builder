@@ -62,6 +62,12 @@
         "text": {"$ref": "#/$defs/colorRef"}
       }
     },
+    "furniture": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "written by brand init: whether layouts have slide numbers, and the color chosen for numbers and footers",
+      "properties": {"slide_numbers": {"type": "boolean"}, "color": {"$ref": "#/$defs/colorRef"}}
+    },
     "layouts": {
       "type": "object",
       "minProperties": 1,
