@@ -27,7 +27,8 @@ def _line(key: str, value: Any) -> str:
 def front_matter(meta: dict[str, Any]) -> str:
     ordered = {k: meta[k] for k in FRONT_ORDER if k in meta}
     ordered.update({k: meta[k] for k in sorted(meta) if k not in ordered})
-    return f"---\n{_dump(ordered) if ordered else ''}---\n"
+    lines = "".join(_line(k, v) + "\n" for k, v in ordered.items())  # one key per line, as people write it
+    return f"---\n{lines}---\n"
 
 
 def _pipe_ok(t: Table) -> bool:

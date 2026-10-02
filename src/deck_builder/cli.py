@@ -70,6 +70,15 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
     p.add_argument("input", help="the deck to convert: .md, .xlsx or .csv")
     p.add_argument("output", help="the file to write; its extension (.md, .xlsx or .csv) picks the format")
     p.add_argument("--force", action="store_true", help="replace the output file if it exists")
+    p = add("import", "turn an existing .pptx back into deck.md, its images and a report of what needs a decision",
+            commands.import_cmd)
+    p.add_argument("pptx", help="the .pptx to import; it's treated as untrusted")
+    p.add_argument("out", help="the folder to write deck.md, assets/ and import-report.md into")
+    which = p.add_mutually_exclusive_group(required=True)
+    which.add_argument("--brand", help="map the slides onto this existing brand kit (also how a deck is re-branded)")
+    which.add_argument("--adopt", metavar="SLUG",
+                       help="make a new kit from the file's own masters and layouts, then map onto it")
+    p.add_argument("--force", action="store_true", help="replace an existing deck.md, or an adopted kit's files")
     p = add("render", "render a .pptx to PDF, slide PNGs and contact sheets; flags slides to look at",
             commands.render_cmd)
     p.add_argument("pptx", help="a built .pptx (to build and render a deck in one step: check --render)")

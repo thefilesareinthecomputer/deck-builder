@@ -4,6 +4,7 @@
 
 ### Added
 
+- `import <deck.pptx> <out> --brand <slug> | --adopt <new-slug>`: an existing deck back into `deck.md`, its images (named by slide and content hash) and `import-report.md`. Layouts map by name or by best fit on placeholder types; placeholders map to fields; runs become inline markup, tables pipe tables, charts chart blocks, notes `Notes:`; brand logos and icons are recognized by hash. Content that can't be placed goes to the slide's notes and the report, SmartArt, media, embedded objects and groups are reported, linked images are never fetched, and local formatting is dropped and counted. The `deck-builder` skill has a "Refresh an existing deck" path.
 - `check` and `build` accept a deck folder and use its `deck.md`, `deck.xlsx` or `deck.csv`, in that order.
 - `build -o` accepts a folder (an existing one, or a path ending in `/`) and writes the default file name inside it.
 - `brand check`, `brand init` and `brand adopt` warn with the new `LOW_CONTRAST` code when a color pair misses WCAG 2.2 contrast: 4.5:1 for ink on background and on surface, background on primary, and links on background; 3:1 for the icon color and chart series colors on background.
@@ -19,12 +20,14 @@
 - A deck image must resolve, symlinks followed, inside the deck's folder, and a brand asset inside its kit; anything else is the new error `ASSET_OUTSIDE`, in every mode and per bulk row. Logo and icon ids containing `/`, `\` or `..` are `UNKNOWN_ASSET`. Image messages name the reference as written, not the resolved path. The manifest records each image's source file.
 - Front matter `output:` must be a `.pptx` inside the deck's folder or `<workspace>/out/`; `-o` takes a `.pptx` path or a folder; a build never replaces an existing file that has no manifest beside it.
 - Bulk data values with a line break, or that would start a heading or image line, are the new error `BAD_DATA_VALUE` for that row.
+- A template's theme XML is parsed with entities, DTDs and network loads off, so an adopted template or imported deck can't read local files through XML entities; such a theme is refused.
 - Re-rendering deletes only the files render writes, not the whole `.render/` folder.
 - The showcase fixture's hero images moved into `showcase/assets/`, since a deck's images must sit inside its folder.
 - `deck-decomposer-agent` runs no commands: Bash is removed, since it reads untrusted material. The main agent puts `brand show <slug> --json` and `docs deck-md` in its prompt and runs `check` on its draft.
 
 ### Changed
 
+- Canonical `deck.md` front matter (from `convert` and `import`) is one `key: value` per line instead of a single YAML flow mapping. Content hashes change once as a result.
 - The neutral brand passes its own contrast check: links use `primary` (10.95:1, was 4.10:1) and the fourth chart color is `5B8FC7` (3.39:1, was `8FB3D9` at 2.18:1).
 
 ### Fixed

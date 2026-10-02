@@ -12,6 +12,7 @@ You, or an agent, write the content. The engine owns layout, styling and validat
 - **Editable output.** Real text in template placeholders, native PowerPoint charts and tables, speaker notes and alt text. No slides made of pictures.
 - **Markdown or Excel, interchangeably.** `deck.md` and `deck.xlsx` hold the same deck and convert into each other without loss, so a deck can start in markdown, go to a team as a workbook, and build from either.
 - **Brands as data.** A brand kit is a template plus two YAML files. Generate one from your colors, fonts and logo, wrap an existing client template, or start from the neutral example.
+- **Existing decks, made consistent.** `import` turns a .pptx with many hands in it back into `deck.md`, drops the one-off formatting, and reports what needs a decision, so the deck rebuilds in one brand.
 - **Visual QA an agent can afford.** Renders with PowerPoint on a Mac or with LibreOffice, measures where every word landed, and flags only the slides that need a look.
 - **Local.** The engine makes no network calls and sends nothing anywhere.
 
@@ -127,6 +128,7 @@ Decks name a brand with `brand: <slug>`, and `--brand` overrides it for one buil
 | `check <deck> [--render]` | Validate a deck; with `--render`, also build, render and measure |
 | `build <deck> [--data rows.csv]` | Build the `.pptx` and its manifest; with `--data`, one deck per row |
 | `convert <in> <out>` | Convert between `.md`, `.xlsx` and `.csv`, refusing anything lossy |
+| `import <pptx> <out>` | Turn an existing deck back into `deck.md`, its images and a report of what needs a decision |
 | `render <pptx>` | PDF, slide PNGs, contact sheets, measured overflow, flagged slides |
 | `brand list`, `brand show <slug>`, `brand check <slug>` | Find brands, see a brand's layouts and budgets, verify a kit |
 | `brand init`, `brand adopt` | Generate a kit, or wrap an existing template |

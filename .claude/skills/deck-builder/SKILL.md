@@ -6,8 +6,9 @@ description: >-
   measures. MUST be used whenever a deck, presentation, slides or a .pptx is to be created,
   drafted, updated, converted or bulk-generated in a repo where deck-builder is available,
   including from notes, markdown, a spreadsheet or a data file, and when converting a deck
-  between markdown and Excel for team editing. Takes precedence over generic pptx tooling for
-  creating decks. Not for reading or extracting text from an existing .pptx someone else made.
+  between markdown and Excel for team editing, and when an existing .pptx should be refreshed or
+  re-branded (import). Takes precedence over generic pptx tooling for creating decks. Not for just
+  reading or quoting text from a .pptx someone else made.
 license: MIT
 ---
 
@@ -84,6 +85,21 @@ number or source you couldn't verify.
 - `MISSING_FONT` means a brand font isn't installed where the deck rendered. Report it to the user;
   don't change content to fit the substitute font.
 - `RENDER_UNVERIFIED` means the PowerPoint backend hasn't been verified on this Mac yet; say so.
+
+## Refresh an existing deck
+
+For a .pptx that already exists, often with many contributors, that should become consistent in a
+brand:
+
+1. `db import <deck.pptx> <folder> --brand <slug>` maps it onto an existing kit (also how a deck is
+   re-branded). `--adopt <new-slug>` instead makes a kit from the file's own masters and layouts.
+2. Read `<folder>/import-report.md` with the user. It names each slide's layout and how it matched,
+   what couldn't be placed, and the formatting that was dropped on purpose. Unplaced content sits in
+   each slide's notes under "Unplaced from the original:".
+3. Resolve each unplaced item and every budget issue by editing `deck.md`: move content into a
+   field, split the slide, or cut it with the user's OK. Then `db check <folder> --json` until clean.
+4. `db check <folder> --render --json`, and `db render <deck.pptx>` for the original.
+5. Show the old and new contact sheets side by side, and say what changed.
 
 ## Other paths
 

@@ -10,9 +10,12 @@ from lxml import etree
 from pptx.enum.shapes import PP_PLACEHOLDER
 
 from deck_builder import template as tpl
+from deck_builder.errors import EnvError
 
 EMU_PER_INCH = 914400
 NS = {"a": "http://schemas.openxmlformats.org/drawingml/2006/main"}
+# Templates and imported decks are untrusted: no entity expansion, no DTD or network loads.
+SAFE_XML = etree.XMLParser(resolve_entities=False, no_network=True, load_dtd=False, huge_tree=False)
 KIND = {
     PP_PLACEHOLDER.TITLE: "text",
     PP_PLACEHOLDER.CENTER_TITLE: "text",
@@ -120,7 +123,10 @@ def theme(path: Path) -> dict[str, Any]:
         names = sorted(n for n in z.namelist() if re.fullmatch(r"ppt/theme/theme\d+\.xml", n))
         if not names:
             return {"colors": {}, "fonts": {}}
-        root = etree.fromstring(z.read(names[0]))
+        try:
+            root = etree.fromstring(z.read(names[0]), parser=SAFE_XML)
+        except etree.XMLSyntaxError as e:
+            raise EnvError(f"{path.name}: its theme isn't plain XML ({e}); refusing to read it") from e
     colors: dict[str, str] = {}
     for slot in THEME_SLOTS:
         el = root.find(f".//a:clrScheme/a:{slot}", NS)

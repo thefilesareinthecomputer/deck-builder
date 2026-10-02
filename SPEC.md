@@ -323,6 +323,18 @@ The supported team path is: write `deck.md`, `convert` to `deck.xlsx`, share it 
 **R-8.1** Round trip holds for every example deck, and one deck builds the same file from any format. AC: tests convert md to xlsx to md and md to xlsx to md to xlsx, asserting model equality, byte-stable canonical forms on the second pass, and byte-identical PPTX files from the `.md`, the `.xlsx` and the converted-back `.md`. `convert` itself parses its output back and refuses with `CONVERT_LOSSY` if anything changed.
 **R-8.2** A workbook edited and re-saved by LibreOffice still builds identically. AC: render-tier test re-saves through `soffice --convert-to xlsx` and rebuilds.
 
+### 8.1 import
+
+`deck-builder import <deck.pptx> <out> (--brand SLUG | --adopt NEW-SLUG) [--force]` turns an existing deck, often one with many contributors, back into `<out>/deck.md`, its images in `<out>/assets/` (named `slideNN-<sha256 prefix>.<ext>`), and `<out>/import-report.md`. The normal loop then makes it consistent. `--brand` maps onto an existing kit, which is also how a deck is re-branded; `--adopt` first runs `brand adopt` on the file itself, keeping its masters and layouts with the slides removed.
+
+- **Layouts.** A slide whose layout exists by name in the kit's template maps to the tokens layout with that `template_layout` (by placeholder content when several share it). Otherwise it maps to the layout that best fits its placeholder types and counts, and the report gives the confidence.
+- **Fields.** Placeholders map to fields by `idx` (by type, in reading order, on a type match). Runs become inline markup, paragraph levels become bullet indents, tables become pipe tables, charts become chart blocks read from the chart part, pictures keep their alt text, and notes become `Notes:`. Brand logos and icons are recognized by content hash and written as `brand:` references.
+- **Nothing dropped silently.** A free shape (a text box, a chart or picture not in a placeholder) goes to the field its position falls in, or to the one free field of its kind; otherwise its content goes to the slide's notes under "Unplaced from the original:" and into the report. SmartArt, video, audio, embedded objects and grouped shapes are reported and noted on the slide. Linked images are reported, never fetched.
+- **Normalization.** Local fonts, sizes, colors, moved placeholders and other overrides are dropped on purpose; the report counts them per slide.
+- **Untrusted input.** The file opens through the template size cap, XML the engine parses itself refuses entities and DTDs, relationship targets are never used as paths, and extracted file names are made by the engine.
+
+**R-8.3** Import round-trips the engine's own output. AC: for both example decks and the showcase in all three demo brands, `import(build(deck.md))` has the same content hash as the source after one documented normalization (front-matter keys a .pptx can't hold dropped, deck-image paths replaced by their file hashes, free `body` content resolved to its field); a deck without deck images or such keys round-trips with no normalization; a hand-made messy deck imports with every override and the stray text box reported and nothing lost; import is deterministic.
+
 ## 9. CLI
 
 ```
@@ -334,6 +346,7 @@ deck-builder assets <brand|deck> [--json]           # section 6.2
 deck-builder check <deck> [--render] [--json]       # validate; --render also builds to the default output, renders, measures
 deck-builder build <deck> [-o OUT] [--data ROWS --name PATTERN] [--json]
 deck-builder convert <in> <out> [--force] [--json]  # never overwrites without --force
+deck-builder import <pptx> <out> (--brand S | --adopt S) [--force] [--json]  # section 8.1
 deck-builder render <pptx> [--backend B] [--slides 3,7] [--dpi N] [--json]
 deck-builder schema brand|tokens|manifest
 deck-builder docs [topic]                           # reference topics shipped with the engine
