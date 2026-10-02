@@ -29,7 +29,7 @@
 - The showcase fixture's hero images moved into `showcase/assets/`, since a deck's images must sit inside its folder.
 - `deck-builder-agent` and `deck-brand-agent` have no shell: Bash is removed and they reach the engine only through the deck-builder MCP server, confined to the workspace, so a missing or failing server leaves them able to run nothing. `skills install` refuses until `deck-builder` is on PATH. Approved by the user.
 - Front matter `template:` and `tokens:` must be files inside the deck's folder.
-- From the third pre-push review: `BAD_DATA_VALUE` catches every line separator Python splits on (`\v`, `\f`, `\x85`, U+2028 and the rest), argparse help can't reach the MCP stdout stream, an MCP path with a NUL byte is refused instead of left unanswered, and a slide-number field id from an adopted template is used only when it's a well-formed GUID.
+- `BAD_DATA_VALUE` catches every line separator Python splits on (`\v`, `\f`, `\x85`, U+2028 and the rest) and judges each filled line, so an empty value can't move the next one to the line start; argparse help can't reach the MCP stdout stream, an MCP path with a NUL byte is refused instead of left unanswered, and a slide-number field id from an adopted template is used only when it's a well-formed GUID.
 - `deck-decomposer-agent` runs no commands: Bash is removed, since it reads untrusted material. The main agent puts `brand show <slug> --json` and `docs deck-md` in its prompt and runs `check` on its draft.
 
 ### Changed

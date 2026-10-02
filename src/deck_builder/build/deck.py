@@ -31,7 +31,7 @@ EMU_PER_INCH = 914400
 MIN_DPI = 150
 DEFAULT_DATE = dt.date(2000, 1, 1)
 SLIDENUM_FIELD = "{B6F15528-21DE-4FAA-801E-634DDDAF4B2B}"  # used when the layout's field has no usable id
-FIELD_ID = re.compile(r"\{[0-9A-Fa-f-]{36}\}")
+FIELD_ID = re.compile(r"\{[0-9A-Fa-f]{8}(-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}\}")
 OFF = {"false", "no", "off", "0"}
 
 
@@ -51,7 +51,7 @@ def add_furniture(slide: Any, layout: Any, n: int, numbers: bool, footer: str | 
     """
     tree = slide.shapes._spTree
     ids = [str(e.get("id", "")) for e in tree.iter(qn("p:cNvPr"))]
-    next_id = max((int(i) for i in ids if i.isdigit()), default=1) + 1
+    next_id = max((int(i) for i in ids if i.isdecimal()), default=1) + 1
     for ph in layout.placeholders:
         kind = ph.placeholder_format.type
         if kind == PP_PLACEHOLDER.SLIDE_NUMBER and numbers:

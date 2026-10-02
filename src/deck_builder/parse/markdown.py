@@ -19,6 +19,8 @@ NUMBERED = re.compile(r"^(\s*)\d+[.)]\s+(.*)$")
 TOKEN = re.compile(r"\{\{\s*([\w.-]+)\s*\}\}")
 NOTES = re.compile(r"^(Notes|\?\?\?):?\s*$")
 STRAY_HEADING = re.compile(r"^#{1,6}\s")
+# A line that changes a deck's structure: a heading, an image, a fence, or the start of speaker notes.
+STRUCTURE = re.compile(r"^\s*(#|!\[|```|(Notes|\?\?\?):?\s*$)")
 
 
 def substitute(text: str, row: dict[str, str] | None, file: str, issues: list[Issue]) -> str:
@@ -32,15 +34,20 @@ def substitute(text: str, row: dict[str, str] | None, file: str, issues: list[Is
             issues.append(Issue("UNKNOWN_TOKEN", f"{{{{{key}}}}} has no data column", file=file))
             return m.group(0)
         value = str(row[key])
-        line_start = not text[text.rfind("\n", 0, m.start()) + 1 : m.start()].strip()
         if len(f"x{value}x".splitlines()) > 1:  # any break splitlines() honors: \v, \f, \x85, U+2028...
             issues.append(Issue("BAD_DATA_VALUE", f"column {key!r} holds a line break", file=file))
-        elif line_start and value.lstrip().startswith(("#", "![")):
-            issues.append(Issue("BAD_DATA_VALUE", f"column {key!r} would start a heading or image line: "
-                                f"{value[:40]!r}", file=file))
         return value
 
-    return TOKEN.sub(rep, text)
+    lines = []
+    for line in text.split("\n"):  # values hold no line breaks, so template lines map one to one
+        filled = TOKEN.sub(rep, line)
+        # judge the filled line, not each value: "{{a}}{{b}}" with an empty a still starts with b
+        if filled != line and STRUCTURE.match(filled) and not STRUCTURE.match(TOKEN.sub("x", line)):
+            cols = ", ".join(repr(k) for k in TOKEN.findall(line))
+            issues.append(Issue("BAD_DATA_VALUE", f"column {cols} would start a heading or image line: "
+                                f"{filled.strip()[:40]!r}", file=file))
+        lines.append(filled)
+    return "\n".join(lines)
 
 
 def split_front_matter(text: str, file: str, issues: list[Issue]) -> tuple[dict[str, Any], str, int]:

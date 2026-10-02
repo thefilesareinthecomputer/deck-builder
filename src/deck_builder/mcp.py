@@ -247,8 +247,9 @@ class Server:
                 "capabilities": {"tools": {"listChanged": False}},
                 "serverInfo": {"name": "deck-builder", "version": __version__},
                 "instructions": (
-                    f"deck-builder tools, confined to the workspace at {self.root}; relative paths resolve "
-                    "against it, and anything outside it is refused. The usual loop: brand_show and docs "
+                    f"deck-builder tools, confined to the workspace at {self.root} (brand tools also reach "
+                    "the configured brand_paths folders); relative paths resolve against the workspace, and "
+                    "anything else is refused. The usual loop: brand_show and docs "
                     "deck-md once, write the deck file, check until it has no errors (explain gives each "
                     "code's fix), then check with render: true and read only the flagged slides' PNGs."),
             })
