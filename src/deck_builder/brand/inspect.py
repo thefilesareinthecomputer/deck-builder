@@ -106,7 +106,11 @@ def starter_tokens(path: Path) -> dict[str, Any]:
             key = slug(layout.name)
             while key in layouts:
                 key += "-2"
-            layouts[key] = {"template_layout": layout.name, "fields": fields}
+            entry: dict[str, Any] = {"template_layout": layout.name}
+            if len(prs.slide_masters) > 1:
+                entry["master"] = master.name  # layout names repeat across masters; the key must say which
+            entry["fields"] = fields
+            layouts[key] = entry
     return {"spec_version": 1, "layouts": layouts}
 
 

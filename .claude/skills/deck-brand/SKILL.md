@@ -24,7 +24,7 @@ before writing either file.
 
 | Path | When | Commands |
 |---|---|---|
-| Adopt | They have a template (`.potx` or `.pptx`) | `brand adopt <slug> --template FILE`, then fill in `brand.yaml` |
+| Adopt | They have a template (`.potx` or `.pptx`) | `brand adopt <slug> --template FILE`, then `inspect FILE` to read each layout's placeholder types, rename the generated layout keys and fields in `tokens.yaml` to what they're for, and fill in `brand.yaml` |
 | Starter | They want something working now | A minimal `brand.yaml` (palette, fonts, logo), `brand init <slug> --from brand.yaml` |
 | Full | They want the whole kit | Work through every section below, then `brand init` and the PowerPoint polish |
 

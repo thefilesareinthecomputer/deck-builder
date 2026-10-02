@@ -33,8 +33,10 @@ are the formats; read them first.
 2. `db brand init <slug> --from brand.yaml` when generating.
 3. `db brand check <slug> --json` must pass.
 4. Write a test deck using every layout with long text in every text field, then
-   `db check <test deck> --render --json`. Read the `OVERFLOW_MEASURED` results and the contact
-   sheets, and propose a budget per field that leaves about 10% headroom.
+   `db check <test deck> --render --json`. If the result has `MISSING_FONT`, stop and report it:
+   budgets measured with a substitute font are wrong, and the fonts have to be installed on this
+   machine first. Otherwise read the `OVERFLOW_MEASURED` results and the contact sheets, and
+   propose a budget per field that leaves about 10% headroom.
 5. `db brand show <slug>` for the summary in the report.
 
 ## Report
