@@ -30,6 +30,10 @@ on those layouts. The `deck-builder` and `deck-brand` skills read this topic bef
   bullets and agenda numbers in the primary color. No other decoration.
 - **Brand color in proportion.** Content slides are white with the brand color on titles, the table
   header and small accents; title, section and closing slides are full-bleed primary color.
+- **Structure from shapes (designed set).** `layout_set: designed` adds layouts that draw their own
+  structure: cards with colored label bands, process chevrons in a ramp of the primary color, and
+  labeled bands. Every content slide gains a section label (`kicker:`) above the title and a
+  one-line `subtitle:` under it, and comparison panels gain optional logo slots.
 
 ## Writing a deck that uses them well
 
@@ -49,6 +53,9 @@ on those layouts. The `deck-builder` and `deck-brand` skills read this topic bef
   | A voice from outside the team | `quote` |
   | Rows a reader will look up | `table`, six rows or fewer |
   | A short argument | `content`, four bullets or fewer |
+  | Three or four parallel options, each with a few points (designed set) | `cards-3` or `cards-4` |
+  | Steps in order (designed set) | `process-4` or `process-5` |
+  | Three themes, each with its points (designed set) | `bands-3` |
 
 - **Digestible amounts.** Four bullets or fewer, each two lines at most, and about 40 words on a
   projected slide. Working memory holds about four chunks; the exact limits are convention. Move
@@ -71,8 +78,9 @@ on those layouts. The `deck-builder` and `deck-brand` skills read this topic bef
 - Use icons for parallel ideas, one style and one color per deck, from the brand's icon set.
 - Use vendor and product logos only where the slide is about that product, from the vendor's official
   artwork, unmodified and not recolored, with clear space around it.
-- Use screenshots and photos at their real aspect ratio; the image layouts crop photos to fill and fit
-  logos and icons inside.
+- Use screenshots and photos at their real aspect ratio. The image layouts crop opaque images to fill
+  their box, and fit images with transparent pixels (logos, icons) inside it, so a logo is never cut.
+  Give a logo a transparent background to get the fit.
 
 ## Charts
 

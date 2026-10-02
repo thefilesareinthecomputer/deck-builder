@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from deck_builder import config as cfgmod
@@ -58,10 +58,12 @@ def load_deck(path: Path, row: dict[str, str] | None = None) -> Loaded:
 
 
 def content_sha(deck: Deck) -> str:
-    """A hash of the deck's content, the same whichever format it was written in: its canonical markdown."""
+    """A hash of the deck's content, the same whichever format it was written in: its canonical markdown,
+    with each slide's fields in name order, since a workbook's columns can order them differently."""
     from deck_builder.write import markdown as md_writer
 
-    return hashlib.sha256(md_writer.write(deck).encode("utf-8")).hexdigest()
+    canon = replace(deck, slides=[replace(s, fields=dict(sorted(s.fields.items()))) for s in deck.slides])
+    return hashlib.sha256(md_writer.write(canon).encode("utf-8")).hexdigest()
 
 
 def brand_for(deck: Deck, deck_path: Path, cfg: cfgmod.Config, override: str | None = None) -> Brand:

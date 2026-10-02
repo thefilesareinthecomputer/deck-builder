@@ -56,7 +56,7 @@ lint:                            # enforced by `check`
 
 generate:                        # read only by `brand init`
   slide_size: "16:9"             # 16:9 | 4:3
-  layout_set: standard           # minimal | standard | full
+  layout_set: standard           # minimal | standard | full | designed
   logo_on_master: primary        # a logo id, or leave out
   slide_numbers: true            # a small number at the bottom left of content slides (default true)
   mode: projected                # projected | read: presented to a room, or sent and read on screen
@@ -71,6 +71,8 @@ generate:                        # read only by `brand init`
     icon_text: 18                # (read: 13)
     table: 18                    # table text, header included (read: 12)
     big_number: 120              # (read: 96)
+    kicker: 14                   # designed set: the section label above a content title (read: 11)
+    lede: 20                     # designed set: the subtitle line under a content title (read: 15)
 ```
 
 Pick the mode by how the deck is used. A projected deck keeps every size at 18 pt or more. A read deck
@@ -94,6 +96,16 @@ master logo changed since the kit was generated.
 | minimal | title, section, content, closing |
 | standard | minimal plus two-col, big-number, chart, table, image, quote |
 | full | standard plus agenda, comparison, image-right, icon-row, team |
+| designed | full plus cards-3, cards-4, process-4, process-5, bands-3; every content slide also takes `kicker:` and `subtitle:`, and comparison takes `left-logo:` and `right-logo:` |
+
+The designed set's extra layouts are built from shapes rather than loose text. Cards are equal
+columns, each with a colored label band, bullets and a bold footer line. Process steps are chevrons
+in a ramp of the primary color, each with a short label inside and a line of text below. Bands are
+labeled rows that fill the slide, a label on the left and its points on the right. Every card, step
+and band must be filled, since its shape is drawn whether or not it has text: pick `cards-3` for
+three items and `cards-4` for four. A card's footer line is optional. `kicker:` is a
+short section label above the title, and `subtitle:` is one line under it; leave either out and
+nothing is drawn, though the title and body keep their designed-set positions.
 
 ## Fonts
 

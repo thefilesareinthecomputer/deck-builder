@@ -10,7 +10,7 @@ import json
 import sys
 from collections.abc import Callable
 
-from deck_builder import __version__, commands
+from deck_builder import __version__, commands, docs
 from deck_builder.errors import EXIT_ENV, EnvError, Result
 
 Handler = Callable[[argparse.Namespace], Result]
@@ -34,7 +34,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
         return p
 
     p = add("docs", "print a reference topic; no topic lists them", commands.docs_cmd)
-    p.add_argument("topic", nargs="?", help="deck-md, workbook, brand-yaml, tokens-yaml, workflow or codes")
+    p.add_argument("topic", nargs="?", help=f"one of: {', '.join(docs.topics())}")
     p = add("explain", "print the cause and fix for an issue code", commands.explain)
     p.add_argument("code", help="an issue code from a check or build, e.g. BUDGET_CHARS")
 

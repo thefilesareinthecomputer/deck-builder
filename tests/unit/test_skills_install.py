@@ -55,7 +55,15 @@ def test_existing_files_are_left_alone(tmp_path, capsys, monkeypatch):
     assert (mine / "SKILL.md").read_text() == "my own"
 
 
-def test_outside_a_clone_is_an_environment_error(tmp_path, capsys, monkeypatch):
+def test_outside_a_clone_it_links_the_clone_the_engine_runs_from(tmp_path, capsys, monkeypatch):
+    """`uv run --project <clone>` or an editable install, run from another repo."""
     monkeypatch.chdir(tmp_path)
+    code, out = run("skills", "install", "--target", str(tmp_path / "home"), capsys=capsys)
+    assert code == 0 and str(REPO) in json.dumps(out["links"])
+
+
+def test_no_clone_anywhere_is_an_environment_error(tmp_path, capsys, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("deck_builder.skills.__file__", str(tmp_path / "site" / "deck_builder" / "skills.py"))
     code, out = run("skills", "install", capsys=capsys)
     assert code == 2 and "clone" in out["error"]

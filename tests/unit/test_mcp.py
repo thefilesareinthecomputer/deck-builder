@@ -189,6 +189,8 @@ def test_brand_tools(server, ws):
     shutil.copytree(DEMO / "brands" / "dumbder-nifftlin", ws / "incoming" / "dumbder-nifftlin")
     err, out = call(server, "brand_init", slug="dumbder-nifftlin", **{"from": "incoming/dumbder-nifftlin/brand.yaml"})
     assert not err, out
+    err, out = call(server, "brand_init", slug="dumbder-nifftlin", force=True)  # the KIT_STALE fix: its own recipe
+    assert not err, out
     Presentation().save(str(ws / "client.pptx"))
     err, out = call(server, "brand_adopt", slug="client", template="client.pptx")
     assert not err, out
@@ -433,6 +435,7 @@ def test_add_asset_copies_a_png_logo_and_says_how_to_declare_it(ws, capsys):
     assert code == 0, out
     assert (ws / "brands" / "stock" / "assets" / "mono.png").is_file()
     assert out["ref"] == "brand:logo/mono"
+    assert out["todo"] == "add `mono: assets/mono.png` under logos: in brand.yaml to use it"  # --json and MCP too
     code, out = cli_json(ws, "brand", "add-asset", "stock", str(ws / "mono.png"), "--as", "logo/mono", capsys=capsys)
     assert code == 2 and "pass --force" in out["error"]
     from deck_builder.cli import main

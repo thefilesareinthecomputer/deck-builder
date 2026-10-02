@@ -22,7 +22,8 @@ class Link:
 
 
 def find_clone(start: Path) -> Path:
-    for d in [start, *start.parents]:
+    """The clone above start, else the clone this engine runs from (an editable install or `uv run --project`)."""
+    for d in [start, *start.parents, Path(__file__).resolve().parents[2]]:
         if (d / ".claude" / "skills" / "deck-builder" / "SKILL.md").is_file():
             return d
     raise EnvError("run this from inside a deck-builder clone; its .claude/ folder holds the skills to link")

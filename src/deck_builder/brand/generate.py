@@ -155,7 +155,8 @@ def _decor_sp(shape_id: int, dec: Decor) -> str:
     """A filled rectangle with no outline or text, drawn behind the layout's placeholders."""
     return (f'<p:sp><p:nvSpPr><p:cNvPr id="{shape_id}" name="Decoration {shape_id}"/><p:cNvSpPr/>'
             f'<p:nvPr userDrawn="1"/></p:nvSpPr><p:spPr><a:xfrm><a:off x="{emu(dec.x)}" y="{emu(dec.y)}"/>'
-            f'<a:ext cx="{emu(dec.w)}" cy="{emu(dec.h)}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom>'
+            f'<a:ext cx="{emu(dec.w)}" cy="{emu(dec.h)}"/></a:xfrm>'
+            f'<a:prstGeom prst="{dec.geom}"><a:avLst/></a:prstGeom>'
             f"<a:solidFill>{_scheme(dec.fill)}</a:solidFill><a:ln><a:noFill/></a:ln></p:spPr>"
             '<p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:endParaRPr lang="en-US"/></a:p></p:txBody></p:sp>')
 

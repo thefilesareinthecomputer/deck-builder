@@ -342,6 +342,9 @@ def _check_chart(name: str, c: Chart, brand: Brand, at: dict[str, Any]) -> list[
 
 
 def _check_asset(name: str, ref: str, brand: Brand, deck_dir: Path, at: dict[str, Any]) -> list[Issue]:
+    if ref.startswith("!["):  # a quoted `field: "![alt](path)"` line
+        return [Issue("ASSET_FORMAT", f"{ref!r} is image markdown on a field line; put the ![alt](path) line "
+                      f"in a `### {name}` section instead", field=name, **at)]
     if re.match(r"^[a-z][a-z0-9+.-]*://", ref, re.IGNORECASE):
         return [Issue("MISSING_IMAGE", f"{ref!r} is a web address; images must be local files, so download it "
                       "into the deck folder and use its path", field=name, **at)]

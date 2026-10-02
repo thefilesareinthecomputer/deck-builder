@@ -23,7 +23,7 @@ from typing import Any, TextIO
 
 import jsonschema
 
-from deck_builder import __version__, confine, doctor
+from deck_builder import __version__, confine, docs, doctor
 from deck_builder import config as cfgmod
 from deck_builder.errors import EXIT_ENV, EnvError
 
@@ -110,9 +110,11 @@ TOOLS = {t.name: t for t in (
          "(LOW_CONTRAST is a warning for the user, not something to fix by hand).", ("brand", "check"),
          (SLUG_ARG,)),
     Tool("brand_init", "Generate a brand kit (template.potx and tokens.yaml) from a brand.yaml into a brand_paths "
-         "folder. Asset paths in the brand.yaml are relative to its own folder.", ("brand", "init"), (
+         "folder. Asset paths in the brand.yaml are relative to its own folder. With no from and force: true, it "
+         "regenerates an existing kit from its own brand.yaml, the fix for KIT_STALE.", ("brand", "init"), (
              SLUG_ARG,
-             Arg("from", TEXT, "--from", BRAND_READ, required=True, about="the brand.yaml to generate from"),
+             Arg("from", TEXT, "--from", BRAND_READ,
+                 about="the brand.yaml to generate from; leave out with force to regenerate the kit from its own"),
              Arg("out", TEXT, "--out", BRAND_WRITE, about="a brand_paths folder (default: the first)"),
              FORCE)),
     Tool("brand_adopt", "Wrap an existing .potx or .pptx template as a brand kit, with starter tokens.yaml and "
@@ -134,8 +136,7 @@ TOOLS = {t.name: t for t in (
     Tool("assets", "Inventory a brand's assets (pass its slug) or a deck's (pass its path), with the slides that "
          "use each.", ("assets",), (
              Arg("target", TEXT, path=SLUG_OR_ROOT, required=True, about="a brand slug or a deck path"),)),
-    Tool("docs", "A reference topic: deck-md, workbook, brand-yaml, tokens-yaml, workflow or codes. With no topic, "
-         "the list.", ("docs",), (
+    Tool("docs", f"A reference topic: one of {', '.join(docs.topics())}. With no topic, the list.", ("docs",), (
              Arg("topic", {"type": "string", "pattern": "^[a-z][a-z-]*$"}, about="e.g. deck-md"),)),
     Tool("explain", "The cause and fix for one issue code.", ("explain",), (
         Arg("code", {"type": "string", "pattern": "^[A-Za-z_]+$"}, required=True, about="e.g. BUDGET_CHARS"),)),

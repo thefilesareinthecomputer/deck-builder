@@ -46,7 +46,7 @@ Source: the Q3 shipment ledger.
 |---|---|
 | text | One paragraph, or a `key: value` field |
 | bullets | `- item` lines; numbered lines also work |
-| image | `![alt text](assets/photo.png)`, or `![alt](brand:logo/primary)`; files inside the deck's folder only |
+| image | `![alt text](assets/photo.png)`, or `![alt](brand:logo/primary)`, on its own line in the field's `### name` section (or the body); files inside the deck's folder only. A `key:` line takes only a bare path such as `left-logo: assets/logo.png`, with no alt text |
 | icon | `brand:icon/<id>` as the field value |
 | table | A pipe table, or a ```` ```table ```` block with `header:` and `rows:` |
 | chart | A ```` ```chart ```` block, below |

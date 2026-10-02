@@ -84,6 +84,16 @@ def deck_date(meta: dict[str, Any]) -> dt.datetime:
     return dt.datetime(d.year, d.month, d.day, tzinfo=dt.UTC)
 
 
+def _transparent(path: Path) -> bool:
+    """Whether an image has transparent pixels: logos and icons do, photos and screenshots don't.
+    Cropping a logo breaks its usage terms, so these are fitted inside the placeholder instead."""
+    with PILImage.open(path) as im:
+        if im.mode not in ("RGBA", "LA", "PA") and "transparency" not in im.info:
+            return False
+        low = im.convert("RGBA").getchannel("A").getextrema()[0]
+        return isinstance(low, (int, float)) and low < 255
+
+
 def _dpi(path: Path, geo: tuple[int, int, int, int], crop: bool) -> float:
     with PILImage.open(path) as im:
         iw, ih = im.size
@@ -111,9 +121,10 @@ class Builder:
                   else path.resolve().relative_to(self.deck_dir.resolve()))  # validation confines both
         if color:
             path = recolor_icon(path, color, self.cache_dir)
-        geo = fill_picture(slide, ph, path, alt, crop=not brand_asset)
+        crop = not brand_asset and not _transparent(path)  # logos and icons fit inside; photos fill
+        geo = fill_picture(slide, ph, path, alt, crop=crop)
         fentry["asset"] = {"ref": ref, "source": source.as_posix(), "sha256": sha256_file(path)}
-        if _dpi(path, geo, crop=not brand_asset) < MIN_DPI:
+        if _dpi(path, geo, crop=crop) < MIN_DPI:
             self.issues.append(Issue("ASSET_LOW_RES", f"{ref!r} shows below {MIN_DPI} DPI at this size",
                                      severity="warning", **at))
 

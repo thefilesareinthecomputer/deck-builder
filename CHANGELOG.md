@@ -16,6 +16,9 @@ All notable changes to this project are listed here. The format follows [Keep a 
 
 ### Added
 
+- `layout_set: designed` in `brand.yaml`: the full set, plus a section label (`kicker:`) and a one-line `subtitle:` above and below every content-slide title, and five layouts built from shapes rather than loose text: `cards-3` and `cards-4` (a colored label band, bullets and a bold footer line per card), `process-4` and `process-5` (chevron steps in a primary-color ramp, a label inside each and text below), and `bands-3` (labeled rows that fill the slide). Comparison panels gain optional `left-logo` and `right-logo` slots. `generate.type.kicker` and `generate.type.lede` size the new lines. Every card, step and band is a required field, since its shape is drawn on the layout whether or not it has text. Other layout sets build exactly as before.
+- Images with transparent pixels (logos, icons) fit inside their placeholder instead of being cropped to fill it, so a vendor logo is never cut.
+- `tests/fixtures/demo-brands/designed/`: a deck on every designed-set layout, with transparent logos on the comparison panels and in image-right, built and rendered in all three demo brands generated with `layout_set: designed`.
 - `generate.mode: projected | read` in `brand.yaml`. Projected (the default) keeps every size at 18 pt or more, tables included. Read is for decks sent ahead and read on screen: 28 pt titles, a 14 pt body on a 9 in measure, 12 pt tables, text from the top.
 - Table columns are at least as wide as their longest word, so no word breaks mid-word, and `TABLE_TALL` estimates with the same widths the build uses.
 - `generate.type` in `brand.yaml` sets the type scale (title, title weight, subtitle, body, two-column, icon text, table, big number), and character budgets are computed from it. `generate.body_anchor: top` keeps body text at the top; `generate.big_number: dark` puts the big number on the primary color.
@@ -31,6 +34,13 @@ All notable changes to this project are listed here. The format follows [Keep a 
 
 ### Fixed
 
+- The content hash no longer depends on field order, so a deck converted to a workbook and back hashes the same.
+- `skills install` run outside the clone links the clone the engine runs from (an editable install or `uv run --project`), instead of refusing.
+- `brand add-asset --json` and the MCP `brand_add_asset` tool return `todo` with the `logos:` line a new logo needs, which only the human output showed before.
+- The MCP `brand_init` tool takes no `from` with `force: true`, so an agent can regenerate a kit from its own `brand.yaml`, the fix for `KIT_STALE`.
+- Image markdown on a `key:` line, such as `left-logo: ![alt](assets/x.png)`, fails with a message that names the `### left-logo` section to use instead of a bare YAML error.
+- The workspace folder table is in `docs workflow`, so every workspace and every agent can read it; `workspace/README.md` existed only in the clone.
+
 - Charts write `roundedCorners` off, which PowerPoint otherwise draws as rounded chart corners, and keep one color per series instead of varying colors across a single series.
 - A `brand_paths` entry or a `workspace` value that resolves to the home folder, the filesystem root or a parent of the config folder is refused.
 - Overflow measurement: tables are measured against their area, so table words no longer land on the footer and real overruns are reported; list numbers, a chart's own text and words a renderer splits mid-word are attributed correctly.
@@ -39,6 +49,7 @@ All notable changes to this project are listed here. The format follows [Keep a 
 ### Docs
 
 - The skills and agents route any edit to an existing deck through the `deck-builder` skill, use one delegation threshold and one two-round stop rule stated in AGENTS.md, treat engine changes during deck work as a separate task, cite grounding facts from outside the workspace in a dated `source/grounding-<date>.md`, and read `docs design` before writing slides.
+- The help for `docs` and the MCP `docs` tool lists every reference topic, read from the topics themselves, so `design` and `agents` are no longer missing. `docs workflow` names `check --render` as the usual loop and covers import and bulk builds; `docs brand-yaml` and `docs design` describe the designed set and image fitting. The onboarding skill names LibreOffice as the verified renderer that `auto` prefers. The README command table lists `brand add-asset`, `schema` and `mcp`, and the Development section lists the maintainer scripts.
 - README: `uv tool install .` is the main setup, with global skills and the clone as the other paths, and pipx or pip for machines without uv; a Design section; a Fix up an existing deck section for fonts, formatting and slide numbers.
 
 ## 0.1.0 - 2026-10-02

@@ -50,6 +50,34 @@ def test_md_to_xlsx_to_md_keeps_the_model_and_the_build(ws, capsys):
     assert len({sha(b["output"]) for b in builds}) == 1
 
 
+def test_content_sha_is_the_same_whatever_order_a_format_puts_fields_in(ws, capsys):
+    src = write_deck(ws, """
+        ---
+        brand: stock
+        ---
+        ## Two sides
+        layout: two-col
+
+        ### left
+        - Before
+
+        ### right
+        - After
+
+        ## Two more sides
+        layout: two-col
+
+        ### right
+        - Later
+
+        ### left
+        - Sooner
+        """)
+    (xlsx,) = roundtrip(ws, capsys, src, [".xlsx"])  # one column per field, so both slides share one order
+    assert list(model(src).slides[1].fields) != list(model(xlsx).slides[1].fields)
+    assert pipeline.content_sha(model(src)) == pipeline.content_sha(model(xlsx))
+
+
 def test_canonical_forms_are_byte_stable(ws, capsys):
     src = write_deck(ws, GOOD)
     md1, xlsx1, md2, xlsx2 = roundtrip(ws, capsys, src, [".md", ".xlsx", ".md", ".xlsx"])

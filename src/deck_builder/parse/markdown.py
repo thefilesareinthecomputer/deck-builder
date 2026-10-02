@@ -14,6 +14,7 @@ SPEC_VERSION = 1
 FIELD_LINE = re.compile(r"^([a-z_][\w-]*):(\s|$)")
 FENCE = re.compile(r"^```(\w+)?\s*$")
 IMAGE = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)\s*$")
+IMAGE_FIELD_LINE = re.compile(r"^([a-z_][\w-]*):\s*!\[")  # YAML reads the ! as a tag, so this can't parse
 BULLET = re.compile(r"^(\s*)[-*+]\s+(.*)$")
 NUMBERED = re.compile(r"^(\s*)\d+[.)]\s+(.*)$")
 TOKEN = re.compile(r"\{\{\s*([\w.-]+)\s*\}\}")
@@ -254,7 +255,10 @@ def parse(path: Path, row: dict[str, str] | None = None) -> tuple[Deck, list[Iss
                 loaded = yaml.safe_load("\n".join(head_lines))
                 kv = loaded if isinstance(loaded, dict) else {}
             except yaml.YAMLError as e:
-                issues.append(Issue("PARSE", f"field lines: {e}", **_at(where)))
+                image = next((m.group(1) for ln in head_lines if (m := IMAGE_FIELD_LINE.match(ln))), None)
+                hint = (f"; an image goes in a `### {image}` section holding the ![alt](path) line, not on a "
+                        "field line" if image else "")
+                issues.append(Issue("PARSE", f"field lines: {e}{hint}", **_at(where)))
         rest = lines[i:]
 
         notes = ""

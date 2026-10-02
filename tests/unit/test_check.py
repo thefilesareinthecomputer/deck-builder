@@ -148,6 +148,22 @@ def test_each_issue_code(ws, capsys, body, expected):
     assert expected in codes(out), out["issues"]
 
 
+def test_image_markdown_on_a_field_line_says_to_use_a_section(ws, capsys):
+    from PIL import Image
+
+    (ws / "decks" / "assets").mkdir()
+    Image.new("RGB", (1600, 900), "#888888").save(ws / "decks" / "assets" / "p.png")
+    for line, code in (("image: ![A photo](assets/p.png)", "PARSE"),
+                       ('image: "![A photo](assets/p.png)"', "ASSET_FORMAT")):
+        p = write_deck(ws, f"---\nbrand: stock\n---\n## A photo\nlayout: image\n{line}\n")
+        _, out = cli_json(ws, "check", str(p), capsys=capsys)
+        hit = [i for i in out["issues"] if i["code"] == code]
+        assert hit and "### image" in hit[0]["message"], out["issues"]
+    p = write_deck(ws, "---\nbrand: stock\n---\n## A photo\nlayout: image\nimage: assets/p.png\n")
+    code, out = cli_json(ws, "check", str(p), capsys=capsys)
+    assert code == 0, out["issues"]  # a bare path on a field line works
+
+
 def test_spec_version_newer_than_engine(ws, capsys):
     deck = write_deck(ws, "---\nspec_version: 99\n---\n\n## A\nlayout: title\n")
     _, out = cli_json(ws, "check", str(deck), capsys=capsys)

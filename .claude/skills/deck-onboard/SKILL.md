@@ -34,8 +34,8 @@ command for anything missing and wait for the user to run it or approve it. What
 | Tool | Needed for |
 |---|---|
 | poppler | Rendering and overflow measurement |
-| Microsoft PowerPoint | Exact renders on a Mac; preferred when present |
-| LibreOffice | Renders when PowerPoint isn't installed |
+| LibreOffice | Renders; the verified backend, and what `auto` uses when it's installed |
+| Microsoft PowerPoint | Renders on a Mac when LibreOffice isn't installed; not yet verified |
 
 Building and checking decks needs none of these. Without poppler and a renderer, the user can
 build but not see renders.

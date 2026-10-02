@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from conftest import init_designed_demo_brands
 from deck_builder.cli import main
 from deck_builder.qa import tools
 
@@ -48,6 +49,27 @@ def test_showcase_renders_in_the_brand_fonts_with_no_flags(built, slug, capsys):
     code, res = run("--config", cfg, "render", str(out / f"{slug}.pptx"), capsys=capsys)
     assert code == 0, res["issues"]
     assert [i for i in res["issues"] if i["code"] == "MISSING_FONT"] == []
+    assert res["flagged_slides"] == []
+
+
+@pytest.fixture(scope="module")
+def designed(tmp_path_factory):
+    root = tmp_path_factory.mktemp("designed-render")
+    cfg = str(root / "deck-builder.toml")
+    assert main(["init", "--dir", str(root)]) == 0
+    init_designed_demo_brands(root, DEMO / "brands", SLUGS)
+    assert main(["--config", cfg, "build", str(DEMO / "designed" / "deck.md"), "--data",
+                 str(DEMO / "designed" / "brands.csv"), "--name", "{{brand}}.pptx", "-o", str(root / "out")]) == 0
+    return cfg, root / "out"
+
+
+@pytest.mark.parametrize("slug", SLUGS)
+def test_designed_layouts_render_with_no_flags(designed, slug, capsys):
+    """The designed fixture: cards, process steps, bands, section labels, subtitles and logo slots."""
+    cfg, out = designed
+    capsys.readouterr()
+    code, res = run("--config", cfg, "render", str(out / f"{slug}.pptx"), capsys=capsys)
+    assert code == 0, res["issues"]
     assert res["flagged_slides"] == []
 
 

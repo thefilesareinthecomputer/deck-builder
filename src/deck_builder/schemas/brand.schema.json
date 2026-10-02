@@ -74,7 +74,7 @@
       "additionalProperties": false,
       "properties": {
         "slide_size": {"enum": ["16:9", "4:3"]},
-        "layout_set": {"enum": ["minimal", "standard", "full"]},
+        "layout_set": {"enum": ["minimal", "standard", "full", "designed"], "description": "designed: full, plus a section label and subtitle on content slides and the cards, process and bands layouts"},
         "logo_on_master": {"type": "string"},
         "slide_numbers": {"type": "boolean", "description": "a slide number on layouts that show the master (default true)"},
         "type": {
@@ -89,7 +89,9 @@
             "two_col": {"type": "number", "minimum": 10, "maximum": 40, "description": "two-column, comparison and image-right text (default 20)"},
             "icon_text": {"type": "number", "minimum": 10, "maximum": 36, "description": "icon-row text (default 18)"},
             "table": {"type": "number", "minimum": 8, "maximum": 32, "description": "table text, header included (default 16)"},
-            "big_number": {"type": "number", "minimum": 48, "maximum": 200, "description": "the big-number numeral (default 120)"}
+            "big_number": {"type": "number", "minimum": 48, "maximum": 200, "description": "the big-number numeral (default 120)"},
+            "kicker": {"type": "number", "minimum": 9, "maximum": 24, "description": "designed set: the section label above a content title (default 14)"},
+            "lede": {"type": "number", "minimum": 12, "maximum": 32, "description": "designed set: the subtitle line under a content title (default 20)"}
           }
         },
         "mode": {"enum": ["projected", "read"], "description": "projected decks are presented to a room; read decks are sent and read on a screen: smaller type, a 9 in text measure, text from the top (default projected)"},

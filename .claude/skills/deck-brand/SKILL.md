@@ -46,8 +46,9 @@ Ask one topic at a time and show what you'll write before writing it.
 - **Logos.** PNG files with ids (`primary`, `mono`). Ask which one goes on the master, if any.
 - **Icons.** PNG files, one per icon, file name = icon id. Record where they came from and their
   license in `icons.source`. Only use icon sets the user has the right to use.
-- **Layout set.** `minimal`, `standard` or `full`; `deck-builder docs brand-yaml` lists what each
-  holds. Ask what kinds of slides they make most.
+- **Layout set.** `minimal`, `standard`, `full` or `designed`; `deck-builder docs brand-yaml` lists
+  what each holds. Ask what kinds of slides they make most. `designed` suits decks that need cards,
+  process steps or section labels on every slide.
 - **Type and placement.** Ask whether decks are mostly projected or read on screen. The defaults in
   `generate.type` suit projection; a leave-behind document takes smaller sizes. A brand that
   prefers dark emphasis slides can set `generate.big_number: dark`. If they have past decks they

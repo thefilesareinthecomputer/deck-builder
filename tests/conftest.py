@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import textwrap
 from pathlib import Path
 
@@ -97,3 +98,15 @@ def cli_json(ws: Path, *argv: str, capsys: pytest.CaptureFixture[str]) -> tuple[
 
 def codes(payload: dict) -> list[str]:
     return [i["code"] for i in payload["issues"]]
+
+
+def init_designed_demo_brands(root: Path, brands: Path, slugs: tuple[str, ...]) -> None:
+    """Generate each demo brand with `layout_set: designed` in the workspace `init` made at root."""
+    for slug in slugs:
+        src = root / "designed-src" / slug
+        shutil.copytree(brands / slug, src)
+        text = (src / "brand.yaml").read_text(encoding="utf-8")
+        assert "layout_set: full" in text, slug
+        (src / "brand.yaml").write_text(text.replace("layout_set: full", "layout_set: designed"), encoding="utf-8")
+        assert main(["--config", str(root / "deck-builder.toml"), "brand", "init", slug,
+                     "--from", str(src / "brand.yaml")]) == 0, slug

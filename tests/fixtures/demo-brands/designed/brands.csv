@@ -1,0 +1,4 @@
+brand,company,product,account_a,account_a_name,account_b,account_b_name
+dumbder-nifftlin,Dumbder Nifftlin Paper Co.,copy paper,cubicle-nine,Cubicle 9 Enterprises,soap-club,Soap Club
+cubicle-nine,Cubicle 9 Enterprises,desk system,soap-club,Soap Club,dumbder-nifftlin,Dumbder Nifftlin Paper Co.
+soap-club,Soap Club,bar soap,dumbder-nifftlin,Dumbder Nifftlin Paper Co.,cubicle-nine,Cubicle 9 Enterprises

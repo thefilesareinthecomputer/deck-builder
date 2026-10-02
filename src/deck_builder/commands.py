@@ -204,8 +204,10 @@ def _add_asset(args: argparse.Namespace, cfg: cfgmod.Config, r: Result) -> Resul
     dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(src, dest)
     r.data.update({"slug": b.slug, "path": str(dest), "ref": f"brand:{kind}/{aid}"})
-    todo = "" if kind == "icon" or aid in logos else f"; add `{aid}: {rel}` under logos: in brand.yaml to use it"
-    r.summary = f"ok brand add-asset {b.slug}: brand:{kind}/{aid} at {rel}{todo}"
+    todo = "" if kind == "icon" or aid in logos else f"add `{aid}: {rel}` under logos: in brand.yaml to use it"
+    if todo:
+        r.data["todo"] = todo
+    r.summary = f"ok brand add-asset {b.slug}: brand:{kind}/{aid} at {rel}{'; ' + todo if todo else ''}"
     return r
 
 

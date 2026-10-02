@@ -21,6 +21,7 @@ FOOTER = 0.8  # space kept clear at the bottom for the logo and slide furniture
 RULE_W, RULE_H = 1.2, 0.07  # the accent rule
 OPTICAL_LIFT = 0.3  # a centered body block sits this far above its area's middle, at the optical center
 PANEL_PAD = 0.3
+LOGO_SLOT_W, LOGO_SLOT_H = 1.8, 0.65  # the optional logo at a comparison panel's bottom right (designed set)
 
 
 @dataclass(frozen=True)
@@ -35,6 +36,8 @@ class Scale:
     icon_text: float = 18
     table: float = 18
     big_number: float = 120
+    kicker: float = 14  # the section label above a content-slide title (designed set)
+    lede: float = 20  # the one-line subtitle under a content-slide title (designed set)
 
     @classmethod
     def from_meta(cls, gen: dict[str, Any]) -> Scale:
@@ -49,7 +52,7 @@ class Scale:
 MODES: dict[str, dict[str, Any]] = {
     "projected": {},
     "read": {"title": 28, "subtitle": 18, "body": 14, "two_col": 13, "icon_text": 13, "table": 12,
-             "big_number": 96},
+             "big_number": 96, "kicker": 11, "lede": 15},
 }
 READ_MEASURE = 9.0  # inches: a read deck's single-column body, about 90 characters a line at 14 pt
 
@@ -86,9 +89,11 @@ class PH:
 
 @dataclass
 class Decor:
-    """A drawn rectangle on a layout, behind its placeholders: a panel, a divider or the accent rule.
+    """A drawn shape on a layout, behind its placeholders: a panel, a divider, the accent rule, a card,
+    a process chevron or a band label.
 
-    fill is a theme color (bg2, accent2 ...) or a tint written "tx1@15": 15% of tx1 over the background.
+    fill is a theme color (bg2, accent2 ...) or a tint written "tx2@70": tx2 lightened to 70% of its
+    luminance range. geom is a DrawingML preset: rect, homePlate, chevron or parallelogram.
     """
 
     x: float
@@ -96,6 +101,7 @@ class Decor:
     w: float
     h: float
     fill: str
+    geom: str = "rect"
 
 
 @dataclass
@@ -144,7 +150,8 @@ def _takeaway(g: Grid) -> PH:
               color="bg1", fill="tx2", inset=0.2)
 
 
-def _defs(g: Grid, s: Scale, body_anchor: str, big_number: str, mode: str = "projected") -> dict[str, LayoutDef]:
+def _defs(g: Grid, s: Scale, body_anchor: str, big_number: str, mode: str = "projected",
+          designed: bool = False) -> dict[str, LayoutDef]:
     mid = g.h * 0.36
     two = g.cols(2)
     three = g.cols(3)
@@ -174,7 +181,7 @@ def _defs(g: Grid, s: Scale, body_anchor: str, big_number: str, mode: str = "pro
         PH("title", "title", 0, g.m, mid + 0.35, g.cw, 1.4, size=40, anchor="t", bold=True, color="bg1",
            required=True),
     ], background="tx2", hide_master=True, decor=[rule(g.m + 0.1, mid - 0.45)]))
-    add(LayoutDef("content", "Content", "A title and up to six bullets", [
+    add(LayoutDef("content", "Content", "A title and a short bulleted list", [
         _title(g, s),
         PH("body", "body", 1, g.m, BODY_Y, measure, single_h, size=s.body, bullets=True, anchor=single, lift=lift),
         _takeaway(g),
@@ -242,17 +249,25 @@ def _defs(g: Grid, s: Scale, body_anchor: str, big_number: str, mode: str = "pro
     add(LayoutDef("icon-row", "Icon Row", "Three icons, each with a short line of text", icon_row))
     panel_h = g.body_h - 0.6
     panels = [Decor(x, BODY_Y, w, panel_h, "bg2") for x, w in two]
-    add(LayoutDef("comparison", "Comparison", "Two labeled lists side by side, each on a tinted panel", [
+    logo_h = LOGO_SLOT_H if designed else 0.0  # the designed set gives each panel an optional logo slot
+    comparison = [
         _title(g, s),
         PH("left-heading", "body", 1, two[0][0] + PANEL_PAD, BODY_Y + 0.25, two[0][1] - 2 * PANEL_PAD, 0.6,
            size=s.two_col + 2, bold=True, color="tx2"),
         PH("left", "body", 2, two[0][0] + PANEL_PAD, BODY_Y + 0.95, two[0][1] - 2 * PANEL_PAD,
-           panel_h - 1.2, size=s.two_col, bullets=True),
+           panel_h - 1.2 - logo_h, size=s.two_col, bullets=True),
         PH("right-heading", "body", 3, two[1][0] + PANEL_PAD, BODY_Y + 0.25, two[1][1] - 2 * PANEL_PAD, 0.6,
            size=s.two_col + 2, bold=True, color="tx2"),
         PH("right", "body", 4, two[1][0] + PANEL_PAD, BODY_Y + 0.95, two[1][1] - 2 * PANEL_PAD,
-           panel_h - 1.2, size=s.two_col, bullets=True),
-    ], decor=panels))
+           panel_h - 1.2 - logo_h, size=s.two_col, bullets=True),
+    ]
+    if designed:  # bottom right of each panel, so headings keep their full width
+        for n, edge in enumerate(("left", "right")):
+            px, pw = two[n]
+            comparison.append(PH(f"{edge}-logo", "pic", 5 + n, px + pw - PANEL_PAD - LOGO_SLOT_W,
+                                 BODY_Y + panel_h - PANEL_PAD - logo_h + 0.1, LOGO_SLOT_W, logo_h - 0.1))
+    add(LayoutDef("comparison", "Comparison", "Two labeled lists side by side, each on a tinted panel",
+                  comparison, decor=panels))
     add(LayoutDef("agenda", "Agenda", "The deck's sections, in order", [
         _title(g, s),
         PH("body", "body", 1, g.m, BODY_Y, measure, single_h, size=s.body + 4, bullets=True, numbered=True,
@@ -264,7 +279,124 @@ def _defs(g: Grid, s: Scale, body_anchor: str, big_number: str, mode: str = "pro
         team.append(PH(f"photo{i}", "pic", 8 + 2 * i, x + (w - side) / 2, BODY_Y + 0.1, side, side))
         team.append(PH(f"name{i}", "body", 9 + 2 * i, x, BODY_Y + side + 0.25, w, 1.0, size=18, align="ctr"))
     add(LayoutDef("team", "Team", "Up to four people with photos and names", team))
+    if designed:
+        for n in (3, 4):
+            add(_cards(g, s, n))
+        for n in (4, 5):
+            add(_process(g, s, n))
+        add(_bands(g, s, 3))
     return d
+
+
+def ramp(n: int) -> list[str]:
+    """n fills from the primary color (tx2) to a lighter tint of it, for cards, steps and band labels.
+    The lightest stays dark enough for white bold text at 18 pt (3:1)."""
+    if n == 1:
+        return ["tx2"]
+    return ["tx2" if i == 0 else f"tx2@{round(100 - 40 * i / (n - 1))}" for i in range(n)]
+
+
+CARD_GAP, CARD_LABEL_H = 0.25, 0.62
+# Every card, step and band is required: its shape is drawn on the layout, so an empty one would show.
+
+
+def _cards(g: Grid, s: Scale, n: int) -> LayoutDef:
+    """n equal cards: a colored label band, bullets, and a bold footer line under a thin rule."""
+    phs, decor = [_title(g, s)], []
+    top, bottom = BODY_Y, BODY_END
+    text = s.icon_text
+    for i, ((x, w), fill) in enumerate(zip(g.cols(n, CARD_GAP), ramp(n), strict=True), start=1):
+        decor.append(Decor(x, top, w, bottom - top, "bg2"))
+        decor.append(Decor(x + 0.2, bottom - 0.92, w - 0.4, 0.014, "tx1@20"))
+        base = 30 + 10 * i
+        phs.append(PH(f"label{i}", "body", base, x, top, w, CARD_LABEL_H, size=s.two_col, anchor="ctr",
+                      align="ctr", bold=True, color="bg1", fill=fill, inset=0.12, required=True))
+        phs.append(PH(f"body{i}", "body", base + 1, x + 0.2, top + CARD_LABEL_H + 0.2, w - 0.4,
+                      bottom - top - CARD_LABEL_H - 1.25, size=text, bullets=True, required=True))
+        phs.append(PH(f"footer{i}", "body", base + 2, x + 0.2, bottom - 0.85, w - 0.4, 0.75, size=text,
+                      bold=True, color="tx2", anchor="ctr"))
+    phs.append(_takeaway(g))
+    return LayoutDef(f"cards-{n}", f"Cards {n}", f"{n} equal cards, each a colored label, bullets and a bold "
+                     "footer line", phs, decor=decor)
+
+
+def _process(g: Grid, s: Scale, n: int) -> LayoutDef:
+    """n process steps as arrow chevrons in a color ramp, each with its label inside and text below."""
+    phs, decor = [_title(g, s)], []
+    step_h, gap = 1.15, 0.1
+    depth = step_h * 0.5  # the chevron's point and notch, at the preset's default adjustment
+    # Each chevron's notch takes the previous one's point, so steps overlap by depth less the gap.
+    w = (g.cw + (n - 1) * (depth - gap)) / n
+    for i, fill in enumerate(ramp(n), start=1):
+        x = g.m + (i - 1) * (w - depth + gap)
+        decor.append(Decor(x, BODY_Y, w, step_h, fill, "homePlate" if i == 1 else "chevron"))
+        base = 30 + 10 * i
+        left = 0.15 if i == 1 else depth
+        phs.append(PH(f"step{i}", "body", base, x + left, BODY_Y, w - left - depth, step_h,
+                      size=s.icon_text, anchor="ctr", align="ctr", bold=True, color="bg1", inset=0.04,
+                      required=True))
+        phs.append(PH(f"text{i}", "body", base + 1, x + depth * 0.5, BODY_Y + step_h + 0.3, w - depth,
+                      BODY_END - BODY_Y - step_h - 0.3, size=s.icon_text, align="ctr", required=True))
+    phs.append(_takeaway(g))
+    return LayoutDef(f"process-{n}", f"Process {n}", f"{n} steps in order, each a short label in an arrow "
+                     "with a line of text under it", phs, decor=decor)
+
+
+def _bands(g: Grid, s: Scale, n: int) -> LayoutDef:
+    """n labeled rows that fill the body: a colored label on the left, text on the right, thin rules between."""
+    phs, decor = [_title(g, s)], []
+    top, bottom = BODY_Y, g.h - FOOTER
+    row = (bottom - top) / n
+    label_w = min(3.2, g.cw * 0.27)
+    text_x = g.m + label_w + 0.35
+    for i, fill in enumerate(ramp(n), start=1):
+        y = top + (i - 1) * row
+        decor.append(Decor(g.m, y + 0.14, label_w, row - 0.28, fill, "parallelogram"))
+        if i > 1:
+            decor.append(Decor(text_x, y, g.m + g.cw - text_x, 0.014, "tx1@20"))
+        base = 30 + 10 * i
+        phs.append(PH(f"label{i}", "body", base, g.m + 0.3, y + 0.14, label_w - 0.6, row - 0.28,
+                      size=s.two_col, anchor="ctr", align="ctr", bold=True, color="bg1", required=True))
+        phs.append(PH(f"text{i}", "body", base + 1, text_x, y + 0.08, g.m + g.cw - text_x, row - 0.16,
+                      size=s.two_col, bullets=True, anchor="ctr", required=True))
+    return LayoutDef(f"bands-{n}", f"Bands {n}", f"{n} labeled rows that fill the slide, a label on the left "
+                     "and its points on the right", phs, decor=decor)
+
+
+KICKER_Y, KICKER_H = 0.36, 0.34
+HEADED_TITLE_Y, HEADED_TITLE_H = 0.68, 0.8
+LEDE_Y, LEDE_H = 1.5, 0.48
+HEADED_BODY_Y = 2.05
+
+
+def with_headers(ld: LayoutDef, g: Grid, s: Scale) -> LayoutDef:
+    """A content-family layout with a section label above the title and a one-line subtitle under it.
+
+    Everything below the title moves down and keeps its bottom edge: a y in [BODY_Y, bottom] maps
+    linearly onto [HEADED_BODY_Y, bottom]. Pictures keep their size and only move, so icons stay square.
+    """
+    if not any(ph.field == "title" and ph.y == TITLE_Y for ph in ld.phs):
+        return ld  # title, section, closing, big-number and quote slides have no content header
+    bottom = g.h - FOOTER
+    k = (bottom - HEADED_BODY_Y) / (bottom - BODY_Y)
+
+    def move(y: float) -> float:
+        return HEADED_BODY_Y + (y - BODY_Y) * k if y >= BODY_Y - 1e-6 else y
+
+    phs: list[PH] = []
+    for ph in ld.phs:
+        if ph.field == "title":
+            phs.append(PH(**{**ph.__dict__, "y": HEADED_TITLE_Y, "h": HEADED_TITLE_H}))
+            continue
+        y2 = move(ph.y + ph.h) if ph.kind != "pic" else min(move(ph.y) + ph.h, bottom)
+        phs.append(PH(**{**ph.__dict__, "y": move(ph.y), "h": max(0.3, y2 - move(ph.y)),
+                         "lift": ph.lift * k}))
+    phs.insert(1, PH("kicker", "body", 20, g.m, KICKER_Y, g.cw, KICKER_H, size=s.kicker, bold=True,
+                     color="tx2", anchor="b"))
+    phs.insert(2, PH("subtitle", "body", 21, g.m, LEDE_Y, g.cw, LEDE_H, size=s.lede, anchor="t"))
+    decor = [Decor(d.x, move(d.y), d.w, max(0.014, move(d.y + d.h) - move(d.y)) if d.h > 0.02 else d.h,
+                   d.fill, d.geom) for d in ld.decor]
+    return LayoutDef(ld.key, ld.name, ld.description, phs, ld.heading, ld.background, ld.hide_master, decor)
 
 
 SETS = {
@@ -274,9 +406,15 @@ SETS = {
     "full": ["title", "section", "agenda", "content", "two-col", "comparison", "big-number", "chart", "table",
              "image", "image-right", "icon-row", "team", "quote", "closing"],
 }
+# The designed set: the full set, every content slide with a section label and a subtitle line, plus
+# cards, process and band layouts built from shapes rather than loose text.
+SETS["designed"] = SETS["full"][:-1] + ["cards-3", "cards-4", "process-4", "process-5", "bands-3", "closing"]
 
 
 def layout_set(name: str, width_in: float, height_in: float, scale: Scale | None = None,
                body_anchor: str = "middle", big_number: str = "light", mode: str = "projected") -> list[LayoutDef]:
-    defs = _defs(Grid(width_in, height_in), scale or Scale(), body_anchor, big_number, mode)
-    return [defs[k] for k in SETS[name]]
+    g, s = Grid(width_in, height_in), scale or Scale()
+    designed = name == "designed"
+    defs = _defs(g, s, body_anchor, big_number, mode, designed)
+    out = [defs[k] for k in SETS[name]]
+    return [with_headers(ld, g, s) for ld in out] if designed else out

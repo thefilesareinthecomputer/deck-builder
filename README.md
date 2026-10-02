@@ -143,6 +143,8 @@ Every generated kit follows one design standard, built from presentation researc
 
 Set `generate.mode` in `brand.yaml` by how the deck is used: `projected` (the default) for a room, with nothing under 18 pt, or `read` for decks sent ahead and read on screen, with a 14 pt body on a readable measure. `generate.type` adjusts any size.
 
+`generate.layout_set: designed` adds layouts built from shapes rather than loose text: cards with colored label bands, process chevrons and labeled bands, plus a section label and a subtitle line on every content slide. Images with transparent pixels, such as logos, are fitted inside their box instead of cropped.
+
 ## Fix up an existing deck
 
 To make a deck consistent (fonts, sizes, colors and slide numbers) or move it onto your brand, import it and rebuild:
@@ -187,11 +189,14 @@ A deck selects its brand with `brand: <slug>`, and `--brand` overrides it for a 
 | `import <pptx> <out>` | Turn an existing deck back into `deck.md`, its images and a report of what needs a decision |
 | `render <pptx>` | PDF, slide PNGs, contact sheets, measured overflow, flagged slides |
 | `brand list`, `brand show <slug>`, `brand check <slug>` | Find brands, see a brand's layouts and budgets, verify a kit |
-| `brand init`, `brand adopt` | Generate a kit, or wrap an existing template |
+| `brand init`, `brand adopt` | Generate a kit, or wrap an existing template; `brand init <slug> --force` regenerates a kit from its own `brand.yaml` |
+| `brand add-asset <slug> <png> --as logo/<id>` | Copy a logo or icon (`icon/<id>`) into a kit |
 | `inspect <template>` | A template's layouts, placeholders and theme |
 | `assets <brand or deck>` | Logos, icons, colors and images, with the slides that use them |
 | `docs [topic]`, `explain <CODE>` | Reference topics and issue-code fixes for the installed version |
+| `schema brand\|tokens\|manifest` | The JSON Schema for `brand.yaml`, `tokens.yaml` or a build manifest |
 | `skills install` | Link this clone's skills and agents into `~/.claude` |
+| `mcp` | Serve the engine as MCP tools over stdio for the agents, confined to the workspace |
 
 A `<deck>` is a `.md`, `.xlsx` or `.csv` file, or a folder containing one. Every command accepts `--json`. Exit codes are 0 for success, 1 for issues to fix and 2 for usage or environment errors. `deck-builder docs` lists the reference topics, and [docs/issue-codes.md](docs/issue-codes.md) documents every issue code.
 
@@ -234,6 +239,13 @@ uv run pytest -m render                # render tier only
 uv run ruff check && uv run mypy
 uv run python scripts/readme_images.py # regenerate the images in this README
 ```
+
+| Script | Does |
+|---|---|
+| `scripts/readme_images.py` | Builds the showcase deck in the three demo brands and redraws `docs/images/` |
+| `scripts/demo_brand_logos.py` | Redraws the demo brands' logo wordmarks from their SVG sources (macOS fonts) |
+| `scripts/make_example_assets.py` | Draws the neutral brand's logo and icons and the example deck's image |
+| `scripts/probe_powerpoint.sh <deck.pptx>` | Tests the PowerPoint render backend on a Mac with PowerPoint |
 
 The three fictional brands in `tests/fixtures/demo-brands/` serve as the test and showcase brands; their names and artwork were created for this repository. Everything under `workspace/` is ignored by git, so decks and brands created there stay out of the repository. Releases follow the [release checklist](docs/release-checklist.md).
 
