@@ -33,9 +33,11 @@ If `uv run deck-builder brand list` reports no config, the user hasn't onboarded
 Subagents can't talk with the user. The main agent holds the conversation, hands each agent the
 decisions it needs, relays the questions they return, and reviews their work before the user sees it.
 
-The subagents have no shell. `deck-builder-agent` and `deck-brand-agent` reach the engine only
-through the deck-builder MCP server (`deck-builder mcp`, which needs the CLI on PATH), confined to
-the workspace; put their input files inside it. The decomposer runs no commands at all.
+The subagents have no shell; put their input files inside the workspace before handing off, since
+`deck-builder-agent` and `deck-brand-agent` reach the engine only through the deck-builder MCP server
+(`deck-builder mcp`, which needs the CLI on PATH), and the decomposer runs no commands at all.
+`deck-builder docs agents` maps every CLI command and MCP tool to the one party that owns it, and
+says what each subagent may read and write.
 
 ## Working on the engine itself
 
