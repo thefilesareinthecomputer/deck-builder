@@ -12,6 +12,7 @@
 - `build -o` accepts a folder (an existing one, or a path ending in `/`) and writes the default file name inside it.
 - `brand check`, `brand init` and `brand adopt` warn with the new `LOW_CONTRAST` code when a color pair misses WCAG 2.2 contrast: 4.5:1 for ink on background and on surface, background on primary, and links on background; 3:1 for the icon color and chart series colors on background.
 - Charts and tables have alt text that names the chart type, title, series and categories, or the table's columns and row count.
+- `tokens.yaml` `table.status` maps exact cell values (e.g. `Green`, `Amber`, `Red`) to colors; a matching body cell gets a colored dot before its text, the word itself unchanged, and `import` drops the dot on the way back to `deck.md`. `brand check` warns `LOW_CONTRAST` when a status color misses 3:1 against the table's row fill, band fill or background.
 - Human output ends with one `for the fix: deck-builder explain <CODE>` line naming every error code in the result.
 - Help text on the `deck`, `-o`, `input`, `output` and `pptx` arguments.
 - `tests/fixtures/demo-brands/`: three fictional brands and a showcase deck that bulk-builds into all three; unit and render tests build and render it.

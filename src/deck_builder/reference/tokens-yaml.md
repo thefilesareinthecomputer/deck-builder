@@ -18,6 +18,7 @@ table:
   header_fill: primary
   header_text: background
   band_fill: surface
+  status: {Green: "15803D", Amber: "B45309", Red: "B91C1C"}  # exact cell value -> dot color, case-insensitive
 furniture:                       # written by brand init; a record, not a setting
   slide_numbers: true            # from brand.yaml generate.slide_numbers
   color: muted                   # numbers and footers: muted, or ink when muted is under 4.5:1

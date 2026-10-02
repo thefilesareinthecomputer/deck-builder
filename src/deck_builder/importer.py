@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import re
 from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -164,11 +165,17 @@ def overrides(shape: Any, code_font: str) -> Counter[str]:
 # ---------------------------------------------------------------- tables and charts
 
 
-def table_value(tbl: Any, code_font: str) -> Table:
+def table_value(tbl: Any, code_font: str, status_keys: Iterable[str] = ()) -> Table:
+    status = {k.strip().casefold() for k in status_keys}
+
     def cell(c: Any, header: bool) -> str:
         text = " ".join(md for p in c.text_frame.paragraphs if (md := paragraph_md(p, code_font)))
         if header and text.startswith("**") and text.endswith("**") and text.count("**") == 2:
             return text[2:-2]  # a bold header row is the table's styling, not markup
+        if not header and text.startswith("● "):
+            rest = text[2:]
+            if rest.strip().casefold() in status:
+                return rest  # the status dot is rendering, not the cell's own text
         return text
 
     rows = [[cell(c, n == 0) for c in row.cells] for n, row in enumerate(tbl.rows)]
@@ -335,7 +342,9 @@ class Importer:
                 found.append(Found("chart", chart, f"chart {sh.name!r}", box, idx))
                 continue
             if getattr(sh, "has_table", False) and sh.has_table:
-                found.append(Found("table", table_value(sh.table, self.code_font), f"table {sh.name!r}", box, idx))
+                status_keys = (self.brand.tokens.get("table") or {}).get("status") or {}
+                found.append(Found("table", table_value(sh.table, self.code_font, status_keys),
+                                   f"table {sh.name!r}", box, idx))
                 continue
             if sh._element.tag == qn("p:graphicFrame"):
                 gd = sh._element.find(f".//{qn('a:graphicData')}")
