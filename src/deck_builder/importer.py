@@ -254,6 +254,9 @@ class Importer:
         self.brand = brand
         self.code_font = (brand.tokens.get("text") or {}).get("code_font", CODE_FONT_DEFAULT)
         self.assets: dict[str, bytes] = {}
+        self.footers: dict[str, list[int]] = {}  # footer text -> slides showing it
+        self.numbered = False  # any slide shows a slide number
+        self.can_number = False  # any slide's layout has a slide-number placeholder
         self.known: dict[str, tuple[str, str]] = {}  # image sha256 -> (kind, brand ref)
         for lid, rel in (brand.meta.get("logos") or {}).items():
             p = brand.path / str(rel)
@@ -302,10 +305,11 @@ class Importer:
             box = (int(sh.left or 0), int(sh.top or 0), int(sh.width or 0), int(sh.height or 0))
             ph = sh.placeholder_format if sh.is_placeholder else None
             idx = ph.idx if ph is not None else None
-            if ph is not None and ph.type in FURNITURE:
+            if ph is not None and ph.type in FURNITURE:  # becomes front matter, not slide content
                 text = sh.text_frame.text.strip() if sh.has_text_frame else ""
                 if ph.type == PP_PLACEHOLDER.FOOTER and text:
-                    rep.skipped.append(f"footer text {text!r} (slide furniture comes from the brand)")
+                    self.footers.setdefault(text, []).append(n)
+                self.numbered |= ph.type == PP_PLACEHOLDER.SLIDE_NUMBER
                 continue
             st = sh.shape_type
             if st == MSO_SHAPE_TYPE.GROUP:
@@ -433,6 +437,8 @@ class Importer:
 
     def slide(self, slide: Any, n: int, prs_layouts: dict[Any, Any], same_template: bool) -> tuple[Slide, SlideReport]:
         rep = SlideReport(n)
+        self.can_number |= any(p.placeholder_format.type == PP_PLACEHOLDER.SLIDE_NUMBER
+                               for p in slide.slide_layout.placeholders)
         found = self.shapes(slide.shapes, n, rep)
         names = self._candidates(slide) if same_template else []
         best: tuple[float, float, str, dict[str, Found], Found | None, list[Found]] | None = None
@@ -542,6 +548,14 @@ def import_pptx(pptx: Path, brand: Brand, cache_dir: Path) -> Imported:
         meta["author"] = cp.author.strip()
     if cp.created and cp.created.date() != DEFAULT_DATE:
         meta["date"] = cp.created.date()
+    if len(imp.footers) == 1:
+        meta["footer"] = next(iter(imp.footers))
+    elif imp.footers:  # several footer texts: the deck gets one, so the user picks it
+        for text, ns in imp.footers.items():
+            reports[ns[0] - 1].skipped.append(f"footer text {text!r} on slides {', '.join(map(str, ns))}; the "
+                                              "footers differ, so set `footer:` in the front matter yourself")
+    if imp.can_number and not imp.numbered:
+        meta["slide_numbers"] = False
     return Imported(Deck(meta=meta, slides=slides, source=str(pptx)), reports, imp.assets)
 
 

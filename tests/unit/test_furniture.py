@@ -4,10 +4,12 @@ from pathlib import Path
 
 import pytest
 import yaml
+from pptx import Presentation
 from pptx.enum.shapes import PP_PLACEHOLDER
 from pptx.util import Emu
+from test_check import GOOD
 
-from conftest import cli_json
+from conftest import cli_json, write_deck
 from deck_builder import template as tpl
 
 DEMO = Path(__file__).resolve().parents[1] / "fixtures" / "demo-brands" / "brands"
@@ -80,6 +82,116 @@ def test_the_brand_can_turn_slide_numbers_off(ws, capsys):
     assert set(master) == {"FOOTER"} and master["FOOTER"].left == round(0.6 * EMU)
     assert all("SLIDE_NUMBER" not in furniture(lay.placeholders) for lay in prs.slide_masters[0].slide_layouts)
     assert yaml.safe_load((kit / "tokens.yaml").read_text())["furniture"]["slide_numbers"] is False
+
+
+# ---------------------------------------------------------------- built decks
+
+DECK = """
+---
+brand: briarfield-paper
+title: Furniture test
+{extra}---
+
+## Q3 review
+layout: title
+subtitle: Volume and delivery
+
+## Volume grew
+layout: content
+
+- Copy paper led
+
+## Part 2
+layout: section
+kicker: Part 2
+
+## 18%
+layout: big-number
+caption: Growth in volume
+
+## Thank you
+layout: closing
+subtitle: Questions to ops@example.com
+"""
+
+
+def build(ws, capsys, extra="", out="deck.pptx"):
+    deck = write_deck(ws, DECK.format(extra=extra))
+    code, res = cli_json(ws, "build", str(deck), "-o", str(ws / "out" / out), capsys=capsys)
+    assert code == 0, res["issues"]
+    return Path(res["output"])
+
+
+def slide_furniture(pptx: Path) -> list[dict[str, str]]:
+    """Per slide: furniture type name -> its text."""
+    return [{k: ph.text_frame.text for k, ph in furniture(s.placeholders).items()}
+            for s in Presentation(str(pptx)).slides]
+
+
+def test_content_slides_get_their_number_and_title_section_closing_get_none(ws, capsys):
+    init_brand(ws, capsys)
+    got = slide_furniture(build(ws, capsys))
+    assert got == [{}, {"SLIDE_NUMBER": "2"}, {}, {"SLIDE_NUMBER": "4"}, {}]
+
+
+def test_the_number_inherits_position_and_style_from_the_layout(ws, capsys):
+    init_brand(ws, capsys)
+    slide = Presentation(str(build(ws, capsys))).slides[1]
+    num = furniture(slide.placeholders)["SLIDE_NUMBER"]
+    assert num._element.find("{*}spPr/{*}xfrm") is None and num._element.find("{*}txBody/{*}bodyPr").attrib == {}
+    assert num._element.find(".//{*}fld").get("type") == "slidenum"
+
+
+def test_a_footer_appears_only_when_the_deck_sets_one(ws, capsys):
+    init_brand(ws, capsys)
+    got = slide_furniture(build(ws, capsys, "footer: Confidential\n"))
+    assert got == [{}, {"SLIDE_NUMBER": "2", "FOOTER": "Confidential"}, {},
+                   {"SLIDE_NUMBER": "4", "FOOTER": "Confidential"}, {}]
+
+
+def test_a_deck_can_turn_numbers_off(ws, capsys):
+    init_brand(ws, capsys)
+    assert slide_furniture(build(ws, capsys, "slide_numbers: false\n")) == [{}] * 5
+
+
+def test_an_adopted_templates_own_slide_number_is_copied_with_its_field(ws, capsys):
+    deck = write_deck(ws, GOOD)  # the stock kit wraps python-pptx's template, whose layouts have sldNum
+    code, res = cli_json(ws, "build", str(deck), capsys=capsys)
+    assert code == 0, res["issues"]
+    prs = Presentation(res["output"])
+    slide = prs.slides[1]
+    num = furniture(slide.placeholders)["SLIDE_NUMBER"]
+    layout_fld = furniture(slide.slide_layout.placeholders)["SLIDE_NUMBER"]._element.find(".//{*}fld")
+    assert num.text_frame.text == "2"
+    assert num._element.find(".//{*}fld").get("id") == layout_fld.get("id")
+    assert "DATE" not in furniture(slide.placeholders)
+
+
+def test_builds_with_furniture_stay_byte_identical(ws, capsys):
+    init_brand(ws, capsys)
+    a = build(ws, capsys, "footer: Confidential\n", "a.pptx").read_bytes()
+    assert build(ws, capsys, "footer: Confidential\n", "b.pptx").read_bytes() == a
+
+
+def test_furniture_isnt_an_empty_placeholder(ws, capsys):
+    from deck_builder.qa.render import empty_placeholders
+
+    init_brand(ws, capsys)
+    assert empty_placeholders(build(ws, capsys, "footer: Confidential\n")) == []
+
+
+def test_import_gives_back_the_footer_and_the_off_switch(ws, capsys):
+    from deck_builder.parse import markdown
+
+    init_brand(ws, capsys)
+    for n, (extra, meta) in enumerate([("footer: Confidential\n", {"footer": "Confidential"}),
+                                       ("slide_numbers: false\n", {"slide_numbers": False})]):
+        pptx = build(ws, capsys, extra)
+        dest = ws / "imp" / str(n)
+        code, res = cli_json(ws, "import", str(pptx), str(dest), "--brand", "briarfield-paper", capsys=capsys)
+        assert code == 0, res
+        got = markdown.parse(dest / "deck.md")[0].meta
+        assert {k: got.get(k) for k in meta} == meta
 
 
 @pytest.mark.parametrize("slug", ["briarfield-paper"])

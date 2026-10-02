@@ -1,14 +1,19 @@
 """Build a resolved deck into a PPTX and its manifest."""
 from __future__ import annotations
 
+import copy
 import datetime as dt
 import hashlib
 import io
 import json
 from pathlib import Path
 from typing import Any
+from xml.sax.saxutils import escape
 
 from PIL import Image as PILImage
+from pptx.enum.shapes import PP_PLACEHOLDER
+from pptx.oxml import parse_xml
+from pptx.oxml.ns import nsdecls, qn
 
 from deck_builder import __version__
 from deck_builder import template as tpl
@@ -24,6 +29,42 @@ from deck_builder.validate import plain, resolve_asset, text_of
 EMU_PER_INCH = 914400
 MIN_DPI = 150
 DEFAULT_DATE = dt.date(2000, 1, 1)
+SLIDENUM_FIELD = "{B6F15528-21DE-4FAA-801E-634DDDAF4B2B}"  # used when the layout's field has no id
+OFF = {"false", "no", "off", "0"}
+
+
+def furniture_settings(meta: dict[str, Any]) -> tuple[bool, str | None]:
+    """(slide numbers on, footer text) from front matter: `slide_numbers: false` and `footer: <text>`."""
+    numbers = str(meta.get("slide_numbers", True)).strip().lower() not in OFF
+    footer = str(meta["footer"]).strip() if meta.get("footer") not in (None, "") else None
+    return numbers, footer or None
+
+
+def add_furniture(slide: Any, layout: Any, n: int, numbers: bool, footer: str | None) -> None:
+    """Copy the layout's slide-number placeholder (and its footer when there's text for it) onto the slide.
+
+    python-pptx never copies these. The copy keeps the template's styling: it names the layout's
+    placeholder and inherits position and type from it. Dates are never copied.
+    """
+    tree = slide.shapes._spTree
+    next_id = max((int(e.get("id", 0)) for e in tree.iter(qn("p:cNvPr"))), default=1) + 1
+    for ph in layout.placeholders:
+        kind = ph.placeholder_format.type
+        if kind == PP_PLACEHOLDER.SLIDE_NUMBER and numbers:
+            fld = ph._element.find(f".//{qn('a:fld')}[@type='slidenum']")
+            fid = fld.get("id") if fld is not None else SLIDENUM_FIELD
+            para = f'<a:fld id="{fid}" type="slidenum"><a:rPr lang="en-US"/><a:t>{n}</a:t></a:fld>'
+        elif kind == PP_PLACEHOLDER.FOOTER and footer:
+            para = f'<a:r><a:rPr lang="en-US"/><a:t>{escape(footer)}</a:t></a:r>'
+        else:
+            continue
+        nv = copy.deepcopy(ph._element.find(qn("p:nvSpPr")))
+        nv.find(qn("p:cNvPr")).set("id", str(next_id))
+        next_id += 1
+        sp = parse_xml(f'<p:sp {nsdecls("p", "a")}><p:spPr/><p:txBody><a:bodyPr/><a:lstStyle/><a:p>{para}</a:p>'
+                       "</p:txBody></p:sp>")
+        sp.insert(0, nv)
+        tree.append(sp)
 
 
 def deck_date(meta: dict[str, Any]) -> dt.datetime:
@@ -46,10 +87,12 @@ def _dpi(path: Path, geo: tuple[int, int, int, int], crop: bool) -> float:
 
 
 class Builder:
-    def __init__(self, brand: Brand, deck_dir: Path, cache_dir: Path) -> None:
+    def __init__(self, brand: Brand, deck_dir: Path, cache_dir: Path, numbers: bool = True,
+                 footer: str | None = None) -> None:
         self.brand = brand
         self.deck_dir = deck_dir
         self.cache_dir = cache_dir
+        self.numbers, self.footer = numbers, footer
         self.code_font = (brand.tokens.get("text") or {}).get("code_font", CODE_FONT_DEFAULT)
         self.issues: list[Issue] = []
 
@@ -71,7 +114,8 @@ class Builder:
     def slide(self, prs: Any, layouts: dict[Any, Any], s: Slide, n: int) -> dict[str, Any]:
         ls = self.brand.tokens["layouts"][s.layout]
         tl = ls["template_layout"]
-        slide = prs.slides.add_slide(tpl.find_layout(layouts, tl, ls.get("master")))
+        layout = tpl.find_layout(layouts, tl, ls.get("master"))
+        slide = prs.slides.add_slide(layout)
         phs = {ph.placeholder_format.idx: ph for ph in slide.placeholders}
         entry: dict[str, Any] = {"slide": n, "layout": s.layout, "template_layout": tl, "title": s.title,
                                  "fields": {}}
@@ -107,6 +151,7 @@ class Builder:
         for idx, ph in phs.items():
             if idx not in used:  # no empty "Click to add text" boxes left behind
                 ph._element.getparent().remove(ph._element)
+        add_furniture(slide, layout, n, self.numbers, self.footer)
         if s.notes:
             slide.notes_slide.notes_text_frame.text = s.notes
             entry["notes_chars"] = len(s.notes)
@@ -124,7 +169,7 @@ def build(deck: Deck, brand: Brand, deck_path: Path, out_path: Path, cache_dir: 
     if not keep_template_slides:
         tpl.remove_all_slides(prs)
     layouts = tpl.layouts(prs)
-    b = Builder(brand, deck_path.parent, cache_dir)
+    b = Builder(brand, deck_path.parent, cache_dir, *furniture_settings(deck.meta))
     slides = [b.slide(prs, layouts, s, n) for n, s in enumerate(deck.slides, start=1)]
 
     when = deck_date(deck.meta)
