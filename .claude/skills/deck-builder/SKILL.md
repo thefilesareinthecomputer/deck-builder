@@ -27,10 +27,12 @@ the user and propose an engine or brand-kit change.
 ## Who does what
 
 When the deck has to come out of more material than fits here (a folder of documents, a
-knowledge base or vault), start with the `deck-decomposer-agent`: it returns `outline.md` (the
-storyline with a source for every slide, plus open questions) and a draft `deck.md` that passes
-`check`. Walk the user through the outline, co-author and proofread with them (or convert to
-`.xlsx` for their team), and only then build.
+knowledge base or vault), start with the `deck-decomposer-agent`. It runs no commands, since what
+it reads is untrusted, so put the output of `brand show <slug> --json` and `docs deck-md` in its
+prompt. It returns `outline.md` (the storyline with a source for every slide, plus open questions)
+and a draft `deck.md`; run `check` on the draft and send any issues back to it. Walk the user
+through the outline, co-author and proofread with them (or convert to `.xlsx` for their team),
+and only then build.
 
 For more than a handful of slides, hand the build loop to the `deck-builder-agent` subagent and
 keep this context for the storyline and the review. Give it the source material paths, the brand

@@ -22,10 +22,10 @@ theme_colors:
   accent1: primary
   accent2: accent
   accent3: muted
-  accent4: "8FB3D9"
+  accent4: "5B8FC7"
   accent5: "D97706"
   accent6: "15803D"
-  hlink: accent
+  hlink: primary
   folHlink: muted
 
 fonts:

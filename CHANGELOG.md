@@ -21,6 +21,11 @@
 - Bulk data values with a line break, or that would start a heading or image line, are the new error `BAD_DATA_VALUE` for that row.
 - Re-rendering deletes only the files render writes, not the whole `.render/` folder.
 - The showcase fixture's hero images moved into `showcase/assets/`, since a deck's images must sit inside its folder.
+- `deck-decomposer-agent` runs no commands: Bash is removed, since it reads untrusted material. The main agent puts `brand show <slug> --json` and `docs deck-md` in its prompt and runs `check` on its draft.
+
+### Changed
+
+- The neutral brand passes its own contrast check: links use `primary` (10.95:1, was 4.10:1) and the fourth chart color is `5B8FC7` (3.39:1, was `8FB3D9` at 2.18:1).
 
 ### Fixed
 
