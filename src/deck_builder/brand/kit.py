@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from pptx.enum.shapes import PP_PLACEHOLDER
+
 from deck_builder import template as tpl
 from deck_builder.brand import inspect as brand_inspect
 from deck_builder.brand.registry import Brand
@@ -128,6 +130,22 @@ def _field_summary(fs: dict[str, Any]) -> str:
     return s
 
 
+def furniture_layouts(brand: Brand) -> dict[str, list[str]]:
+    """Which layout keys can show a slide number, and which a footer: their template layout has the placeholder."""
+    out: dict[str, list[str]] = {"slide_numbers": [], "footer": []}
+    if brand.template is None or not brand.template.is_file():
+        return out
+    prs_layouts = tpl.layouts(tpl.open_template(brand.template))
+    for lname, ls in (brand.tokens.get("layouts") or {}).items():
+        layout = tpl.find_layout(prs_layouts, ls["template_layout"], ls.get("master"))
+        kinds = {ph.placeholder_format.type for ph in layout.placeholders} if layout is not None else set()
+        if PP_PLACEHOLDER.SLIDE_NUMBER in kinds:
+            out["slide_numbers"].append(lname)
+        if PP_PLACEHOLDER.FOOTER in kinds:
+            out["footer"].append(lname)
+    return out
+
+
 def show(brand: Brand) -> dict[str, Any]:
     """The compact contract an agent needs before writing a deck."""
     icons = brand.meta.get("icons") or {}
@@ -152,6 +170,7 @@ def show(brand: Brand) -> dict[str, Any]:
         "icons": icon_ids,
         "voice": brand.meta.get("voice") or [],
         "lint": brand.meta.get("lint") or {},
+        "furniture": furniture_layouts(brand),
     }
 
 
@@ -173,4 +192,7 @@ def show_text(d: dict[str, Any]) -> str:
         lines.append(f"voice: {v}")
     if d["lint"]:
         lines.append(f"lint: {d['lint']}")
+    f = d["furniture"]
+    lines.append(f"slide numbers: {', '.join(f['slide_numbers']) or 'none'} (front matter slide_numbers: false "
+                 f"turns them off); footer: {', '.join(f['footer']) or 'none'} (shown when front matter sets footer:)")
     return "\n".join(lines)

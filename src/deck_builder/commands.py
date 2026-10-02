@@ -23,7 +23,7 @@ from deck_builder.brand import generate, kit, registry, schema
 from deck_builder.brand import inspect as brand_inspect
 from deck_builder.brand.registry import Brand
 from deck_builder.build.deck import build as build_deck
-from deck_builder.build.deck import manifest_path
+from deck_builder.build.deck import furniture_settings, manifest_path
 from deck_builder.errors import CODES, EnvError, Issue, Result
 from deck_builder.model import Deck
 from deck_builder.parse import markdown as markdown_parser
@@ -606,7 +606,9 @@ def check(args: argparse.Namespace) -> Result:
     path = pipeline.deck_path(Path(args.deck))
     r = Result(command="check", data={"input": str(path)})
     if not args.render:
-        _validated(path, cfg, r, args.brand)
+        deck, brand = _validated(path, cfg, r, args.brand)
+        if deck is not None and brand is not None:
+            r.data.update(_furniture(deck, brand))
         r.summary = f"{'ok' if r.ok else 'failed'} check {path.name}: {r.data['slides']} slides, {_tally(r)}"
         return r
     done = _build_one(path, cfg, args, None, None, r)
@@ -617,6 +619,15 @@ def check(args: argparse.Namespace) -> Result:
     r.summary = (f"{'ok' if r.ok else 'failed'} check --render {path.name}: {r.data['slides']} slides, "
                  f"flagged {flagged}, {_tally(r)}")
     return r
+
+
+def _furniture(deck: Deck, brand: Brand) -> dict[str, Any]:
+    """Whether this deck's slides will show numbers, and the footer text they'll show (None for none)."""
+    numbers, footer = furniture_settings(deck.meta)
+    can = kit.furniture_layouts(brand)
+    used = {s.layout for s in deck.slides}
+    return {"slide_numbers": numbers and bool(used & set(can["slide_numbers"])),
+            "footer": footer if footer and used & set(can["footer"]) else None}
 
 
 def default_output(path: Path, deck: Deck | None, cfg: cfgmod.Config) -> Path:
@@ -649,7 +660,8 @@ def _build_one(path: Path, cfg: cfgmod.Config, args: argparse.Namespace, out: Pa
     manifest, issues = build_deck(deck, brand, path, out_path, _cache_dir(cfg), r.data["content_sha256"])
     for i in issues:
         r.add(i)
-    return {"output": str(out_path), "manifest": str(manifest_path(out_path)), "slides": len(manifest["slides"])}
+    return {"output": str(out_path), "manifest": str(manifest_path(out_path)), "slides": len(manifest["slides"]),
+            **_furniture(deck, brand)}
 
 
 def build(args: argparse.Namespace) -> Result:

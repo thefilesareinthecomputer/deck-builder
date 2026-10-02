@@ -194,6 +194,29 @@ def test_import_gives_back_the_footer_and_the_off_switch(ws, capsys):
         assert {k: got.get(k) for k in meta} == meta
 
 
+# ---------------------------------------------------------------- reporting
+
+
+def test_brand_show_says_which_layouts_show_numbers_and_footers(ws, capsys):
+    init_brand(ws, capsys)
+    code, out = cli_json(ws, "brand", "show", "briarfield-paper", capsys=capsys)
+    assert code == 0
+    for kind in ("slide_numbers", "footer"):
+        assert "content" in out["furniture"][kind]
+        assert not {"title", "section", "closing"} & set(out["furniture"][kind])
+
+
+@pytest.mark.parametrize("extra, numbers, footer", [
+    ("", True, None), ("footer: Confidential\n", True, "Confidential"), ("slide_numbers: false\n", False, None)])
+def test_check_reports_whether_numbers_and_footer_are_on(ws, capsys, extra, numbers, footer):
+    init_brand(ws, capsys)
+    deck = write_deck(ws, DECK.format(extra=extra))
+    for command in ("check", "build"):
+        code, out = cli_json(ws, command, str(deck), capsys=capsys)
+        assert code == 0, out["issues"]
+        assert (out["slide_numbers"], out["footer"]) == (numbers, footer)
+
+
 @pytest.mark.parametrize("slug", ["briarfield-paper"])
 def test_generation_stays_deterministic(ws, capsys, slug):
     first = (init_brand(ws, capsys, slug) / "template.potx").read_bytes()
