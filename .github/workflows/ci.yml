@@ -2,12 +2,12 @@ name: ci
 
 on:
   push:
+    branches: [main]  # other branches run through their pull request, so each job runs once
   pull_request:
   workflow_dispatch:
   schedule:
-    # Weekly, Monday 13:00 UTC: re-audits the locked dependencies for newly published CVEs and
-    # re-runs the render tier against current LibreOffice and poppler, even when nobody pushed.
-    # Dependabot (.github/dependabot.yml) opens the update PRs; this catches what lands between them.
+    # Weekly, Monday 13:00 UTC: catches newly published CVEs and LibreOffice or poppler changes
+    # even when nobody pushed.
     - cron: "0 13 * * 1"
 
 permissions:
@@ -39,6 +39,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7  # v10.2.0
       - name: Known vulnerabilities in the locked dependencies
+        # The export is already the full pinned list, so pip-audit checks it as-is (--no-deps)
+        # without installing or resolving anything (--disable-pip).
         run: |
           uv export --frozen --no-dev --no-emit-project --format requirements-txt --output-file requirements.txt
           uvx pip-audit==2.10.1 --requirement requirements.txt --disable-pip --no-deps

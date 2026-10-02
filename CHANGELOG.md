@@ -43,5 +43,5 @@ First release.
 
 ### Tooling
 
-- CI runs lint, type checks, tests, a dependency audit and the render tier on every push and weekly. Dependabot keeps the lockfile and the Actions current.
+- CI runs lint, type checks, tests, a dependency audit and the render tier on pushes to `main`, pull requests and weekly. Dependabot keeps the lockfile and the Actions current.
 - Three fictional demo brands and a showcase deck in `tests/fixtures/demo-brands/`; `scripts/readme_images.py` regenerates the README images from them.
