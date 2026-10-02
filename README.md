@@ -34,7 +34,7 @@ You or an agent supply the content, and deck-builder sets every slide in a place
   <tr>
     <td width="33%" valign="top"><b>Built on your template</b><br>Generate a brand kit from your colors, fonts and logo, or adopt the PowerPoint template your team already uses.</td>
     <td width="33%" valign="top"><b>Markdown or Excel</b><br>Author in <code>deck.md</code> or <code>deck.xlsx</code>. The formats convert losslessly, so writers and reviewers each work in the one they prefer.</td>
-    <td width="33%" valign="top"><b>Guided onboarding</b><br>In Claude Code, onboarding checks your environment, configures your brand and builds a first deck with you.</td>
+    <td width="33%" valign="top"><b>Guided onboarding</b><br>In <a href="https://code.claude.com/docs/en/overview">Claude Code</a>, Anthropic's coding agent, onboarding checks your environment, configures your brand and builds a first deck with you.</td>
   </tr>
   <tr>
     <td valign="top"><b>Deterministic builds</b><br>Identical input produces an identical file, and the engine makes no network calls.</td>
@@ -45,38 +45,40 @@ You or an agent supply the content, and deck-builder sets every slide in a place
 
 ## Quick start
 
-Requires [uv](https://docs.astral.sh/uv/). Rendering also requires LibreOffice (or PowerPoint on macOS) and poppler; `uv run deck-builder doctor` verifies both.
+Requires [uv](https://docs.astral.sh/uv/). Rendering also requires poppler and LibreOffice, the verified renderer; PowerPoint on macOS is supported but not yet verified. `uv run deck-builder doctor` checks what is installed.
 
 ```bash
-git clone <this repo> deck-builder && cd deck-builder
+git clone https://github.com/thefilesareinthecomputer/deck-builder.git && cd deck-builder
 uv run deck-builder init
 uv run deck-builder check workspace/decks/quarterly-review --render
 ```
 
-`init` creates a workspace with a neutral brand and two example decks, and `check --render` validates, builds and renders the first of them. The finished deck is at `workspace/out/quarterly-review.pptx`.
+`init` creates a workspace with a neutral brand and two example decks, and `check --render` validates, builds and renders the first of them. The deck is written to `workspace/out/quarterly-review.pptx`, and its slide images and contact sheet to `workspace/out/quarterly-review.render/`.
 
-To use `deck-builder` from any directory, install it once with `uv tool install --editable .`
+To use `deck-builder` from any directory, install it once with `uv tool install --editable .`.
 
 > [!TIP]
 > **Working in Claude Code?** Open the repository and start a session. Onboarding runs these steps with you and then sets up your brand.
 
 ## How it works
 
-1. **Write** the content in `deck.md` or `deck.xlsx`.
-2. **Check** it. Unknown layouts, missing images and text over a field's character budget fail with an issue code.
-3. **Build** the `.pptx` from the brand's template.
-4. **Render** it and review the contact sheet. Overflowing text, empty placeholders and substituted fonts are flagged.
+A deck is a text file. Each `##` heading is one slide, and its `layout:` line picks one of the brand's layouts. A layout has fields, such as title, subtitle, body and caption, that map to placeholders in the PowerPoint template, and each field has a character budget: the most text that fits in its placeholder.
 
-Resolve any flagged items and repeat. `deck-builder explain <CODE>` documents the cause and fix for every issue code, and `check --render` runs steps 2 through 4 in a single command.
+1. **Write** the content in `deck.md` or `deck.xlsx`.
+2. **Check** it with `deck-builder check`. A layout the brand does not have, a missing image or text over a field's budget fails with an issue code, and `deck-builder explain <CODE>` describes the cause and the fix.
+3. **Build** the `.pptx`. Every piece of text lands in a template placeholder, so fonts, colors and positions come from the template.
+4. **Render** the `.pptx` to images and review the contact sheet, an overview image with up to 20 slides per sheet. The render measures where each word landed and flags slides with overflowing text, empty placeholders or substituted fonts.
+
+`check --render` runs steps 2 through 4 in one command, which is what the quick start ran. Fix the flagged slides in the deck file and run it again.
 
 <p align="center">
   <img src="docs/images/contact-sheet.png" width="100%" alt="A contact sheet of nine rendered slides labeled slide 1 to slide 9, the image an agent reviews after a render.">
 </p>
-<p align="center"><sub>The contact sheet from a render. Flagged slides receive a red border, so a reviewer reads one image instead of nine.</sub></p>
+<p align="center"><sub>A contact sheet from a clean render, with nothing flagged. A flagged slide receives a red border and label, so a reviewer finds it without opening every slide.</sub></p>
 
 ## Write a deck
 
-Each `##` heading defines a slide. `key: value` lines populate the layout's fields, and the remaining content fills its body. The three slides below form the first column of the image above:
+`key: value` lines under a heading fill the layout's fields, and the rest of the slide fills its body. The three slides below form the first column of the showcase image at the top. They use the `briarfield-paper` demo brand; to try them in the quick-start workspace, change the brand to `neutral` and point the image at a picture in the deck's folder.
 
 ````markdown
 ---
@@ -133,7 +135,7 @@ brands/<slug>/
 | An existing template | `deck-builder brand adopt <slug> --template client.potx` wraps it; a test render then tunes the budgets |
 | Nothing yet | The `neutral` brand that `init` creates |
 
-A deck selects its brand with `brand: <slug>`, and `--brand` overrides it for a single build. Brands resolve from the `brand_paths` in `deck-builder.toml`, so a client kit can live in its own private repository. Nothing under `workspace/` is committed.
+A deck selects its brand with `brand: <slug>`, and `--brand` overrides it for a single build. Brands resolve from the `brand_paths` in `deck-builder.toml`, so a client kit can live in its own private repository.
 
 ## Commands
 
@@ -195,7 +197,7 @@ uv run ruff check && uv run mypy
 uv run python scripts/readme_images.py # regenerate the images in this README
 ```
 
-The three fictional brands in `tests/fixtures/demo-brands/` serve as the test and showcase brands; their names and artwork were created for this repository. Releases follow the [release checklist](docs/release-checklist.md).
+The three fictional brands in `tests/fixtures/demo-brands/` serve as the test and showcase brands; their names and artwork were created for this repository. Everything under `workspace/` is ignored by git, so decks and brands created there stay out of the repository. Releases follow the [release checklist](docs/release-checklist.md).
 
 ## License
 
