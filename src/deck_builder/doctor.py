@@ -45,6 +45,23 @@ def install_hint() -> str:
     return f"uv tool install --editable {clone if (clone / 'pyproject.toml').is_file() else '<clone>'}"
 
 
+def editable_install() -> bool:
+    """Whether the running deck_builder package is `pip install -e` / `uv sync`'s editable install, straight
+    from this clone's src/: the agents' MCP server then runs this clone's code live, not an installed copy."""
+    try:
+        dist = md.distribution("deck-builder")
+    except md.PackageNotFoundError:
+        return False
+    raw = dist.read_text("direct_url.json")
+    if not raw:
+        return False
+    try:
+        data = json.loads(raw)
+    except ValueError:
+        return False
+    return bool(data.get("dir_info", {}).get("editable"))
+
+
 def mcp_command() -> list[str] | None:
     """How Claude Code starts the agents' MCP server: `deck-builder mcp`, found on PATH."""
     exe = shutil.which("deck-builder")

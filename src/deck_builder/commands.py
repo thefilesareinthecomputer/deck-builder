@@ -477,12 +477,17 @@ def doctor_cmd(args: argparse.Namespace) -> Result:
     cfg = _cfg(args)
     checks = doctor.run(cfg, args.powerpoint)
     backend = doctor.render_backend(checks)
+    editable = doctor.editable_install()
     r = Result(command="doctor", data={"checks": [c.as_dict() for c in checks], "render_backend": backend,
-                                       "can_build": all(c.status == "ok" for c in checks[:7])})
+                                       "can_build": all(c.status == "ok" for c in checks[:7]),
+                                       "editable_install": editable})
     if not r.data["can_build"]:
         r.ok, r.exit_code = False, 2
     lines = [f"{c.status:<10} {c.name:<22} {c.detail}" + (f"\n{'':<10} fix: {c.fix}" if c.fix else "")
              for c in checks]
+    if editable:
+        lines.append(f"{'warning':<10} {'editable install':<22} agents' MCP server runs this clone's src/ live; "
+                     "keep client workspaces outside the clone")
     lines.append(f"build: {'ready' if r.data['can_build'] else 'not ready'}; "
                  f"render: {backend or 'not available (install poppler and LibreOffice)'}")
     r.summary = "\n".join(lines)
