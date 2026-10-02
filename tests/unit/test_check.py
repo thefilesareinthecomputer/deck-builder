@@ -66,6 +66,26 @@ def test_valid_deck_passes(ws, capsys):
     assert out["brand"] == "stock"
 
 
+def test_check_render_flags_a_build_time_low_res_warning(ws, capsys, monkeypatch):
+    from deck_builder import commands
+    from deck_builder.qa.render import Rendered
+
+    def fake_render(pptx, backend, dpi, batch, pages, brand):
+        out_dir = pptx.with_name(pptx.stem + ".render")
+        out_dir.mkdir(exist_ok=True)
+        pdf = out_dir / "deck.pdf"
+        pdf.write_bytes(b"%PDF-1.4 stub")
+        return Rendered(backend="stub", out_dir=out_dir, pdf=pdf, slides=[], contact_sheets=[], issues=[])
+
+    monkeypatch.setattr(commands.qa_backends, "choose", lambda requested: "stub")
+    monkeypatch.setattr(commands.qa_render, "render", fake_render)
+    code, out = cli_json(ws, "check", str(write_deck(ws, GOOD)), "--render", capsys=capsys)
+    assert code == 0, out["issues"]  # ASSET_LOW_RES is a warning, build still succeeds
+    assert "ASSET_LOW_RES" in codes(out)
+    flagged = {f["slide"]: f["codes"] for f in out["flagged_slides"]}
+    assert 7 in flagged and "ASSET_LOW_RES" in flagged[7]
+
+
 def test_human_output_is_one_summary_line(ws, capsys):
     from deck_builder.cli import main
 

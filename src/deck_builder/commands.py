@@ -634,11 +634,26 @@ def check(args: argparse.Namespace) -> Result:
     done = _build_one(path, cfg, args, None, None, r)
     if done:
         r.data.update(done)
+        build_flags = [i for i in r.issues if i.slide is not None]  # e.g. ASSET_LOW_RES, raised at build
         _render_into(r, Path(done["output"]), cfg, None, None)
+        _merge_flagged_slides(r, build_flags)
     flagged = ", ".join(str(f["slide"]) for f in r.data.get("flagged_slides", [])) or "none"
     r.summary = (f"{'ok' if r.ok else 'failed'} check --render {path.name}: {r.data['slides']} slides, "
                  f"flagged {flagged}, {_tally(r)}")
     return r
+
+
+def _merge_flagged_slides(r: Result, build_issues: list[Issue]) -> None:
+    """check --render builds through the same path as build, so a build issue tied to a slide (such as
+    ASSET_LOW_RES) belongs in flagged_slides beside whatever render found, not only in the issue list."""
+    flagged: dict[int, list[str]] = {f["slide"]: list(f["codes"]) for f in r.data.get("flagged_slides", [])}
+    for i in build_issues:
+        assert i.slide is not None
+        bucket = flagged.setdefault(i.slide, [])
+        if i.code not in bucket:
+            bucket.append(i.code)
+    if flagged:
+        r.data["flagged_slides"] = [{"slide": n, "codes": c} for n, c in sorted(flagged.items())]
 
 
 def _furniture(deck: Deck, brand: Brand) -> dict[str, Any]:
