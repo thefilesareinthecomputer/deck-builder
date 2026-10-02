@@ -17,7 +17,7 @@ from PIL import Image as PILImage
 
 from deck_builder import assets as asset_inventory
 from deck_builder import config as cfgmod
-from deck_builder import docs, doctor, importer, pipeline, skills, validate
+from deck_builder import confine, docs, doctor, importer, pipeline, skills, validate
 from deck_builder import template as tpl
 from deck_builder.brand import generate, kit, registry, schema
 from deck_builder.brand import inspect as brand_inspect
@@ -315,7 +315,9 @@ def _kit_dir(args: argparse.Namespace, cfg: cfgmod.Config) -> Path:
     if not args.slug or not re.fullmatch(r"[a-z0-9][a-z0-9-]*", args.slug):
         raise EnvError("a brand slug is lowercase letters, digits and hyphens, e.g. `acme` or `acme-2026`")
     root = Path(args.out) if args.out else cfg.brand_paths[0]
-    target = root / args.slug
+    # the slug is appended after root was checked; that folder name can already be an existing
+    # symlink pointing outside every allowed root (a no-op outside an MCP call).
+    target = confine.guard(root / args.slug, "the kit folder")
     if (target / "brand.yaml").exists() and not args.force:
         replaced = "template, tokens.yaml and brand.yaml" if args.action == "adopt" else "template.potx and tokens.yaml"
         raise EnvError(f"{target} already holds a brand kit; --force replaces its {replaced}, discarding tuned "
@@ -508,16 +510,18 @@ def import_cmd(args: argparse.Namespace) -> Result:
     if not brand.valid:
         raise EnvError(f"brand {brand.slug!r} is invalid; run `deck-builder brand check {brand.slug}`")
     imp = importer.import_pptx(src, brand, _cache_dir(cfg))
+    confine.guard(out, "the import output folder")
     out.mkdir(parents=True, exist_ok=True)
     if imp.assets:
-        (out / "assets").mkdir(exist_ok=True)
+        assets_dir = confine.guard(out / "assets", "the import assets folder")
+        assets_dir.mkdir(exist_ok=True)
         for name, blob in imp.assets.items():
-            (out / "assets" / name).write_bytes(blob)
-    deck_md = out / "deck.md"
+            confine.guard(assets_dir / name, "an imported asset").write_bytes(blob)
+    deck_md = confine.guard(out / "deck.md", "the imported deck")
     deck_md.write_text(md_writer.write(imp.deck), encoding="utf-8")
     back, _ = markdown_parser.parse(deck_md)
     mismatched = [n for n, (a, b) in enumerate(zip(imp.deck.slides, back.slides, strict=False), start=1) if a != b]
-    report = out / "import-report.md"
+    report = confine.guard(out / "import-report.md", "the import report")
     report.write_text(importer.report_md(src, brand, bool(args.adopt), imp, mismatched), encoding="utf-8")
     unplaced = sum(len(x.unplaced) for x in imp.reports)
     dropped = sum(sum(x.dropped.values()) for x in imp.reports)

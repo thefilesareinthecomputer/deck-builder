@@ -21,7 +21,7 @@ from typing import Any, TextIO
 
 import jsonschema
 
-from deck_builder import __version__
+from deck_builder import __version__, confine
 from deck_builder import config as cfgmod
 from deck_builder.errors import EXIT_ENV, EnvError
 
@@ -220,7 +220,10 @@ class Server:
             return _text(f"refused: {err.getvalue().strip().splitlines()[-1] if err.getvalue() else 'bad arguments'}",
                          error=True)
         try:
-            with contextlib.redirect_stdout(sys.stderr):  # stdout belongs to the protocol
+            # Checking an argument path doesn't confine what a command derives from it afterward (a
+            # manifest beside a build output, a render folder beside a .pptx, a slug appended to a
+            # brand path, ...); guard() catches those for the whole call, wherever the engine derives one.
+            with contextlib.redirect_stdout(sys.stderr), confine.scoped(self.root, *self.brands):
                 result = self.cli.run(self.handlers[args.command], args)
         except Exception as e:  # an engine bug: report it, keep serving
             return _text(f"internal error: {type(e).__name__}: {e}", error=True)

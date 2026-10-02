@@ -16,7 +16,7 @@ from pptx.enum.shapes import PP_PLACEHOLDER
 from pptx.oxml import parse_xml
 from pptx.oxml.ns import nsdecls, qn
 
-from deck_builder import __version__
+from deck_builder import __version__, confine
 from deck_builder import template as tpl
 from deck_builder.assets import recolor_icon, sha256_file
 from deck_builder.brand.registry import Brand
@@ -171,6 +171,10 @@ def build(deck: Deck, brand: Brand, deck_path: Path, out_path: Path, cache_dir: 
     if out_path.exists() and not manifest_path(out_path).is_file():
         raise EnvError(f"{out_path} exists and has no {manifest_path(out_path).name} beside it, so deck-builder "
                        "didn't build it; move it or write somewhere else")
+    # out_path and its manifest sidecar can each already be an existing symlink; confine both before
+    # writing either (a no-op outside an MCP call, where there's no configured area to confine to).
+    confine.guard(out_path, "the build output")
+    confine.guard(manifest_path(out_path), "the build manifest")
     prs = tpl.open_template(brand.template)
     if not keep_template_slides:
         tpl.remove_all_slides(prs)

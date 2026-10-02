@@ -8,6 +8,7 @@ from typing import Any
 
 import yaml
 
+from deck_builder import confine
 from deck_builder.brand import schema
 from deck_builder.config import Config
 from deck_builder.errors import EnvError, Issue
@@ -92,6 +93,13 @@ def discover(cfg: Config) -> tuple[dict[str, Brand], list[Issue]]:
             p for p in root.iterdir() if p.is_dir() and (p / "brand.yaml").is_file()
         )
         for kit in candidates:
+            try:
+                # a candidate folder name under brand_paths can already be an existing symlink
+                # pointing outside every allowed root; skip it rather than load a kit from there
+                # (a no-op outside an MCP call, which has no allowed-root list to check against).
+                confine.guard(kit, "a brand kit folder")
+            except EnvError:
+                continue
             b = load_kit(kit)
             if b.slug in found:
                 issues.append(Issue("BRAND_DUPLICATE",
