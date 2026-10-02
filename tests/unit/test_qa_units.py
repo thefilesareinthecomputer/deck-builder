@@ -7,7 +7,7 @@ import pytest
 from conftest import cli_json, write_deck
 from deck_builder.errors import EnvError
 from deck_builder.qa import backends, fonts
-from deck_builder.qa.render import empty_placeholders
+from deck_builder.qa.render import empty_placeholders, stale_build_check
 
 
 def test_empty_text_field_is_flagged(ws, capsys):
@@ -31,6 +31,55 @@ def test_font_check_reports_fallback_and_substitution(monkeypatch):
 def test_font_check_passes_when_the_family_is_used(monkeypatch):
     monkeypatch.setattr(fonts, "embedded", lambda pdf: {"interbold", "intermedium"})
     assert fonts.check(Path("x.pdf"), {"fonts": {"heading": {"family": "Inter"}}}) == []
+
+
+def test_stale_build_warns_when_the_source_is_newer_than_the_pptx(tmp_path):
+    import os
+    import time
+
+    source = tmp_path / "deck.md"
+    pptx = tmp_path / "deck.pptx"
+    pptx.write_bytes(b"pptx")
+    source.write_text("stuff")
+    now = time.time()
+    os.utime(pptx, (now - 10, now - 10))
+    os.utime(source, (now, now))
+    manifest = {"input": {"path": str(source)}}
+    issues = stale_build_check(pptx, manifest)
+    assert [i.code for i in issues] == ["STALE_BUILD"]
+    assert issues[0].severity == "warning"
+
+
+def test_stale_build_is_quiet_when_the_pptx_is_newer(tmp_path):
+    import os
+    import time
+
+    source = tmp_path / "deck.md"
+    pptx = tmp_path / "deck.pptx"
+    source.write_text("stuff")
+    now = time.time()
+    os.utime(source, (now - 10, now - 10))
+    pptx.write_bytes(b"pptx")
+    os.utime(pptx, (now, now))
+    manifest = {"input": {"path": str(source)}}
+    assert stale_build_check(pptx, manifest) == []
+
+
+def test_stale_build_is_quiet_without_a_manifest_or_path():
+    assert stale_build_check(Path("x.pptx"), None) == []
+    assert stale_build_check(Path("x.pptx"), {"input": {}}) == []
+
+
+def test_auto_backend_prefers_libreoffice_over_unverified_powerpoint(monkeypatch):
+    monkeypatch.setattr(backends.tools, "soffice", lambda: "/usr/bin/soffice")
+    monkeypatch.setattr(backends.tools, "powerpoint", lambda: True)
+    assert backends.choose("auto") == "libreoffice"
+
+
+def test_auto_backend_falls_back_to_powerpoint_without_libreoffice(monkeypatch):
+    monkeypatch.setattr(backends.tools, "soffice", lambda: None)
+    monkeypatch.setattr(backends.tools, "powerpoint", lambda: True)
+    assert backends.choose("auto") == "powerpoint"
 
 
 class FakeProc:

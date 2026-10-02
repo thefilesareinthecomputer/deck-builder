@@ -202,7 +202,7 @@ brand_paths = ["workspace/brands"]
 default_brand = "neutral"
 
 [render]
-backend = "auto"     # auto prefers PowerPoint, then LibreOffice
+backend = "auto"     # auto prefers LibreOffice, then PowerPoint
 dpi = 96
 contact_batch = 20   # slides per contact sheet
 """
@@ -439,6 +439,7 @@ def _render_into(r: Result, pptx: Path, cfg: cfgmod.Config, backend_req: str | N
         "slide_png": str(out.out_dir / "slide-NN.png"),
         "flagged_slides": [{"slide": n, "codes": c} for n, c in out.flagged.items()],
         "contact_sheets": [str(p) for p in out.contact_sheets],
+        "hidden_slides": out.hidden,
     })
 
 
@@ -548,7 +549,9 @@ def render_cmd(args: argparse.Namespace) -> Result:
     r = Result(command="render", data={"input": str(pptx)})
     _render_into(r, pptx, cfg, args.backend, _pages(args.slides), args.dpi)
     flagged = ", ".join(str(f["slide"]) for f in r.data["flagged_slides"]) or "none"
+    hidden = ", ".join(str(n) for n in r.data["hidden_slides"]) or "none"
     r.summary = (f"{'ok' if r.ok else 'failed'} render {pptx.name} with {r.data['backend']}: flagged slides {flagged}; "
+                 f"hidden slides {hidden}; "
                  f"contact sheets {', '.join(Path(p).name for p in r.data['contact_sheets'])} in "
                  f"{r.data['render_dir']}, {_tally(r)}")
     return r
@@ -621,10 +624,11 @@ def check(args: argparse.Namespace) -> Result:
     done = _build_one(path, cfg, args, None, None, r)
     if done:
         r.data.update(done)
-        _render_into(r, Path(done["output"]), cfg, None, None)
+        _render_into(r, Path(done["output"]), cfg, args.backend, None)
     flagged = ", ".join(str(f["slide"]) for f in r.data.get("flagged_slides", [])) or "none"
+    hidden = ", ".join(str(n) for n in r.data.get("hidden_slides", [])) or "none"
     r.summary = (f"{'ok' if r.ok else 'failed'} check --render {path.name}: {r.data['slides']} slides, "
-                 f"flagged {flagged}, {_tally(r)}")
+                 f"flagged {flagged}, hidden {hidden}, {_tally(r)}")
     return r
 
 

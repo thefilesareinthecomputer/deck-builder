@@ -122,6 +122,6 @@ def render_backend(checks: list[Check]) -> str | None:
     status = {c.name: c.status for c in checks}
     if status.get("poppler") != "ok":
         return None
-    if status.get("powerpoint") == "unverified":
-        return "powerpoint"
-    return "libreoffice" if status.get("libreoffice") == "ok" else None
+    if status.get("libreoffice") == "ok":
+        return "libreoffice"
+    return "powerpoint" if status.get("powerpoint") == "unverified" else None

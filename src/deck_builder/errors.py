@@ -14,6 +14,10 @@ EXIT_ENV = 2
 
 # code -> (cause, fix)
 CODES: dict[str, tuple[str, str]] = {
+    "AMBIGUOUS_DECK": (
+        "A folder passed as the deck holds more than one of deck.md, deck.xlsx and deck.csv.",
+        "Pass the deck file itself, or remove the extra copy from the folder.",
+    ),
     "PARSE": (
         "The input can't be parsed: bad YAML, an unclosed block, a malformed table, or no slides.",
         "Fix the syntax at the reported line; `deck-builder docs deck-md` shows the format.",
@@ -77,6 +81,11 @@ CODES: dict[str, tuple[str, str]] = {
     "TABLE_SHAPE": (
         "A table has no header, too many rows or columns, or rows of different lengths.",
         "Fix the table so every row matches the header and fits the field's limits.",
+    ),
+    "TABLE_TALL": (
+        "A table's estimated rendered height, from its row count and each row's wrapped line count, "
+        "exceeds its layout placeholder's height.",
+        "Shorten cell text, cut rows or columns, or choose a layout with a taller table placeholder.",
     ),
     "CHART_SHAPE": (
         "A chart has an unknown type, no categories or series, or a series of the wrong length.",
@@ -155,6 +164,10 @@ CODES: dict[str, tuple[str, str]] = {
     "RENDER_UNVERIFIED": (
         "The PowerPoint render backend hasn't been verified on a real Mac yet.",
         "Treat the render as provisional; run scripts/probe_powerpoint.sh to verify the backend.",
+    ),
+    "STALE_BUILD": (
+        "The deck source recorded in the .pptx's manifest was edited after the .pptx was built.",
+        "Rebuild the deck before trusting this render.",
     ),
     "SKILL_CONFLICT": (
         "`skills install` found a file or folder where it would put a link, and left it alone.",

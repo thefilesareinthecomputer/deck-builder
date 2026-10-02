@@ -3,6 +3,7 @@ import sys
 
 from deck_builder import doctor
 from deck_builder.cli import main
+from deck_builder.doctor import Check
 
 
 def test_doctor_reports_build_readiness_and_backend(ws, capsys):
@@ -30,6 +31,16 @@ def test_doctor_says_how_to_install_the_cli_when_its_missing(ws, capsys, monkeyp
     monkeypatch.setattr("deck_builder.doctor.mcp_command", lambda: None)
     check = agent_check(ws, capsys)
     assert check["status"] == "missing" and check["fix"].startswith("uv tool install --editable ")
+
+
+def test_render_backend_prefers_libreoffice_over_unverified_powerpoint():
+    checks = [Check("poppler", "ok", ""), Check("libreoffice", "ok", ""), Check("powerpoint", "unverified", "")]
+    assert doctor.render_backend(checks) == "libreoffice"
+
+
+def test_render_backend_falls_back_to_powerpoint_without_libreoffice():
+    checks = [Check("poppler", "ok", ""), Check("libreoffice", "missing", ""), Check("powerpoint", "unverified", "")]
+    assert doctor.render_backend(checks) == "powerpoint"
 
 
 def test_doctor_without_config_points_at_init(tmp_path, capsys, monkeypatch):

@@ -28,9 +28,12 @@ DECK_FILES = ("deck.md", "deck.xlsx", "deck.csv")
 def deck_path(path: Path) -> Path:
     """A deck file as given, or the deck file inside a deck folder."""
     if path.is_dir():
-        for name in DECK_FILES:
-            if (path / name).is_file():
-                return path / name
+        found = [path / name for name in DECK_FILES if (path / name).is_file()]
+        if len(found) > 1:
+            raise EnvError(f"{path} has more than one deck file ({', '.join(p.name for p in found)}); "
+                           "pass the deck file itself, or remove the extra copy", code="AMBIGUOUS_DECK")
+        if found:
+            return found[0]
         raise EnvError(f"no {', '.join(DECK_FILES)} in {path}; pass the deck file itself")
     if not path.is_file():
         raise EnvError(f"deck not found: {path}")

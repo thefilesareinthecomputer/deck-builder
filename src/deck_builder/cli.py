@@ -65,6 +65,8 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
     p.add_argument("deck", help=deck_help)
     p.add_argument("--brand", help="brand slug (overrides the deck's brand:)")
     p.add_argument("--render", action="store_true", help="also build, render and measure")
+    p.add_argument("--backend", choices=["auto", "powerpoint", "libreoffice"], default=None,
+                   help="with --render: default from config: auto prefers LibreOffice, then PowerPoint")
     p = add("build", "build a deck into a .pptx", commands.build)
     p.add_argument("deck", help=deck_help)
     p.add_argument("--brand", help="brand slug (overrides the deck's brand:)")
@@ -89,7 +91,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
             commands.render_cmd)
     p.add_argument("pptx", help="a built .pptx (to build and render a deck in one step: check --render)")
     p.add_argument("--backend", choices=["auto", "powerpoint", "libreoffice"], default=None,
-                   help="default from config: auto prefers PowerPoint, then LibreOffice")
+                   help="default from config: auto prefers LibreOffice, then PowerPoint")
     p.add_argument("--slides", help="only these slide numbers, comma-separated")
     p.add_argument("--dpi", type=int, help="PNG resolution (default from config, 96)")
     sub.add_parser("mcp", help="serve the engine as MCP tools over stdio, confined to the workspace (for agents)",

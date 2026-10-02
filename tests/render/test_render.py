@@ -69,6 +69,45 @@ def test_overflow_is_measured_and_flagged(project, capsys):
     assert issue["field"] == "body" and issue["actual"] > 20
 
 
+def test_table_cells_sharing_the_footers_words_dont_misreport_footer_overflow(project, capsys):
+    """Wrapped table cells sit below the table's nominal frame (row height times row count), which
+    used to make their words match the nearest other shape by token - often the footer - and get
+    reported as that shape's overflow."""
+    deck = project / "workspace" / "decks" / "table-footer.md"
+    deck.write_text(
+        "---\nbrand: neutral\nfooter: Confidential draft\n---\n\n"
+        "## Footer word test\nlayout: table\n\n"
+        "| Item | Note |\n|---|---|\n"
+        "| Lease | Confidential draft notes about the warehouse lease renewal running long enough "
+        "that this single cell wraps across several lines inside its column so we can check nothing "
+        "lower down gets blamed on the footer placeholder by mistake |\n"
+        "| Audit | Routine |\n")
+    code, out = run("--config", cfg(project), "check", str(deck), "--render", capsys=capsys)
+    assert code == 0, out["issues"]
+    assert out["flagged_slides"] == []
+    assert not any("Footer" in i["message"] for i in out["issues"])
+
+
+def test_a_table_that_overruns_its_area_is_reported(project, capsys):
+    kit = project / "workspace" / "brands" / "neutral"
+    tokens = yaml.safe_load((kit / "tokens.yaml").read_text())
+    tokens["layouts"]["table"]["fields"]["table"].update(max_rows=20)
+    (kit / "tokens.yaml").write_text(yaml.safe_dump(tokens, sort_keys=False))
+    cell = "Lorem ipsum dolor sit amet consectetur"
+    row = " | ".join([cell] * 6)
+    rows = "\n".join(f"| {row} |" for _ in range(9))
+    deck = project / "workspace" / "decks" / "table-overrun.md"
+    deck.write_text(
+        "---\nbrand: neutral\n---\n\n## Overrun test\nlayout: table\n\n"
+        "| A | B | C | D | E | F |\n|---|---|---|---|---|---|\n" + rows + "\n")
+    code, out = run("--config", cfg(project), "check", str(deck), "--render", capsys=capsys)
+    assert code == 1
+    flagged = {f["slide"]: f["codes"] for f in out["flagged_slides"]}
+    assert flagged == {1: ["OVERFLOW_MEASURED"]}
+    issue = next(i for i in out["issues"] if i["code"] == "OVERFLOW_MEASURED")
+    assert "Table" in issue["message"]
+
+
 def test_render_selected_slides_only(project, capsys):
     deck = project / "workspace" / "decks" / "quarterly-review" / "deck.md"
     run("--config", cfg(project), "build", str(deck), capsys=capsys)
@@ -90,6 +129,24 @@ def test_powerpoint_backend_results_are_marked_unverified(project, capsys, monke
     code, out = run("--config", cfg(project), "render", str(pptx), "--slides", "1", capsys=capsys)
     assert out["backend"] == "powerpoint"
     assert "RENDER_UNVERIFIED" in [i["code"] for i in out["issues"]]
+
+
+def test_render_skips_a_hidden_slide_without_crashing(project, capsys, tmp_path):
+    from pptx import Presentation
+
+    deck = project / "workspace" / "decks" / "quarterly-review" / "deck.md"
+    pptx = tmp_path / "quarterly-review.pptx"
+    run("--config", cfg(project), "build", str(deck), "-o", str(pptx), capsys=capsys)
+    prs = Presentation(str(pptx))
+    prs.slides[5]._element.set("show", "0")  # hide the 6th of 12 slides
+    prs.save(str(pptx))
+    code, out = run("--config", cfg(project), "render", str(pptx), capsys=capsys)
+    assert code == 0, out["issues"]
+    assert out["hidden_slides"] == [6]
+    render_dir = Path(out["render_dir"])
+    names = sorted(p.name for p in render_dir.glob("slide-*.png"))
+    assert names == [f"slide-{n:02d}.png" for n in range(1, 13) if n != 6]
+    assert out["flagged_slides"] == []
 
 
 def test_workbook_resaved_by_libreoffice_builds_identically(project, capsys, tmp_path):

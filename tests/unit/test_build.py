@@ -28,6 +28,7 @@ def test_build_writes_pptx_and_manifest(ws, capsys):
     m = json.loads(manifest.read_text())
     assert [s["layout"] for s in m["slides"]][:3] == ["title", "content", "big-number"]
     assert m["brand"]["slug"] == "stock"
+    assert Path(m["input"]["path"]) == (ws / "decks" / "deck.md").resolve()
 
 
 def test_default_output_uses_folder_name_for_deck_md(ws, capsys):

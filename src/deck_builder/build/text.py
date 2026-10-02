@@ -10,28 +10,46 @@ INLINE = re.compile(r"\*\*(?P<b>.+?)\*\*|\*(?P<i>.+?)\*|`(?P<c>[^`]+)`|\[(?P<lt>
 CODE_FONT_DEFAULT = "Courier New"  # documented default; tokens.yaml text.code_font overrides
 
 
-def add_runs(paragraph: Any, text: str, code_font: str = CODE_FONT_DEFAULT) -> None:
-    """**bold**, *italic*, `code` and [text](url). Everything else is literal."""
+def _styled_run(paragraph: Any, text: str, bold: bool, italic: bool, code_font: str | None = None) -> None:
+    run = paragraph.add_run()
+    run.text = text
+    if bold:
+        run.font.bold = True
+    if italic:
+        run.font.italic = True
+    if code_font:
+        run.font.name = code_font
+
+
+def add_runs(paragraph: Any, text: str, code_font: str = CODE_FONT_DEFAULT, bold: bool = False,
+            italic: bool = False) -> None:
+    """**bold**, *italic*, `code` and [text](url). Everything else is literal.
+
+    `**` or `*` around a code span or link captures the inner markup as literal characters (the
+    outer pattern is lazy but still swallows them), so that inner text is re-scanned on its own,
+    carrying the outer bold or italic down onto whatever runs it produces.
+    """
     pos = 0
     for m in INLINE.finditer(text):
         if m.start() > pos:
-            paragraph.add_run().text = text[pos : m.start()]
-        run = paragraph.add_run()
+            _styled_run(paragraph, text[pos : m.start()], bold, italic)
         if m.group("b") is not None:
-            run.text = m.group("b")
-            run.font.bold = True
+            add_runs(paragraph, m.group("b"), code_font, bold=True, italic=italic)
         elif m.group("i") is not None:
-            run.text = m.group("i")
-            run.font.italic = True
+            add_runs(paragraph, m.group("i"), code_font, bold=bold, italic=True)
         elif m.group("c") is not None:
-            run.text = m.group("c")
-            run.font.name = code_font
+            _styled_run(paragraph, m.group("c"), bold, italic, code_font)
         else:
+            run = paragraph.add_run()
             run.text = m.group("lt")
             run.hyperlink.address = m.group("lu")
+            if bold:
+                run.font.bold = True
+            if italic:
+                run.font.italic = True
         pos = m.end()
     if pos < len(text):
-        paragraph.add_run().text = text[pos:]
+        _styled_run(paragraph, text[pos:], bold, italic)
 
 
 def fill_text(ph: Any, value: Value, code_font: str = CODE_FONT_DEFAULT) -> None:

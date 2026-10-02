@@ -28,6 +28,7 @@ class Rendered:
     slides: list[Path]
     contact_sheets: list[Path]
     issues: list[Issue] = field(default_factory=list)
+    hidden: list[int] = field(default_factory=list)
 
     @property
     def flagged(self) -> dict[int, list[str]]:
@@ -36,6 +37,28 @@ class Rendered:
             if i.code in FLAG_CODES and i.slide is not None:
                 out.setdefault(i.slide, []).append(i.code)
         return dict(sorted(out.items()))
+
+
+def hidden_slide_numbers(prs: Any) -> list[int]:
+    """Slide numbers (1-indexed) marked hidden (`<p:sld show="0">`): LibreOffice leaves these out of the
+    PDF entirely, so PDF page order skips them."""
+    return [n for n, slide in enumerate(prs.slides, start=1) if slide._element.get("show") == "0"]
+
+
+def stale_build_check(pptx: Path, manifest: dict[str, Any] | None) -> list[Issue]:
+    """Warn when the deck source the manifest points at was edited after this .pptx was built."""
+    if not manifest:
+        return []
+    src = manifest.get("input", {}).get("path")
+    if not src:
+        return []
+    source = Path(src)
+    if not source.is_file():
+        return []
+    if source.stat().st_mtime > pptx.stat().st_mtime:
+        return [Issue("STALE_BUILD", f"{source.name} was edited after {pptx.name} was built",
+                     severity="warning")]
+    return []
 
 
 def empty_placeholders(pptx: Path) -> list[Issue]:
@@ -68,21 +91,24 @@ def render(pptx: Path, backend: str, dpi: int, batch: int, pages: list[int] | No
     backends.to_pdf(backend, pptx, pdf)
     prs = Presentation(str(pptx))
     total = len(prs.slides)
+    hidden = hidden_slide_numbers(prs)
+    visible = [n for n in range(1, total + 1) if n not in hidden]
     w_emu, h_emu = int(prs.slide_width or 0), int(prs.slide_height or 0)
     size = (round(w_emu / 914400 * dpi), round(h_emu / 914400 * dpi))  # 13.33 in x 96 dpi = 1280 px
-    pngs = images.rasterize(pdf, out_dir, size, pages, total)
+    pngs = images.rasterize(pdf, out_dir, size, pages, total, visible)
     issues: list[Issue] = []
     if backend == "powerpoint":
         issues.append(Issue("RENDER_UNVERIFIED", "the PowerPoint backend hasn't been verified on a real Mac yet",
                             severity="warning"))
     mpath = manifest_path(pptx)
     manifest: dict[str, Any] | None = json.loads(mpath.read_text()) if mpath.is_file() else None
-    issues += measure.overflow(pptx, pdf, manifest)
+    issues += stale_build_check(pptx, manifest)
+    issues += measure.overflow(pptx, pdf, manifest, visible)
     issues += empty_placeholders(pptx)
     if brand is not None:
         issues += fonts.check(pdf, brand.meta)
     if pages:
         issues = [i for i in issues if i.slide is None or i.slide in pages]
-    result = Rendered(backend, out_dir, pdf, pngs, [], issues)
+    result = Rendered(backend, out_dir, pdf, pngs, [], issues, hidden)
     result.contact_sheets = images.contact_sheets(pngs, out_dir, batch, set(result.flagged))
     return result

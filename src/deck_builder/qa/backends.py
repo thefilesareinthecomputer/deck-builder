@@ -41,10 +41,10 @@ def choose(requested: str) -> str:
         if tools.soffice() is None:
             raise EnvError(f"LibreOffice not found; install it: {tools.install_hint('libreoffice')}")
         return "libreoffice"
-    if tools.powerpoint():
-        return "powerpoint"
     if tools.soffice() is not None:
         return "libreoffice"
+    if tools.powerpoint():
+        return "powerpoint"
     raise EnvError("no renderer: install Microsoft PowerPoint (Mac) or LibreOffice "
                    f"({tools.install_hint('libreoffice')})")
 
