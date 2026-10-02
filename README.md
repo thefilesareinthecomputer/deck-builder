@@ -1,8 +1,8 @@
 <h1 align="center">deck-builder</h1>
 
 <p align="center">
-  Write slides in markdown or Excel and get fully editable PowerPoint decks in your own brand.<br>
-  The same input always builds the same file, and Claude Code walks you through setup and your first deck.
+  Turn markdown or Excel into fully editable PowerPoint decks, built on your own brand template.<br>
+  Every build is deterministic, every slide is checked, and guided setup takes you from install to first deck.
 </p>
 
 <p align="center">
@@ -24,28 +24,28 @@
 <p align="center">
   <img src="docs/images/showcase.png" width="100%" alt="The same deck built in three brands: a dark green paper supplier set in Georgia, a navy office-systems company set in Avenir Next, and a charcoal soap maker set in Helvetica Neue. Each column shows the title slide, a native column chart and an image slide.">
 </p>
-<p align="center"><sub>One <code>deck.md</code>, built with three brand kits. Every chart is a native PowerPoint chart and every word is editable.</sub></p>
+<p align="center"><sub>One <code>deck.md</code>, rendered in three brands. Every chart is native and every word remains editable.</sub></p>
 
 <br>
 
-You write the content, or an agent does. deck-builder handles layout, styling and validation: every slide fills a placeholder in your template, and anything that doesn't fit fails a check that tells you how to fix it.
+You or an agent supply the content, and deck-builder sets every slide in a placeholder of your PowerPoint template, so typography, color and layout always come from the brand. Content that exceeds its space fails validation with an issue code that explains the fix.
 
 <table>
   <tr>
-    <td width="33%" valign="top"><b>Your brand, your template</b><br>Generate a brand kit from your colors, fonts and logo, or wrap the PowerPoint template you already use.</td>
-    <td width="33%" valign="top"><b>Write in markdown or Excel</b><br>Draft in <code>deck.md</code>, hand your team <code>deck.xlsx</code>. They convert into each other without loss, and either one builds the deck.</td>
-    <td width="33%" valign="top"><b>Guided setup</b><br>In Claude Code, onboarding checks your machine, sets up your brand and builds your first deck with you.</td>
+    <td width="33%" valign="top"><b>Built on your template</b><br>Generate a brand kit from your colors, fonts and logo, or adopt the PowerPoint template your team already uses.</td>
+    <td width="33%" valign="top"><b>Markdown or Excel</b><br>Author in <code>deck.md</code> or <code>deck.xlsx</code>. The formats convert losslessly, so writers and reviewers each work in the one they prefer.</td>
+    <td width="33%" valign="top"><b>Guided onboarding</b><br>In Claude Code, onboarding checks your environment, configures your brand and builds a first deck with you.</td>
   </tr>
   <tr>
-    <td valign="top"><b>Deterministic builds</b><br>The same input builds the same file every time, and the engine makes no network calls.</td>
-    <td valign="top"><b>Fully editable output</b><br>Real text in template placeholders, native charts and tables, speaker notes and alt text.</td>
-    <td valign="top"><b>Visual QA built in</b><br>Every render measures where each word landed and flags only the slides that need a look.</td>
+    <td valign="top"><b>Deterministic builds</b><br>Identical input produces an identical file, and the engine makes no network calls.</td>
+    <td valign="top"><b>Native, editable output</b><br>Real text in template placeholders, native charts and tables, speaker notes and alt text. Nothing is flattened into images.</td>
+    <td valign="top"><b>Automated visual QA</b><br>Each render measures where every word lands and flags only the slides that need review.</td>
   </tr>
 </table>
 
 ## Quick start
 
-You need [uv](https://docs.astral.sh/uv/). Rendering also needs LibreOffice (or PowerPoint on a Mac) and poppler, and `uv run deck-builder doctor` checks for them.
+Requires [uv](https://docs.astral.sh/uv/). Rendering also requires LibreOffice (or PowerPoint on macOS) and poppler; `uv run deck-builder doctor` verifies both.
 
 ```bash
 git clone <this repo> deck-builder && cd deck-builder
@@ -53,30 +53,30 @@ uv run deck-builder init
 uv run deck-builder check workspace/decks/quarterly-review --render
 ```
 
-`init` sets up a workspace with a neutral brand and two example decks, and `check --render` builds and renders the first one. Open `workspace/out/quarterly-review.pptx` to see the result.
+`init` creates a workspace with a neutral brand and two example decks, and `check --render` validates, builds and renders the first of them. The finished deck is at `workspace/out/quarterly-review.pptx`.
 
-To run `deck-builder` from any folder, install it once with `uv tool install --editable .`
+To use `deck-builder` from any directory, install it once with `uv tool install --editable .`
 
 > [!TIP]
-> **Using Claude Code?** Open the clone and start a session. Onboarding walks you through these steps, then sets up your own brand.
+> **Working in Claude Code?** Open the repository and start a session. Onboarding runs these steps with you and then sets up your brand.
 
 ## How it works
 
 1. **Write** the content in `deck.md` or `deck.xlsx`.
 2. **Check** it. Unknown layouts, missing images and text over a field's character budget fail with an issue code.
 3. **Build** the `.pptx` from the brand's template.
-4. **Render** it and review the contact sheet. Words that overflow their box, empty placeholders and substituted fonts get flagged.
+4. **Render** it and review the contact sheet. Overflowing text, empty placeholders and substituted fonts are flagged.
 
-Fix what's flagged and run it again; `deck-builder explain <CODE>` prints the cause and fix for any issue code. `check --render` runs steps 2 to 4 in one command.
+Resolve any flagged items and repeat. `deck-builder explain <CODE>` documents the cause and fix for every issue code, and `check --render` runs steps 2 through 4 in a single command.
 
 <p align="center">
   <img src="docs/images/contact-sheet.png" width="100%" alt="A contact sheet of nine rendered slides labeled slide 1 to slide 9, the image an agent reviews after a render.">
 </p>
-<p align="center"><sub>A render's contact sheet. Flagged slides get a red border, so a reviewer reads one image instead of nine.</sub></p>
+<p align="center"><sub>The contact sheet from a render. Flagged slides receive a red border, so a reviewer reads one image instead of nine.</sub></p>
 
 ## Write a deck
 
-One `##` heading is one slide. `key: value` lines fill the layout's fields, and the rest fills its body. These three slides are the first column of the image at the top:
+Each `##` heading defines a slide. `key: value` lines populate the layout's fields, and the remaining content fills its body. The three slides below form the first column of the image above:
 
 ````markdown
 ---
@@ -113,9 +113,9 @@ caption: "Opened in August: same-day delivery for the northern accounts."
 ![The new north warehouse](assets/hero.png)
 ````
 
-Field values are YAML, so quote a value that contains `: `. `deck-builder brand show <slug>` lists a brand's layouts, fields and character budgets. The [full showcase deck](tests/fixtures/demo-brands/showcase/deck.md) builds into all three brands in one command with `build --data`.
+Field values are YAML, so quote any value that contains `: `. `deck-builder brand show <slug>` lists a brand's layouts, fields and character budgets. The [full showcase deck](tests/fixtures/demo-brands/showcase/deck.md) builds into all three brands with a single `build --data` command.
 
-To bring in an existing deck, `deck-builder import old.pptx new-deck --brand <slug>` turns it back into `deck.md` and its images, drops one-off formatting and reports anything that needs a decision.
+Existing decks can be brought in with `deck-builder import old.pptx new-deck --brand <slug>`, which recovers `deck.md` and its images, removes one-off formatting and reports anything that needs a decision.
 
 ## Brands
 
@@ -133,7 +133,7 @@ brands/<slug>/
 | An existing template | `deck-builder brand adopt <slug> --template client.potx` wraps it; a test render then tunes the budgets |
 | Nothing yet | The `neutral` brand that `init` creates |
 
-A deck names its brand with `brand: <slug>`, and `--brand` overrides it for one build. Brands are found under `brand_paths` in `deck-builder.toml`, so a client's kit can live in its own private repo. Nothing under `workspace/` is committed.
+A deck selects its brand with `brand: <slug>`, and `--brand` overrides it for a single build. Brands resolve from the `brand_paths` in `deck-builder.toml`, so a client kit can live in its own private repository. Nothing under `workspace/` is committed.
 
 ## Commands
 
@@ -153,11 +153,11 @@ A deck names its brand with `brand: <slug>`, and `--brand` overrides it for one 
 | `docs [topic]`, `explain <CODE>` | Reference topics and issue-code fixes for the installed version |
 | `skills install` | Link this clone's skills and agents into `~/.claude` |
 
-A `<deck>` is a `.md`, `.xlsx` or `.csv` file, or a folder holding one. Every command takes `--json`. Exit codes are 0 for success, 1 for issues to fix and 2 for usage or environment problems. `deck-builder docs` lists the reference topics, and [docs/issue-codes.md](docs/issue-codes.md) lists every issue code.
+A `<deck>` is a `.md`, `.xlsx` or `.csv` file, or a folder containing one. Every command accepts `--json`. Exit codes are 0 for success, 1 for issues to fix and 2 for usage or environment errors. `deck-builder docs` lists the reference topics, and [docs/issue-codes.md](docs/issue-codes.md) documents every issue code.
 
 ## Claude Code
 
-deck-builder ships with skills and agents for Claude Code, so you can ask for a deck in plain language, from a brief or a folder of notes, and review the rendered result.
+deck-builder includes skills and agents for Claude Code. Describe the deck you need, from a brief or a folder of notes, and review the rendered result.
 
 | Piece | Job |
 |---|---|
@@ -168,23 +168,23 @@ deck-builder ships with skills and agents for Claude Code, so you can ask for a 
 | `deck-brand-agent` | Builds or adopts a brand kit and tunes its budgets with a test render |
 | `deck-builder-agent` | Runs the check, build and render loop on a larger deck in its own context |
 
-The agents have no shell. They reach the engine only through its MCP server (`deck-builder mcp`), confined to the workspace, so the CLI has to be on PATH (`uv tool install --editable .` from the clone). `deck-builder skills install` adds the skills and agents to `~/.claude` for use in other repos.
+The agents have no shell access. They reach the engine only through its MCP server (`deck-builder mcp`), which is confined to the workspace, so the CLI must be on your PATH (`uv tool install --editable .` from the repository). `deck-builder skills install` makes the skills and agents available in other projects.
 
 > [!NOTE]
-> The engine is local, but what an agent reads goes to Anthropic, as in any Claude Code session. Agents can still write files the session allows, so keep client work outside the clone.
+> The engine runs locally, but content an agent reads is sent to Anthropic, as in any Claude Code session. Agents can write any file the session permits, so keep client work outside the repository.
 
 ## Principles
 
-- **Content in, design out.** Decks hold text, data and image references. Layout, fonts and colors come only from the brand kit, and budgets aren't loosened to make content fit.
-- **Confined.** A deck reads images only inside its folder, a build writes only the `.pptx` files it made, and bulk data can't add slides or images. Imported decks are untrusted input.
-- **Restraint.** Visual additions such as slide numbers, footers and status dots are the smallest mark that does the job.
+- **Content in, design out.** Decks contain text, data and image references. Layout, typography and color come only from the brand kit, and budgets are never relaxed to make content fit.
+- **Confined by default.** A deck reads images only from its own folder, a build writes only the `.pptx` files it creates, and bulk data cannot add slides or images. Imported decks are treated as untrusted input.
+- **Restraint.** Visual additions such as slide numbers, footers and status dots use the smallest mark that does the job.
 
 ## Status
 
-v0.1.0. See [CHANGELOG.md](CHANGELOG.md). Known limits:
+Current release: v0.1.0. See the [changelog](CHANGELOG.md). Known limitations:
 
-- The PowerPoint render backend hasn't been verified on a Mac with PowerPoint, so its renders warn `RENDER_UNVERIFIED`. LibreOffice renders are a close proxy.
-- Icons are PNG alpha masks; SVG isn't supported.
+- The PowerPoint render backend has not yet been verified on a Mac with PowerPoint installed, so its renders include the `RENDER_UNVERIFIED` warning. LibreOffice renders are a close proxy.
+- Icons are PNG alpha masks; SVG is not supported.
 
 ## Development
 
@@ -195,8 +195,8 @@ uv run ruff check && uv run mypy
 uv run python scripts/readme_images.py # regenerate the images in this README
 ```
 
-The three fictional brands in `tests/fixtures/demo-brands/` are the test and showcase brands; their names and artwork were made for this repo. Releases follow [docs/release-checklist.md](docs/release-checklist.md).
+The three fictional brands in `tests/fixtures/demo-brands/` serve as the test and showcase brands; their names and artwork were created for this repository. Releases follow the [release checklist](docs/release-checklist.md).
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+Released under the [MIT License](LICENSE).
