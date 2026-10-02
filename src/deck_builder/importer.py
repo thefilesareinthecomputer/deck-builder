@@ -31,6 +31,7 @@ from deck_builder.parse.markdown import number
 from deck_builder.validate import IMAGE_EXT, confined
 from deck_builder.write.markdown import table_md
 
+LINK_SCHEMES = ("http://", "https://", "mailto:")
 FURNITURE = {PP_PLACEHOLDER.DATE, PP_PLACEHOLDER.FOOTER, PP_PLACEHOLDER.SLIDE_NUMBER}
 TITLES = {PP_PLACEHOLDER.TITLE, PP_PLACEHOLDER.CENTER_TITLE, PP_PLACEHOLDER.VERTICAL_TITLE}
 FITS = {"text": {"text", "bullets"}, "image": {"image"}, "icon": {"icon"}, "table": {"table"},
@@ -80,6 +81,10 @@ def _style(run: _Run, code_font: str) -> tuple[bool, bool, bool, str]:
     bold = rpr is not None and rpr.get("b") in ("1", "true")
     italic = rpr is not None and rpr.get("i") in ("1", "true")
     link = str(run.hyperlink.address or "")
+    # Only http(s) and mailto survive import as a link; anything else (javascript:, file:, a UNC
+    # path, ...) becomes plain text - the rebuild never writes a scheme deck.md authors didn't type.
+    if link and not link.lower().startswith(LINK_SCHEMES):
+        link = ""
     return bold, italic, run.font.name == code_font, link
 
 
