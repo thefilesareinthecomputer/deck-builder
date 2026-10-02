@@ -14,6 +14,10 @@ EXIT_ENV = 2
 
 # code -> (cause, fix)
 CODES: dict[str, tuple[str, str]] = {
+    "AMBIGUOUS_DECK": (
+        "A folder passed as the deck holds more than one of deck.md, deck.xlsx and deck.csv.",
+        "Pass the deck file itself, or remove the extra copy from the folder.",
+    ),
     "PARSE": (
         "The input can't be parsed: bad YAML, an unclosed block, a malformed table, or no slides.",
         "Fix the syntax at the reported line; `deck-builder docs deck-md` shows the format.",

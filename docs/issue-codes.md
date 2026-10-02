@@ -4,6 +4,7 @@ Generated from the engine by `deck-builder docs codes`. Fix by code, not by mess
 
 | Code | Cause | Fix |
 |---|---|---|
+| `AMBIGUOUS_DECK` | A folder passed as the deck holds more than one of deck.md, deck.xlsx and deck.csv. | Pass the deck file itself, or remove the extra copy from the folder. |
 | `PARSE` | The input can't be parsed: bad YAML, an unclosed block, a malformed table, or no slides. | Fix the syntax at the reported line; `deck-builder docs deck-md` shows the format. |
 | `SPEC_VERSION` | The input declares a spec_version newer than this engine supports. | Upgrade deck-builder, or lower spec_version if the input doesn't use newer features. |
 | `SCHEMA` | brand.yaml, tokens.yaml or a manifest doesn't match its JSON Schema. | Fix the listed keys; `deck-builder schema brand` or `deck-builder schema tokens` prints the schema. |

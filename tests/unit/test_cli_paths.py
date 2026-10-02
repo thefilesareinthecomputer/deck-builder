@@ -24,6 +24,15 @@ def test_a_folder_without_a_deck_file_is_a_clear_error(ws, capsys):
     assert "no deck.md, deck.xlsx, deck.csv in" in out["error"]
 
 
+def test_a_folder_with_two_deck_files_is_ambiguous(ws, capsys):
+    write_deck(ws, GOOD)
+    (ws / "decks" / "deck.csv").write_text("title\nAnother deck\n")
+    code, out = cli_json(ws, "check", str(ws / "decks"), capsys=capsys)
+    assert code == 2
+    assert out["code"] == "AMBIGUOUS_DECK"
+    assert "deck.md" in out["error"] and "deck.csv" in out["error"]
+
+
 def test_build_output_to_an_existing_folder(ws, capsys):
     deck = write_deck(ws, GOOD)
     (ws / "outbox").mkdir()
