@@ -4,6 +4,8 @@
 
 ### Added
 
+- `deck-builder mcp`: the engine as MCP tools over stdio (hand-written JSON-RPC, no new dependency), for agents without a shell. Each tool runs the CLI's own parser and handler and returns its `--json` object; every path is confined to the workspace, brand writes to a `brand_paths` folder. `doctor` reports whether it answers.
+- `brand add-asset <slug> <png> --as logo/<id>|icon/<id>` copies a PNG into a kit.
 - `import <deck.pptx> <out> --brand <slug> | --adopt <new-slug>`: an existing deck back into `deck.md`, its images (named by slide and content hash) and `import-report.md`. Layouts map by name or by best fit on placeholder types; placeholders map to fields; runs become inline markup, tables pipe tables, charts chart blocks, notes `Notes:`; brand logos and icons are recognized by hash. Content that can't be placed goes to the slide's notes and the report, SmartArt, media, embedded objects and groups are reported, linked images are never fetched, and local formatting is dropped and counted. The `deck-builder` skill has a "Refresh an existing deck" path.
 - `check` and `build` accept a deck folder and use its `deck.md`, `deck.xlsx` or `deck.csv`, in that order.
 - `build -o` accepts a folder (an existing one, or a path ending in `/`) and writes the default file name inside it.
@@ -23,6 +25,8 @@
 - A template's theme XML is parsed with entities, DTDs and network loads off, so an adopted template or imported deck can't read local files through XML entities; such a theme is refused.
 - Re-rendering deletes only the files render writes, not the whole `.render/` folder.
 - The showcase fixture's hero images moved into `showcase/assets/`, since a deck's images must sit inside its folder.
+- `deck-builder-agent` and `deck-brand-agent` have no shell: Bash is removed and they reach the engine only through the deck-builder MCP server, confined to the workspace, so a missing or failing server leaves them able to run nothing. `skills install` refuses until `deck-builder` is on PATH. Approved by the user.
+- Front matter `template:` and `tokens:` must be files inside the deck's folder.
 - `deck-decomposer-agent` runs no commands: Bash is removed, since it reads untrusted material. The main agent puts `brand show <slug> --json` and `docs deck-md` in its prompt and runs `check` on its draft.
 
 ### Changed

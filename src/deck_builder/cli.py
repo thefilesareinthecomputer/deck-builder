@@ -42,13 +42,16 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
     p = add("doctor", "check dependencies, render backends and permissions", commands.doctor_cmd)
     p.add_argument("--powerpoint", action="store_true",
                    help="also test PowerPoint automation (launches PowerPoint; the first run shows a macOS prompt)")
-    p = add("brand", "list, show, check, init or adopt brand kits", commands.brand_cmd)
-    p.add_argument("action", choices=["list", "show", "check", "init", "adopt"])
+    p = add("brand", "list, show, check, init or adopt brand kits, or add a logo or icon", commands.brand_cmd)
+    p.add_argument("action", choices=["list", "show", "check", "init", "adopt", "add-asset"])
     p.add_argument("slug", nargs="?")
+    p.add_argument("file", nargs="?", help="add-asset: the PNG to copy into the kit")
+    p.add_argument("--as", dest="as_", metavar="KIND/ID", help="add-asset: logo/<id> or icon/<id>")
     p.add_argument("--from", dest="from_", metavar="BRAND_YAML", help="init: the brand.yaml to generate from")
     p.add_argument("--template", help="adopt: the .potx or .pptx to wrap")
     p.add_argument("--out", help="folder to create the kit in (default: the first brand_paths entry)")
-    p.add_argument("--force", action="store_true", help="replace the generated files of an existing kit")
+    p.add_argument("--force", action="store_true",
+                   help="replace the generated files of an existing kit, or an existing asset")
     p = add("inspect", "list a template's layouts and placeholders", commands.inspect_cmd)
     p.add_argument("template")
     p.add_argument("--yaml", action="store_true", help="print a starter layouts block for tokens.yaml")
@@ -86,6 +89,8 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
                    help="default from config: auto prefers PowerPoint, then LibreOffice")
     p.add_argument("--slides", help="only these slide numbers, comma-separated")
     p.add_argument("--dpi", type=int, help="PNG resolution (default from config, 96)")
+    sub.add_parser("mcp", help="serve the engine as MCP tools over stdio, confined to the workspace (for agents)",
+                   description="serve the engine as MCP tools over stdio, confined to the workspace (for agents)")
     p = add("schema", "print a JSON Schema", commands.schema_cmd)
     p.add_argument("name", choices=["brand", "tokens", "manifest"])
     p = add("skills", "link this clone's skills and agent into another Claude Code setup", commands.skills_cmd)
@@ -109,22 +114,32 @@ def emit(result: Result, as_json: bool) -> None:
         print(result.summary)
 
 
+def run(handler: Handler, args: argparse.Namespace) -> Result:
+    """Run one command; an environment problem becomes a Result with `error` (and `code`) and exit 2."""
+    try:
+        return handler(args)
+    except EnvError as e:
+        result = Result(command=args.command, ok=False, exit_code=EXIT_ENV)
+        result.data["error"] = str(e)
+        if e.code:
+            result.data["code"] = e.code
+        return result
+
+
 def main(argv: list[str] | None = None) -> int:
     ap, handlers = build_parser()
     args = ap.parse_args(argv)
     if not args.command:
         ap.print_help()
         return EXIT_ENV
+    if args.command == "mcp":
+        from deck_builder import mcp
+
+        return mcp.serve(args.config)
     as_json = bool(getattr(args, "json", False))
-    try:
-        result = handlers[args.command](args)
-    except EnvError as e:
-        result = Result(command=args.command, ok=False, exit_code=EXIT_ENV)
-        if as_json:
-            result.data["error"] = str(e)
-            if e.code:
-                result.data["code"] = e.code
-        else:
-            print(f"error{' ' + e.code if e.code else ''}: {e}", file=sys.stderr)
+    result = run(handlers[args.command], args)
+    if "error" in result.data and not as_json:
+        code = result.data.get("code")
+        print(f"error{' ' + code if code else ''}: {result.data['error']}", file=sys.stderr)
     emit(result, as_json)
     return result.exit_code

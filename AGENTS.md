@@ -27,6 +27,10 @@ If `uv run deck-builder brand list` reports no config, the user hasn't onboarded
 Subagents can't talk with the user. The main agent holds the conversation, hands each agent the
 decisions it needs, relays the questions they return, and reviews their work before the user sees it.
 
+The subagents have no shell. `deck-builder-agent` and `deck-brand-agent` reach the engine only
+through the deck-builder MCP server (`deck-builder mcp`, which needs the CLI on PATH), confined to
+the workspace; put their input files inside it. The decomposer runs no commands at all.
+
 ## Working on the engine itself
 
 - `uv run pytest`, `uv run ruff check`, `uv run mypy` must pass before a commit.

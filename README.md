@@ -154,6 +154,8 @@ A `<deck>` is a `.md`, `.xlsx` or `.csv` deck file, or a folder holding `deck.md
 | `deck-brand-agent` | Builds or adopts a brand kit and tunes its budgets with a test render |
 | `deck-builder-agent` | Runs the check, build and render loop on a larger deck in its own context |
 
+The agents have no shell: they reach the engine only through the deck-builder MCP server (`deck-builder mcp`), whose tools are confined to the workspace, so they need the CLI on PATH (`uv tool install --editable <clone>`).
+
 The engine does all the deterministic work, so the model spends its tokens on content and review. The engine is local; when you use the Claude Code layer, what the agent reads is sent to Anthropic like any Claude Code session.
 
 ---

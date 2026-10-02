@@ -56,6 +56,10 @@ To keep their decks in a folder outside the clone, run `uv run deck-builder init
 from the clone (it creates the folder if needed). Then work from that folder with
 `uv run --project <clone> deck-builder ...`; the CLI finds that folder's `deck-builder.toml`.
 
+Then install the CLI on their PATH, with their OK: `uv tool install --editable <clone>`. The
+subagents have no shell and run the engine through `deck-builder mcp`, so they need it. Confirm
+with `uv run deck-builder doctor`: the `agent tools (mcp)` row should be `ok`.
+
 ## 3. Choose a brand path
 
 Ask which fits, in plain words:
@@ -86,8 +90,8 @@ Then show the workflow for their own decks: `uv run deck-builder docs workflow`.
 
 ## 5. Optional: use from other repos
 
-`uv tool install .` from the clone puts `deck-builder` on their PATH. Then, from the clone,
-`uv run deck-builder skills install` shows the links it would create in `~/.claude` for the skills
-and the agent; with their OK, rerun it with `--yes`. The links point back at this clone, so a
+With the CLI installed (step 2), from the clone, `uv run deck-builder skills install` shows the
+links it would create in `~/.claude` for the skills and the agents; with their OK, rerun it with
+`--yes`. It refuses until `deck-builder` is on their PATH. The links point back at this clone, so a
 `git pull` here updates them everywhere. Other repos can keep their own `deck-builder.toml` with
 `brand_paths` pointing at their brand kits.

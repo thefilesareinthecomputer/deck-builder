@@ -52,6 +52,9 @@ Once the decisions are made, hand the mechanical work to the `deck-brand-agent` 
 slug, the decisions, and the paths of the brand guide, template, logos and icons. It writes
 `brand.yaml`, generates or adopts the kit, checks it, test-renders it and returns proposed
 budgets and questions. Relay the questions, get the user's answers, and send it back if needed.
+It has no shell and runs the engine through the deck-builder MCP tools, which read only inside the
+workspace and the `brand_paths` folders: copy the user's guide, template, logos and icons into a
+scratch folder in the workspace first, and give it those paths.
 The commands it runs, for doing it here instead:
 
 Run the CLI as `uv run deck-builder` inside the deck-builder clone, or `deck-builder` where it's

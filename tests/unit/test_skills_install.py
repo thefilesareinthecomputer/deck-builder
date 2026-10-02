@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from deck_builder.cli import main
 
 REPO = Path(__file__).resolve().parents[2]
@@ -9,6 +11,19 @@ REPO = Path(__file__).resolve().parents[2]
 def run(*argv, capsys):
     code = main([*argv, "--json"])
     return code, json.loads(capsys.readouterr().out)
+
+
+@pytest.fixture(autouse=True)
+def cli_on_path(monkeypatch):
+    monkeypatch.setattr("deck_builder.doctor.mcp_command", lambda: ["deck-builder"])
+
+
+def test_install_refuses_without_the_cli_on_path(tmp_path, capsys, monkeypatch):
+    monkeypatch.chdir(REPO)
+    monkeypatch.setattr("deck_builder.doctor.mcp_command", lambda: None)
+    code, out = run("skills", "install", "--target", str(tmp_path), "--yes", capsys=capsys)
+    assert code == 2 and f"uv tool install --editable {REPO}" in out["error"]
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_plan_changes_nothing_without_yes(tmp_path, capsys, monkeypatch):

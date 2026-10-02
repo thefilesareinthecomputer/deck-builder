@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from PIL import Image as PILImage
 
 from deck_builder import assets as asset_inventory
 from deck_builder import config as cfgmod
@@ -152,7 +153,46 @@ def brand_cmd(args: argparse.Namespace) -> Result:
         return r
     if args.action == "adopt":
         return _adopt(args, cfg, r)
+    if args.action == "add-asset":
+        return _add_asset(args, cfg, r)
     return _init_brand(args, cfg, r)
+
+
+def _add_asset(args: argparse.Namespace, cfg: cfgmod.Config, r: Result) -> Result:
+    """Copy a PNG into a kit as a logo or an icon, so placing an asset needs no shell."""
+    m = re.fullmatch(r"(logo|icon)/([a-z0-9][a-z0-9-]*)", args.as_ or "")
+    if not args.slug or not args.file or not m:
+        raise EnvError("brand add-asset needs a slug, a PNG file and --as logo/<id> or icon/<id> "
+                       "(an id is lowercase letters, digits and hyphens)")
+    src = Path(args.file)
+    if not src.is_file():
+        raise EnvError(f"not found: {src}")
+    try:
+        with PILImage.open(src) as im:
+            is_png = im.format == "PNG"
+    except (OSError, ValueError):
+        is_png = False
+    if not is_png:
+        raise EnvError(f"{src.name} isn't a PNG; convert it first")
+    b = registry.get(cfg, args.slug)
+    kind, aid = m.groups()
+    logos = b.meta.get("logos") or {}
+    if kind == "icon":
+        icons_dir = (b.meta.get("icons") or {}).get("dir")
+        if not icons_dir:
+            raise EnvError(f"brand {b.slug!r} has no icons: dir in brand.yaml; add one first")
+        rel = f"{icons_dir}/{aid}.png"
+    else:
+        rel = str(logos.get(aid) or f"assets/{aid}.png")
+    dest = inside(b.path, rel)
+    if dest.exists() and not args.force:
+        raise EnvError(f"{rel} already exists in brand {b.slug!r}; pass --force to replace it")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(src, dest)
+    r.data.update({"slug": b.slug, "path": str(dest), "ref": f"brand:{kind}/{aid}"})
+    todo = "" if kind == "icon" or aid in logos else f"; add `{aid}: {rel}` under logos: in brand.yaml to use it"
+    r.summary = f"ok brand add-asset {b.slug}: brand:{kind}/{aid} at {rel}{todo}"
+    return r
 
 
 DEFAULT_CONFIG = """\
@@ -411,6 +451,9 @@ def _pages(spec: str | None) -> list[int] | None:
 
 def skills_cmd(args: argparse.Namespace) -> Result:
     clone = skills.find_clone(Path.cwd())
+    if doctor.mcp_command() is None:  # the agents reach the engine only through `deck-builder mcp`
+        raise EnvError(f"deck-builder isn't on PATH, and the agents need it for their tools; install it first: "
+                       f"uv tool install --editable {clone}")
     target = Path(args.target).expanduser() if args.target else Path("~/.claude").expanduser()
     links = skills.plan(clone, target)
     if args.yes:

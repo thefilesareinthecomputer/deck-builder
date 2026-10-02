@@ -140,6 +140,14 @@ def test_brand_ids_that_could_name_a_path_are_unknown(ws, capsys, ref):
     assert "UNKNOWN_ASSET" in codes(out)
 
 
+def test_an_explicit_template_outside_the_deck_folder_is_refused(ws, capsys):
+    kit = "../brands/stock"
+    body = GOOD.replace("brand: stock\n", f"template: {kit}/template.pptx\ntokens: {kit}/tokens.yaml\n")
+    code, out = cli_json(ws, "check", str(write_deck(ws, body)), capsys=capsys)
+    assert code == 2
+    assert "must be files inside the deck's folder" in out["error"]
+
+
 # ---------------------------------------------------------------- bulk data rows
 
 

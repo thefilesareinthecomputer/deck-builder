@@ -37,8 +37,10 @@ and only then build.
 
 For more than a handful of slides, hand the build loop to the `deck-builder-agent` subagent and
 keep this context for the storyline and the review. Give it the source material paths, the brand
-slug, the approved storyline, the deck's path and any constraints. It returns a short report;
-run the review gate below before anything reaches the user.
+slug, the approved storyline, the deck's path and any constraints. It has no shell and runs the
+engine through the deck-builder MCP tools, which work only inside the workspace, so every path you
+give it must be there. It returns a short report; run the review gate below before anything
+reaches the user.
 
 ## The loop
 

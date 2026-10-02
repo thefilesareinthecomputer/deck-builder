@@ -341,6 +341,7 @@ The supported team path is: write `deck.md`, `convert` to `deck.xlsx`, share it 
 deck-builder init [--dir D]                         # workspace, config, neutral brand, example decks
 deck-builder doctor [--powerpoint] [--json]         # deps, tools, render backends; --powerpoint tests automation
 deck-builder brand list|show|check|init|adopt ...   # section 5.4; init and adopt take --out and --force
+deck-builder brand add-asset <slug> <png> --as logo/<id>|icon/<id> [--force]  # copy a PNG into a kit
 deck-builder inspect <template> [--yaml|--json]     # layouts, placeholders, theme
 deck-builder assets <brand|deck> [--json]           # section 6.2
 deck-builder check <deck> [--render] [--json]       # validate; --render also builds to the default output, renders, measures
@@ -351,7 +352,8 @@ deck-builder render <pptx> [--backend B] [--slides 3,7] [--dpi N] [--json]
 deck-builder schema brand|tokens|manifest
 deck-builder docs [topic]                           # reference topics shipped with the engine
 deck-builder explain <CODE>                         # cause and fix for one issue code
-deck-builder skills install [--target ~/.claude] [--yes]
+deck-builder skills install [--target ~/.claude] [--yes]  # refuses until deck-builder is on PATH
+deck-builder mcp                                    # the agents' MCP server over stdio, section 13.3
 deck-builder --version
 ```
 
@@ -460,9 +462,19 @@ Headless, with a throwaway user profile per run and a 300 s timeout. Only render
 
 Skills never contain engine logic. A skill that needs a new capability proposes a CLI change.
 
-### 13.3 deck-builder-agent
+### 13.3 Subagents and the MCP server
 
-`.claude/agents/deck-builder-agent.md`, `model: sonnet`. Tools: Bash, Read, Edit, Write, Glob, Grep. It runs the write, check, fix, build, render loop in its own context, stops after three fix loops, and returns a short report: output path, manifest path, slide count, remaining issues by code, flagged slides, and anything it assumed.
+`.claude/agents/deck-builder-agent.md` runs the write, check, fix, build, render loop in its own context, stops after three fix loops, and returns a short report: output path, manifest path, slide count, remaining issues by code, flagged slides, and anything it assumed. `deck-brand-agent` generates, adopts, checks and test-renders a kit; `deck-decomposer-agent` drafts an outline and `deck.md` from a body of material and runs no commands. All three are `model: sonnet`.
+
+No subagent has a shell. `deck-builder-agent` and `deck-brand-agent` have Read, Write, Edit, Glob and Grep, plus the tools of a deck-builder MCP server declared inline in their frontmatter (`command: deck-builder`, `args: [mcp]`).
+
+`deck-builder mcp` is a stdio MCP server (newline-delimited JSON-RPC 2.0, hand-written so the engine keeps no network library) with tools for check, build, render, convert, import, brand list, show, check, init, adopt and add-asset, inspect, assets, docs, explain and doctor. Each tool builds the argv the CLI would get, runs it through the CLI's parser and handler, and returns the `--json` object, with `isError` on exit 1 or 2. Not exposed: `init`, `skills`, render backends other than the configured one. The server starts only with a config file and confines every path argument, symlinks followed: decks, data and outputs inside the workspace root (the config file's folder), brand writes inside a `brand_paths` folder, brand reads inside either. Anything else is refused before the handler runs.
+
+It fails closed by absence: if `deck-builder` isn't on PATH, the server isn't loaded (an untrusted folder skips a project agent's inline servers), or it can't start, those agents can run nothing. `skills install` refuses until `deck-builder` is on PATH, and `doctor` reports whether `deck-builder mcp` answers `tools/list`.
+
+Residual risk: the agents keep Write and Edit, within the session's permissions, and nothing in an agent executes what they write. Other programs can run such a file later: the engine's own source when the CLI is an editable install and the workspace is the clone, hooks in `.claude/settings*.json` run by the next session, git hooks, shell startup files, and the `deck-builder` executable that starts the MCP server. Keep client workspaces outside the clone (the client-deck runbook in `tasks/handoff.md` does), use a non-editable install outside development, and the user can add permission deny rules for those paths. The main session keeps Bash under the user's own permission prompts. The MCP `render` tool renders only `.pptx` files whose manifest records their hash, so LibreOffice never opens a file an agent wrote by hand.
+
+**R-13.1** The agents' engine access is confined. AC: tests for the protocol shape, each tool on the fixtures, every confinement refusal, and malformed JSON-RPC answered with an error, never a crash.
 
 ### 13.4 Review gate
 

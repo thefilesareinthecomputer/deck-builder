@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 import importlib.metadata as md
+import json
+import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from deck_builder import config as cfgmod
@@ -37,6 +40,38 @@ def automation_permission() -> Check:
     return Check("powerpoint automation", "ok", "PowerPoint answered")
 
 
+def install_hint() -> str:
+    clone = Path(__file__).resolve().parents[2]
+    return f"uv tool install --editable {clone if (clone / 'pyproject.toml').is_file() else '<clone>'}"
+
+
+def mcp_command() -> list[str] | None:
+    """How Claude Code starts the agents' MCP server: `deck-builder mcp`, found on PATH."""
+    exe = shutil.which("deck-builder")
+    return [exe] if exe else None
+
+
+def agent_tools(cfg: cfgmod.Config) -> Check:
+    """The deck agents have no shell: they reach the engine only through `deck-builder mcp`."""
+    name = "agent tools (mcp)"
+    cmd = mcp_command()
+    if cmd is None:
+        return Check(name, "missing", "deck-builder isn't on PATH, so the agents' MCP server can't start",
+                     install_hint())
+    if not cfg.found:
+        return Check(name, "missing", "no deck-builder.toml for the MCP server to confine its tools to",
+                     "deck-builder init")
+    msgs = [{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-06-18"}},
+            {"jsonrpc": "2.0", "id": 2, "method": "tools/list"}]
+    try:
+        proc = subprocess.run([*cmd, "--config", str(cfg.path), "mcp"], capture_output=True, text=True, timeout=60,
+                              input="".join(json.dumps(m) + "\n" for m in msgs))
+        tools_ = json.loads(proc.stdout.splitlines()[-1])["result"]["tools"]
+    except (OSError, subprocess.TimeoutExpired, ValueError, KeyError, IndexError):
+        return Check(name, "missing", "`deck-builder mcp` didn't answer tools/list", install_hint())
+    return Check(name, "ok", f"`deck-builder mcp` answers with {len(tools_)} tools")
+
+
 def run(cfg: cfgmod.Config, test_powerpoint: bool) -> list[Check]:
     checks = [Check("python", "ok" if sys.version_info >= (3, 11) else "missing", sys.version.split()[0],
                     "" if sys.version_info >= (3, 11) else "install Python 3.11 or later")]
@@ -62,6 +97,7 @@ def run(cfg: cfgmod.Config, test_powerpoint: bool) -> list[Check]:
     checks.append(Check("config", "ok" if cfg.found else "missing",
                         str(cfg.path) if cfg.found else "no deck-builder.toml",
                         "" if cfg.found else "deck-builder init"))
+    checks.append(agent_tools(cfg))
     return checks
 
 

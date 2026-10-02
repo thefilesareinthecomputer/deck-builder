@@ -63,7 +63,10 @@ def brand_for(deck: Deck, deck_path: Path, cfg: cfgmod.Config, override: str | N
     meta = deck.meta
     base = deck_path.parent
     if meta.get("template") and meta.get("tokens"):
-        return registry.explicit(base / str(meta["template"]), base / str(meta["tokens"]))
+        paths = [base / str(meta[k]) for k in ("template", "tokens")]
+        if not all(p.resolve().is_relative_to(base.resolve()) for p in paths):  # like images: no reaching out
+            raise EnvError("front matter template: and tokens: must be files inside the deck's folder")
+        return registry.explicit(*paths)
     slug = override or meta.get("brand") or cfg.default_brand
     if not slug:
         raise EnvError("no brand: set `brand:` in the deck, pass --brand, or set default_brand in config",
