@@ -92,6 +92,8 @@ def test_doctor_warns_in_human_output_and_json_when_editable(ws, capsys, monkeyp
 
 
 def test_doctor_has_no_editable_warning_when_not_editable(ws, capsys, monkeypatch):
+    # no deck-builder on PATH to probe, so this falls back to editable_install() for this process.
+    monkeypatch.setattr("deck_builder.doctor.mcp_command", lambda: None)
     monkeypatch.setattr("deck_builder.doctor.editable_install", lambda: False)
     main(["--config", str(ws / "deck-builder.toml"), "doctor", "--json"])
     out = json.loads(capsys.readouterr().out)
@@ -99,3 +101,18 @@ def test_doctor_has_no_editable_warning_when_not_editable(ws, capsys, monkeypatc
 
     main(["--config", str(ws / "deck-builder.toml"), "doctor"])
     assert "editable install" not in capsys.readouterr().out
+
+
+def test_doctor_warns_from_the_mcp_servers_install_not_the_doctor_processs_own(ws, capsys, monkeypatch):
+    """doctor itself can run from a regular install while `deck-builder` on PATH (the agents' MCP server) is
+    this editable clone: the warning must reflect the process that actually serves the agents' tools."""
+    monkeypatch.setattr("deck_builder.doctor.mcp_command", lambda: [sys.executable, "-m", "deck_builder"])
+    monkeypatch.setattr("deck_builder.doctor.editable_install", lambda: False)  # the doctor process: not editable
+    code = main(["--config", str(ws / "deck-builder.toml"), "doctor", "--json"])
+    out = json.loads(capsys.readouterr().out)
+    assert code == 0
+    assert out["editable_install"] is True  # the spawned deck-builder mcp process: this editable clone
+
+    main(["--config", str(ws / "deck-builder.toml"), "doctor"])
+    text = capsys.readouterr().out
+    assert "warning" in text and "editable install" in text

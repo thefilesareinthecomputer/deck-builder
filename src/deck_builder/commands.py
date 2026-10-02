@@ -508,7 +508,12 @@ def doctor_cmd(args: argparse.Namespace) -> Result:
     cfg = _cfg(args)
     checks = doctor.run(cfg, args.powerpoint)
     backend = doctor.render_backend(checks)
-    editable = doctor.editable_install()
+    mcp_check = next((c for c in checks if c.name == "agent tools (mcp)"), None)
+    # Prefer what the spawned `deck-builder mcp` process reports about itself - that's the install
+    # actually serving the agents' tools, which this doctor process need not match. Fall back to this
+    # process's own distribution only when the probe couldn't tell (deck-builder missing, no config).
+    editable = mcp_check.editable if mcp_check is not None and mcp_check.editable is not None \
+        else doctor.editable_install()
     r = Result(command="doctor", data={"checks": [c.as_dict() for c in checks], "render_backend": backend,
                                        "can_build": all(c.status == "ok" for c in checks[:7]),
                                        "editable_install": editable})

@@ -23,7 +23,7 @@ from typing import Any, TextIO
 
 import jsonschema
 
-from deck_builder import __version__, confine
+from deck_builder import __version__, confine, doctor
 from deck_builder import config as cfgmod
 from deck_builder.errors import EXIT_ENV, EnvError
 
@@ -269,7 +269,8 @@ class Server:
             return _result(mid, {
                 "protocolVersion": asked if asked in PROTOCOLS else PROTOCOLS[0],
                 "capabilities": {"tools": {"listChanged": False}},
-                "serverInfo": {"name": "deck-builder", "version": __version__},
+                "serverInfo": {"name": "deck-builder", "version": __version__,
+                               "editable": doctor.editable_install()},
                 "instructions": (
                     f"deck-builder tools, confined to the workspace at {self.workspace} (brand tools also reach "
                     "the configured brand_paths folders); relative paths resolve against the folder holding "
