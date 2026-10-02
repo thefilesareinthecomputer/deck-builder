@@ -92,7 +92,7 @@ workspace/
 `deck-builder init` creates the workspace, writes `deck-builder.toml`, and generates the neutral example brand into `workspace/brands/neutral/`.
 
 **R-4.1** `init` is idempotent: a second run changes nothing and reports that. AC: running `init` twice leaves every file's hash unchanged.
-**R-4.2** `.gitignore` covers `workspace/`, `deck-builder.toml`, `*.render/`. AC: `git status` is clean after onboarding.
+**R-4.2** `.gitignore` is an allowlist: `/*` ignores everything, and only the shipped top-level files and folders are re-included. `workspace/` ships holding only its README, and `.claude/` ships only `skills/` and `agents/`. Everything user-, workspace- or project-specific (config, brands, decks, output, cache, local Claude settings) is written to ignored paths. AC: `git status` is clean after onboarding, and `git check-ignore` matches `deck-builder.toml`, `workspace/brands/x` and `.claude/settings.local.json`.
 
 ## 5. Brand kits
 

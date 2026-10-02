@@ -1,18 +1,35 @@
-# user content and local config
-workspace/
-deck-builder.toml
-*.render/
+# Allowlist: everything is ignored unless listed here, so user, workspace and client files
+# can't be committed by accident. A new top-level file or folder has to be added below.
+/*
+!/.gitignore
+!/.github/
+!/.claude/
+!/CLAUDE.md
+!/README.md
+!/SPEC.md
+!/CHANGELOG.md
+!/LICENSE
+!/pyproject.toml
+!/uv.lock
+!/src/
+!/tests/
+!/examples/
+!/docs/
+!/scripts/
+!/tasks/
+!/workspace/
 
-# python
+# .claude ships only the skills and the agent; local settings stay local
+/.claude/*
+!/.claude/skills/
+!/.claude/agents/
+
+# workspace/ ships as an empty placeholder; init fills it locally
+/workspace/*
+!/workspace/README.md
+
+# generated anywhere
 __pycache__/
 *.py[cod]
-.venv/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-dist/
-build/
-*.egg-info/
-
-# os
+*.render/
 .DS_Store
