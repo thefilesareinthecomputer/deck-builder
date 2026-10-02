@@ -61,7 +61,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
     p = add("assets", "inventory a brand's or a deck's assets", commands.assets_cmd)
     p.add_argument("target", help="a brand slug, or a deck file to list the assets its slides use")
     deck_help = "a deck.md, deck.xlsx or deck.csv file, or the folder holding it"
-    p = add("check", "validate a deck without building it", commands.check)
+    p = add("check", "validate a deck; with --render, also build, render and measure it", commands.check)
     p.add_argument("deck", help=deck_help)
     p.add_argument("--brand", help="brand slug (overrides the deck's brand:)")
     p.add_argument("--render", action="store_true", help="also build, render and measure")
@@ -103,7 +103,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
     p = add("schema", "print a JSON Schema", commands.schema_cmd)
     p.add_argument("name", choices=["brand", "tokens", "manifest"],
                    help="brand.yaml, tokens.yaml, or a build's manifest.json")
-    p = add("skills", "link this clone's skills and agent into another Claude Code setup", commands.skills_cmd)
+    p = add("skills", "link this clone's skills and agents into ~/.claude for other repos", commands.skills_cmd)
     p.add_argument("action", choices=["install"], help="install: link the skills and agents (needs --yes)")
     p.add_argument("--target", help="the Claude Code folder to link into (default: ~/.claude)")
     p.add_argument("--yes", action="store_true", help="create the links; without it, only show the plan")
