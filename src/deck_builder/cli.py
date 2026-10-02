@@ -75,10 +75,13 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
     p.add_argument("input")
     p.add_argument("output")
     p.add_argument("--force", action="store_true", help="replace the output file if it exists")
-    p = add("render", "render a .pptx to PDF, slide PNGs and contact sheets")
+    p = add("render", "render a .pptx to PDF, slide PNGs and contact sheets; flags slides to look at",
+            commands.render_cmd)
     p.add_argument("pptx")
-    p.add_argument("--backend", choices=["auto", "powerpoint", "libreoffice"], default=None)
-    p.add_argument("--slides", help="comma-separated slide numbers")
+    p.add_argument("--backend", choices=["auto", "powerpoint", "libreoffice"], default=None,
+                   help="default from config: auto prefers PowerPoint, then LibreOffice")
+    p.add_argument("--slides", help="only these slide numbers, comma-separated")
+    p.add_argument("--dpi", type=int, help="PNG resolution (default from config, 96)")
     p = add("schema", "print a JSON Schema", commands.schema_cmd)
     p.add_argument("name", choices=["brand", "tokens", "manifest"])
     p = add("skills", "link this repo's skills and agent into another Claude Code setup")

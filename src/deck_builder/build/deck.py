@@ -100,6 +100,7 @@ class Builder:
             else:
                 fill_text(ph, val, self.code_font)
                 fentry["chars"] = len(plain(text_of(val)))
+                fentry["shape"] = ph.name  # lets the render step name the field that overflowed
             entry["fields"][name] = fentry
         for idx, ph in phs.items():
             if idx not in used:  # no empty "Click to add text" boxes left behind

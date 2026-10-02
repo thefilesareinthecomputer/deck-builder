@@ -25,6 +25,8 @@ from deck_builder.errors import CODES, EnvError, Issue, Result
 from deck_builder.model import Deck
 from deck_builder.parse.csvfile import read_rows as read_csv_rows
 from deck_builder.parse.markdown import TOKEN
+from deck_builder.qa import backends as qa_backends
+from deck_builder.qa import render as qa_render
 from deck_builder.write import csvfile as csv_writer
 from deck_builder.write import markdown as md_writer
 from deck_builder.write import workbook as wb_writer
@@ -346,6 +348,51 @@ def convert_cmd(args: argparse.Namespace) -> Result:
     return r
 
 
+def _render_into(r: Result, pptx: Path, cfg: cfgmod.Config, backend_req: str | None, pages: list[int] | None,
+                 dpi: int | None = None) -> None:
+    mpath = manifest_path(pptx)
+    brand = None
+    if mpath.is_file():
+        slug = json.loads(mpath.read_text())["brand"]["slug"]
+        with contextlib.suppress(EnvError):
+            brand = registry.get(cfg, slug)
+    backend = qa_backends.choose(backend_req or cfg.render.backend)
+    out = qa_render.render(pptx, backend, dpi or cfg.render.dpi, cfg.render.contact_batch, pages, brand)
+    for i in out.issues:
+        r.add(i)
+    r.data.update({
+        "backend": out.backend,
+        "render_dir": str(out.out_dir),
+        "pdf": str(out.pdf),
+        "slide_png": str(out.out_dir / "slide-NN.png"),
+        "flagged_slides": [{"slide": n, "codes": c} for n, c in out.flagged.items()],
+        "contact_sheets": [str(p) for p in out.contact_sheets],
+    })
+
+
+def _pages(spec: str | None) -> list[int] | None:
+    if not spec:
+        return None
+    try:
+        return sorted({int(x) for x in spec.split(",") if x.strip()})
+    except ValueError as e:
+        raise EnvError("--slides takes slide numbers separated by commas, e.g. 3,7") from e
+
+
+def render_cmd(args: argparse.Namespace) -> Result:
+    cfg = _cfg(args)
+    pptx = Path(args.pptx)
+    if not pptx.is_file():
+        raise EnvError(f"not found: {pptx}")
+    r = Result(command="render", data={"input": str(pptx)})
+    _render_into(r, pptx, cfg, args.backend, _pages(args.slides), args.dpi)
+    flagged = ", ".join(str(f["slide"]) for f in r.data["flagged_slides"]) or "none"
+    r.summary = (f"{'ok' if r.ok else 'failed'} render {pptx.name} with {r.data['backend']}: flagged slides {flagged}; "
+                 f"contact sheets {', '.join(Path(p).name for p in r.data['contact_sheets'])} in "
+                 f"{r.data['render_dir']}, {_tally(r)}")
+    return r
+
+
 def assets_cmd(args: argparse.Namespace) -> Result:
     cfg = _cfg(args)
     target = Path(args.target)
@@ -404,8 +451,17 @@ def check(args: argparse.Namespace) -> Result:
     cfg = _cfg(args)
     path = Path(args.deck)
     r = Result(command="check", data={"input": str(path)})
-    _validated(path, cfg, r, args.brand)
-    r.summary = f"{'ok' if r.ok else 'failed'} check {path.name}: {r.data['slides']} slides, {_tally(r)}"
+    if not args.render:
+        _validated(path, cfg, r, args.brand)
+        r.summary = f"{'ok' if r.ok else 'failed'} check {path.name}: {r.data['slides']} slides, {_tally(r)}"
+        return r
+    done = _build_one(path, cfg, args, None, None, r)
+    if done:
+        r.data.update(done)
+        _render_into(r, Path(done["output"]), cfg, None, None)
+    flagged = ", ".join(str(f["slide"]) for f in r.data.get("flagged_slides", [])) or "none"
+    r.summary = (f"{'ok' if r.ok else 'failed'} check --render {path.name}: {r.data['slides']} slides, "
+                 f"flagged {flagged}, {_tally(r)}")
     return r
 
 
