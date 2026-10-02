@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import json
 
-from scn import json_bytes, setup_cycle_decks
+from scn import json_bytes, needs_render, render, setup_cycle_decks
 
 from conftest import cli_json
 
@@ -19,6 +19,8 @@ SENTINEL = "SENTINEL-9f3b2a7e-this-exact-run-of-text-must-never-appear-in-any-js
 PER_SLIDE_BUDGET = 300
 
 
+@render
+@needs_render
 def test_the_40_slide_decks_json_never_grows_with_slide_count(tmp_path, capsys):
     root, deck3, deck40 = setup_cycle_decks(tmp_path, sentinel=SENTINEL)
     capsys.readouterr()
