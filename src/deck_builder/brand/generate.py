@@ -25,7 +25,7 @@ from pptx.util import Emu
 
 from deck_builder.brand.inspect import estimate_chars
 from deck_builder.brand.kit import contrast
-from deck_builder.brand.layouts import PH, LayoutDef, layout_set
+from deck_builder.brand.layouts import PH, Decor, LayoutDef, Scale, layout_set
 from deck_builder.build.normalize import read_parts, rezip
 from deck_builder.template import POTX_CT, PPTX_CT
 
@@ -115,18 +115,49 @@ def _sp(shape_id: int, ph: PH) -> str:
             f'<a:ext cx="{emu(ph.w)}" cy="{emu(ph.h)}"/></a:xfrm>')
     if ph.kind in ("title", "body"):
         algn = f' algn="{ph.align}"' if ph.align else ""
-        bullet = "" if ph.bullets or ph.kind == "title" else '<a:buNone/>'
+        if ph.bullets:  # air between items, and the bullet or number in the brand's primary color
+            bullet = (f'<a:spcBef><a:spcPts val="{int((ph.size or 18) * 50)}"/></a:spcBef>'
+                      '<a:buClr><a:schemeClr val="tx2"/></a:buClr>')
+            if ph.numbered:
+                bullet += '<a:buFont typeface="+mj-lt"/><a:buAutoNum type="arabicPeriod"/>'
+        else:
+            bullet = "" if ph.kind == "title" else "<a:buNone/>"
         indent = "" if ph.bullets or ph.kind == "title" else ' marL="0" indent="0"'
+        if ph.numbered:  # room for "10." at the list's size, so numbers never touch the text
+            hang = emu((ph.size or 18) * 1.6 / 72)
+            indent = f' marL="{hang}" indent="-{hang}"'
         lvl1 = f"<a:lvl1pPr{indent}{algn}>{bullet}{_rpr(ph)}</a:lvl1pPr>"
-        body = (f'<p:txBody><a:bodyPr anchor="{ph.anchor}"><a:noAutofit/></a:bodyPr><a:lstStyle>{lvl1}'
+        ins = f' lIns="{emu(ph.inset)}" rIns="{emu(ph.inset)}"' if ph.inset is not None else ""
+        if ph.lift:  # centered text sits lift inches higher: the bottom inset exceeds the top by twice that
+            ins += f' tIns="{emu(0.05)}" bIns="{emu(0.05 + 2 * ph.lift)}"'
+        body = (f'<p:txBody><a:bodyPr{ins} anchor="{ph.anchor}"><a:noAutofit/></a:bodyPr><a:lstStyle>{lvl1}'
                 f'</a:lstStyle><a:p><a:r><a:rPr lang="en-US"/><a:t>{escape(PROMPT[ph.kind])}</a:t></a:r></a:p>'
                 "</p:txBody>")
     else:
         body = '<p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:endParaRPr lang="en-US"/></a:p></p:txBody>'
     name = f"{PROMPT[ph.kind]} Placeholder {shape_id - 1}"
+    fill = f"<a:solidFill>{_scheme(ph.fill)}</a:solidFill>" if ph.fill else ""
     return (f'<p:sp><p:nvSpPr><p:cNvPr id="{shape_id}" name="{escape(name)}"/>'
             f'<p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr>{ph_el}</p:nvPr></p:nvSpPr>'
-            f"<p:spPr>{xfrm}</p:spPr>{body}</p:sp>")
+            f"<p:spPr>{xfrm}{fill}</p:spPr>{body}</p:sp>")
+
+
+def _scheme(ref: str) -> str:
+    """A theme color, or a tint written "tx1@15": 15% of tx1 over the background."""
+    slot, _, pct = ref.partition("@")
+    if not pct:
+        return f'<a:schemeClr val="{slot}"/>'
+    keep = int(pct) * 1000
+    return f'<a:schemeClr val="{slot}"><a:lumMod val="{keep}"/><a:lumOff val="{100000 - keep}"/></a:schemeClr>'
+
+
+def _decor_sp(shape_id: int, dec: Decor) -> str:
+    """A filled rectangle with no outline or text, drawn behind the layout's placeholders."""
+    return (f'<p:sp><p:nvSpPr><p:cNvPr id="{shape_id}" name="Decoration {shape_id}"/><p:cNvSpPr/>'
+            f'<p:nvPr userDrawn="1"/></p:nvSpPr><p:spPr><a:xfrm><a:off x="{emu(dec.x)}" y="{emu(dec.y)}"/>'
+            f'<a:ext cx="{emu(dec.w)}" cy="{emu(dec.h)}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom>'
+            f"<a:solidFill>{_scheme(dec.fill)}</a:solidFill><a:ln><a:noFill/></a:ln></p:spPr>"
+            '<p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:endParaRPr lang="en-US"/></a:p></p:txBody></p:sp>')
 
 
 def furniture_boxes(w_in: float, h_in: float, numbers: bool) -> dict[str, tuple[float, float, float]]:
@@ -167,7 +198,8 @@ def layout_xml(ld: LayoutDef, boxes: dict[str, tuple[float, float, float]] | Non
     if ld.background:
         bg = (f'<p:bg><p:bgPr><a:solidFill><a:schemeClr val="{ld.background}"/></a:solidFill>'
               "<a:effectLst/></p:bgPr></p:bg>")
-    sps = "".join(_sp(i + 2, ph) for i, ph in enumerate(ld.phs))
+    sps = "".join(_decor_sp(100 + i, dec) for i, dec in enumerate(ld.decor))  # first, so it sits behind
+    sps += "".join(_sp(i + 2, ph) for i, ph in enumerate(ld.phs))
     if boxes and not ld.hide_master:  # title, section and closing slides get no furniture
         n = len(ld.phs) + 2
         sps += "".join(_furniture_sp(n + i, kind, {"ftr": FOOTER_IDX, "sldNum": NUMBER_IDX}[kind], box, color)
@@ -222,10 +254,11 @@ def _style_furniture(ph: Any, box: tuple[float, float, float], color: str) -> No
 
 
 def style_master(prs: Any, w_in: float, h_in: float, boxes: dict[str, tuple[float, float, float]] | None = None,
-                 color: str = "6B7280") -> None:
+                 color: str = "6B7280", scale: Scale | None = None) -> None:
     """Fit the master's placeholders to the new size and set the type scale the layouts inherit."""
     master = prs.slide_masters[0]
     boxes = boxes or {}
+    s = scale or Scale()
     for ph in list(master.placeholders):
         t = ph.placeholder_format.type
         name = t.name if t is not None else ""
@@ -242,7 +275,9 @@ def style_master(prs: Any, w_in: float, h_in: float, boxes: dict[str, tuple[floa
     tx = master._element.find(qn("p:txStyles"))
     if tx is None:
         return
-    sizes = {"titleStyle": [3000], "bodyStyle": [2000, 1800, 1600, 1400, 1400]}
+    body = int(s.body * 100)
+    sizes = {"titleStyle": [int(s.title * 100)],
+             "bodyStyle": [body, body - 200, body - 400, body - 600, body - 600]}
     for style, szs in sizes.items():
         el = tx.find(qn(f"p:{style}"))
         if el is None:
@@ -256,6 +291,7 @@ def style_master(prs: Any, w_in: float, h_in: float, boxes: dict[str, tuple[floa
         title_ppr.set("algn", "l")  # the stock master centers titles; body text is left-aligned
     title_rpr = tx.find(f"{qn('p:titleStyle')}/{qn('a:lvl1pPr')}/{qn('a:defRPr')}")
     if title_rpr is not None:
+        title_rpr.set("b", "1" if s.title_bold else "0")
         for fill in title_rpr.findall(qn("a:solidFill")):
             title_rpr.remove(fill)
         fill = etree.SubElement(title_rpr, qn("a:solidFill"))
@@ -284,9 +320,20 @@ def add_master_logo(prs: Any, logo: Path, w_in: float, h_in: float) -> None:
 # ---------------------------------------------------------------- tokens
 
 
-def tokens_for(defs: list[LayoutDef], meta: dict[str, Any]) -> dict[str, Any]:
+def _mix(a: str, b: str, share: float) -> str:
+    """share of color a over color b, as hex."""
+    ca, cb = (tuple(int(h[i:i + 2], 16) for i in (0, 2, 4)) for h in (a, b))
+    return "".join(f"{round(x * share + y * (1 - share)):02X}" for x, y in zip(ca, cb, strict=True))
+
+
+TABLE_ROW_FACTOR = 2.0  # row height as a multiple of the table's font size
+
+
+def tokens_for(defs: list[LayoutDef], meta: dict[str, Any], scale: Scale | None = None) -> dict[str, Any]:
+    s = scale or Scale()
     mapping = meta.get("theme_colors") or {}
     palette = meta.get("palette") or {}
+    slots = slot_colors(meta)
 
     def name_for(slot: str, fallback: str) -> str:
         ref = mapping.get(slot)
@@ -301,13 +348,13 @@ def tokens_for(defs: list[LayoutDef], meta: dict[str, Any]) -> dict[str, Any]:
             kind = KIND_FOR.get(ph.kind) or ("bullets" if ph.bullets else "text")
             spec: dict[str, Any] = {"idx": ph.idx, "kind": kind}
             if kind in ("text", "bullets"):
-                spec["max_chars"] = estimate_chars(ph.w, ph.h, ph.size or 18)
+                spec["max_chars"] = estimate_chars(ph.w, ph.text_h, ph.size or 18)
             if kind == "bullets":
-                spec["max_bullets"] = max(2, min(7, int(ph.h * 72 / ((ph.size or 18) * 1.2 * 1.5))))
+                spec["max_bullets"] = max(2, min(7, int(ph.text_h * 72 / ((ph.size or 18) * 1.2 * 1.5))))
                 spec["max_bullet_chars"] = estimate_chars(ph.w, (ph.size or 18) * 2.4 / 72, ph.size or 18)
                 spec["max_level"] = 1
-            if kind == "table":
-                spec["max_rows"] = 8
+            if kind == "table":  # rows that fit the placeholder at one line each, header included
+                spec["max_rows"] = max(3, min(10, int(ph.h * 72 / (s.table * TABLE_ROW_FACTOR)) - 1))
                 spec["max_cols"] = 6
             if ld.key == "icon-row" and kind == "image":
                 spec["kind"] = "icon"
@@ -324,8 +371,11 @@ def tokens_for(defs: list[LayoutDef], meta: dict[str, Any]) -> dict[str, Any]:
         "chart": {"font_size": 12, "text_color": name_for("dk1", "ink"),
                   "colors": [name_for("accent1", "primary"), name_for("accent2", "accent"),
                              name_for("accent3", "muted"), name_for("accent4", "accent4")]},
-        "table": {"font_size": 14, "header_font_size": 14, "header_fill": name_for("dk2", "primary"),
-                  "header_text": name_for("lt1", "background"), "band_fill": name_for("lt2", "surface"),
+        # A dark header, then white rows split by thin rules: no banding and no vertical lines.
+        "table": {"font_size": s.table, "header_font_size": s.table, "row_height_factor": TABLE_ROW_FACTOR,
+                  "header_fill": name_for("dk2", "primary"), "header_text": name_for("lt1", "background"),
+                  "row_fill": name_for("lt1", "background"), "text": name_for("dk1", "ink"),
+                  "rule": _mix(slots["dk1"], slots["lt1"], 0.2),
                   "status": {"Green": "15803D", "Amber": "B45309", "Red": "B91C1C"}},
         "layouts": layouts,
         "furniture": {"slide_numbers": bool((meta.get("generate") or {}).get("slide_numbers", True)),
@@ -359,7 +409,9 @@ def generate(meta: dict[str, Any], source_dir: Path) -> tuple[bytes, dict[str, A
     gen = meta.get("generate") or {}
     w_emu, h_emu = SIZES_EMU[gen.get("slide_size", "16:9")]
     w_in, h_in = w_emu / EMU, h_emu / EMU
-    defs = layout_set(gen.get("layout_set", "standard"), w_in, h_in)
+    scale = Scale.from_meta(gen)
+    defs = layout_set(gen.get("layout_set", "standard"), w_in, h_in, scale, gen.get("body_anchor", "middle"),
+                      gen.get("big_number", "light"))
 
     prs = Presentation()
     prs.slide_width, prs.slide_height = Emu(w_emu), Emu(h_emu)
@@ -371,7 +423,7 @@ def generate(meta: dict[str, Any], source_dir: Path) -> tuple[bytes, dict[str, A
     write_theme(theme_part, slot_colors(meta), meta.get("fonts") or {})
     boxes = furniture_boxes(w_in, h_in, bool(gen.get("slide_numbers", True)))
     color = furniture_color(meta)[1]
-    style_master(prs, w_in, h_in, boxes, color)
+    style_master(prs, w_in, h_in, boxes, color, scale)
     replace_layouts(prs, defs, boxes, color)
     logo_id = gen.get("logo_on_master")
     if logo_id:
@@ -387,4 +439,4 @@ def generate(meta: dict[str, Any], source_dir: Path) -> tuple[bytes, dict[str, A
     cp.revision = 1
     buf = io.BytesIO()
     prs.save(buf)
-    return _finish(buf.getvalue()), tokens_for(defs, meta)
+    return _finish(buf.getvalue()), tokens_for(defs, meta, scale)

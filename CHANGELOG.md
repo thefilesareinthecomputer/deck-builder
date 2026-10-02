@@ -2,6 +2,31 @@
 
 All notable changes to this project are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Changed
+
+- Generated kits follow a design standard, described in the new `deck-builder docs design` topic. Type is sized for projection: bold 32 pt titles, 24 pt single-column body, 20 pt two-column text, 16 pt tables. Short single-column and two-column content sits at the optical center of its area instead of hugging the top. Comparison columns sit on tinted panels with the heading inside, and two-column slides get a thin divider. Title, section, closing and big-number slides get one short accent rule, bullets and agenda numbers take the primary color, and the agenda is a numbered list. Regenerate a kit with `brand init <slug> --force` to get the new look.
+- Generated tables have a dark header, thin rules between rows and no vertical lines, with column widths that follow the content and numeric columns right-aligned. Bar and column charts with no negative values start their value axis at zero. `brand init` writes every table key to `tokens.yaml` (`row_fill`, `text`, `rule`, `row_height_factor`), and the row budget follows the placeholder height.
+- The MCP server confines paths to the workspace and refuses the clone's own `src/`, `.claude/` and `.git/` folders and its `AGENTS.md`, `CLAUDE.md` and `deck-builder.toml`, whatever the config says. Relative paths still resolve against the config folder.
+
+### Added
+
+- `generate.type` in `brand.yaml` sets the type scale (title, title weight, subtitle, body, two-column, icon text, table, big number), and character budgets are computed from it. `generate.body_anchor: top` keeps body text at the top; `generate.big_number: dark` puts the big number on the primary color.
+- An optional `takeaway:` field on content, two-column, chart and table slides: one sentence in a full-width band in the primary color at the bottom. Nothing is drawn when it's left out, and `import` gives it back only from a matching placeholder.
+- `tests/fixtures/demo-brands/layouts/`: every generated layout with realistic content, built and rendered in all three demo brands. Two demo brands exercise `generate.type` and `big_number: dark`.
+- `doctor` warns when the running package is an editable install, since agents' MCP server then runs the clone's source live.
+- The workspace folder roles are documented once (`workspace/README.md`, `docs workflow`): `source/` and `references/` for read-only inputs, `notes.md` for working notes, `scratch/` for disposable output. `init` creates `source/` in its example decks.
+
+### Fixed
+
+- Charts write `roundedCorners` off, which PowerPoint otherwise draws as rounded chart corners, and keep one color per series instead of varying colors across a single series.
+- A `brand_paths` entry that resolves to the home folder, the filesystem root or the config folder or one of its parents is refused.
+
+### Docs
+
+- The skills and agents route any edit to an existing deck through the `deck-builder` skill, use one delegation threshold and one two-round stop rule stated in AGENTS.md, treat engine changes during deck work as a separate task, cite grounding facts from outside the workspace in a dated `source/grounding-<date>.md`, and read `docs design` before writing slides.
+
 ## 0.1.0 - 2026-10-02
 
 First release.

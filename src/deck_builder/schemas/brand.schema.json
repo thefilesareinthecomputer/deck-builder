@@ -76,7 +76,24 @@
         "slide_size": {"enum": ["16:9", "4:3"]},
         "layout_set": {"enum": ["minimal", "standard", "full"]},
         "logo_on_master": {"type": "string"},
-        "slide_numbers": {"type": "boolean", "description": "a slide number on layouts that show the master (default true)"}
+        "slide_numbers": {"type": "boolean", "description": "a slide number on layouts that show the master (default true)"},
+        "type": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "type sizes in points; any key left out keeps its default",
+          "properties": {
+            "title": {"type": "number", "minimum": 12, "maximum": 72, "description": "content-slide titles (default 32)"},
+            "title_bold": {"type": "boolean", "description": "bold content-slide titles (default true)"},
+            "subtitle": {"type": "number", "minimum": 10, "maximum": 48, "description": "title and closing slide subtitles (default 24)"},
+            "body": {"type": "number", "minimum": 10, "maximum": 48, "description": "single-column body text; the agenda is 4 pt larger (default 24)"},
+            "two_col": {"type": "number", "minimum": 10, "maximum": 40, "description": "two-column, comparison and image-right text (default 20)"},
+            "icon_text": {"type": "number", "minimum": 10, "maximum": 36, "description": "icon-row text (default 18)"},
+            "table": {"type": "number", "minimum": 8, "maximum": 32, "description": "table text, header included (default 16)"},
+            "big_number": {"type": "number", "minimum": 48, "maximum": 200, "description": "the big-number numeral (default 120)"}
+          }
+        },
+        "body_anchor": {"enum": ["middle", "top"], "description": "where single-column body text sits in its area (default middle)"},
+        "big_number": {"enum": ["light", "dark"], "description": "the big-number slide on the background color, or on the primary color like a section slide (default light)"}
       }
     }
   }

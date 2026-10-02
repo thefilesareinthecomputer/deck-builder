@@ -31,6 +31,7 @@ Source: the Q3 shipment ledger. Invented figures for the demo fixtures.
 
 ## {{unit}} shipped by month
 layout: chart
+takeaway: The core line grew every month while specialty held flat
 
 ```chart
 type: column

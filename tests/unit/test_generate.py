@@ -71,6 +71,170 @@ def test_generation_is_deterministic(ws, capsys, tmp_path):
     assert first == again
 
 
+def _layout_xml(kit, name):
+    from lxml import etree
+
+    prs = open_template(kit / "template.potx")
+    layout = next(lay for lay in prs.slide_layouts if lay.name == name)
+    return etree.tostring(layout._element).decode()
+
+
+def _kit(ws, capsys, tmp_path, **gen):
+    code, out = cli_json(ws, "brand", "init", "pemberton", "--from", str(source(tmp_path, **gen)), "--force",
+                         capsys=capsys)
+    assert code == 0, out
+    kit = ws / "brands" / "pemberton"
+    return kit, yaml.safe_load((kit / "tokens.yaml").read_text())
+
+
+def test_default_type_scale_is_sized_for_projection(ws, capsys, tmp_path):
+    kit, tokens = _kit(ws, capsys, tmp_path, layout_set="full")
+    content = _layout_xml(kit, "Content")
+    assert 'sz="3200" b="1"' in content  # bold 32 pt titles
+    assert 'sz="2400"' in content and 'anchor="ctr"' in content  # 24 pt body, centered in its area
+    assert 'tIns="45720" bIns="594360"' in content  # lifted 0.3 in to the optical center
+    assert '<a:buClr><a:schemeClr val="tx2"/></a:buClr>' in content  # bullets in the primary color
+    assert "buAutoNum" in _layout_xml(kit, "Agenda")
+    assert tokens["table"]["font_size"] == 16 and tokens["table"]["header_font_size"] == 16
+
+
+def test_type_scale_and_placement_come_from_brand_yaml(ws, capsys, tmp_path):
+    _, default_tokens = _kit(ws, capsys, tmp_path / "a", layout_set="full")
+    kit, tokens = _kit(ws, capsys, tmp_path / "b", layout_set="full", body_anchor="top", big_number="dark",
+                       type={"title": 28, "title_bold": False, "body": 20, "table": 12})
+    content = _layout_xml(kit, "Content")
+    assert 'sz="2800"' in content and 'sz="3200"' not in content and 'b="1"' not in content.split("idx")[0]
+    assert 'sz="2000"' in content and 'anchor="t"' in content
+    big = _layout_xml(kit, "Big Number")
+    assert 'showMasterSp="0"' in big and '<a:schemeClr val="tx2"/></a:solidFill>' in big  # dark background
+    assert tokens["table"]["font_size"] == 12
+    # budgets follow the sizes: smaller type fits more characters
+    body, default_body = (t["layouts"]["content"]["fields"]["body"] for t in (tokens, default_tokens))
+    assert body["max_chars"] > default_body["max_chars"]
+
+
+def test_unknown_type_key_is_refused(ws, capsys, tmp_path):
+    code, out = cli_json(ws, "brand", "init", "pemberton", "--from", str(source(tmp_path, type={"huge": 99})),
+                         capsys=capsys)
+    assert code != 0
+    assert "huge" in str(out)
+
+
+def test_columns_get_structure_and_title_slides_an_accent_rule(ws, capsys, tmp_path):
+    kit, _ = _kit(ws, capsys, tmp_path, layout_set="full")
+    comparison = _layout_xml(kit, "Comparison")
+    panels = comparison.count('<a:schemeClr val="bg2"/>')
+    assert panels == 2 and comparison.index("Decoration") < comparison.index("<p:ph ")  # drawn behind
+    assert "lumMod" in _layout_xml(kit, "Two Column")  # the divider is a tint, not a hard line
+    for name in ("Title", "Section", "Closing", "Big Number"):
+        assert '<a:schemeClr val="accent2"/>' in _layout_xml(kit, name), name
+
+
+def test_takeaway_band_is_drawn_only_when_used(ws, capsys, tmp_path):
+    kit, tokens = _kit(ws, capsys, tmp_path)
+    for key in ("content", "two-col", "chart", "table"):
+        assert tokens["layouts"][key]["fields"]["takeaway"]["kind"] == "text", key
+    assert '<a:solidFill><a:schemeClr val="tx2"/></a:solidFill>' in _layout_xml(kit, "Content")
+    deck = write_deck(ws, """
+    ---
+    brand: pemberton
+    ---
+
+    ## Copy paper led growth
+    layout: content
+    takeaway: Two contracts explain the growth
+
+    - Two new accounts
+
+    ## Margins held
+    layout: content
+
+    - Flat quarter
+    """)
+    code, out = cli_json(ws, "build", str(deck), capsys=capsys)
+    assert code == 0, out["issues"]
+    with_band, without = Presentation(out["output"]).slides
+    assert [p.text_frame.text for p in with_band.placeholders if p.placeholder_format.idx == 7] == [
+        "Two contracts explain the growth"]
+    assert [p for p in without.placeholders if p.placeholder_format.idx == 7] == []
+    code, imp = cli_json(ws, "import", out["output"], str(ws / "back"), "--brand", "pemberton", capsys=capsys)
+    assert code == 0, imp
+    assert "takeaway: Two contracts explain the growth" in (ws / "back" / "deck.md").read_text()
+
+
+def test_tables_have_rules_and_content_led_column_widths(ws, capsys, tmp_path):
+    from lxml import etree
+
+    _, tokens = _kit(ws, capsys, tmp_path)
+    assert {"rule", "row_fill", "text", "row_height_factor"} <= set(tokens["table"])
+    assert "band_fill" not in tokens["table"]
+    assert 3 <= tokens["layouts"]["table"]["fields"]["table"]["max_rows"] <= 10
+    deck = write_deck(ws, """
+    ---
+    brand: pemberton
+    ---
+
+    ## Accounts
+    layout: table
+
+    | Account | Tier |
+    |---|---|
+    | Northfield Regional School District | A |
+    | Harbor County | B |
+    """)
+    code, out = cli_json(ws, "build", str(deck), capsys=capsys)
+    assert code == 0, out["issues"]
+    frame = next(s for s in Presentation(out["output"]).slides[0].shapes if s.has_table)
+    wide, narrow = (col.width for col in frame.table.columns)
+    assert wide > 2 * narrow and wide + narrow == frame.width
+    header, body = (etree.tostring(frame.table.cell(r, 0)._tc).decode() for r in (0, 1))
+    assert "<a:lnB" in body and "srgbClr" in body.split("<a:lnB")[1].split("</a:lnB>")[0]
+    assert "<a:lnL" in body and "noFill" in body.split("<a:lnL")[1].split("</a:lnL>")[0]
+    assert "noFill" in header.split("<a:lnB")[1].split("</a:lnB>")[0]
+
+
+def test_numeric_columns_right_align_and_bars_start_at_zero(ws, capsys, tmp_path):
+    from pptx.enum.text import PP_ALIGN
+
+    _kit(ws, capsys, tmp_path)
+    deck = write_deck(ws, """
+    ---
+    brand: pemberton
+    ---
+
+    ## Margins
+    layout: table
+
+    | Line | Margin | Change |
+    |---|---|---|
+    | Core | 23% | +2 pts |
+    | Specialty | 31% | flat |
+
+    ## Volume
+    layout: chart
+
+    ```chart
+    type: column
+    categories: [Jul, Aug]
+    series: [{name: Core, values: [9800, 11250]}]
+    ```
+    """)
+    code, out = cli_json(ws, "build", str(deck), capsys=capsys)
+    assert code == 0, out["issues"]
+    table_slide, chart_slide = Presentation(out["output"]).slides
+    table = next(s for s in table_slide.shapes if s.has_table).table
+    aligns = [table.cell(1, c).text_frame.paragraphs[0].alignment for c in range(3)]
+    assert aligns == [None, PP_ALIGN.RIGHT, None]  # "flat" keeps the change column left-aligned
+    assert table.cell(0, 1).text_frame.paragraphs[0].alignment == PP_ALIGN.RIGHT  # its header too
+    chart = next(s for s in chart_slide.shapes if s.has_chart).chart
+    assert chart.value_axis.minimum_scale == 0
+    assert chart.plots[0].vary_by_categories is False
+    rounded = chart._chartSpace.find("{http://schemas.openxmlformats.org/drawingml/2006/chart}roundedCorners")
+    assert rounded is not None and rounded.get("val") == "0"
+    order = [el.tag.split("}")[1] for el in chart._chartSpace]
+    assert order.index("roundedCorners") < order.index("chart")
+
+
 def test_generated_kit_builds_every_layout(ws, capsys, tmp_path):
     cli_json(ws, "brand", "init", "pemberton", "--from", str(source(tmp_path, layout_set="full")), capsys=capsys)
     deck = write_deck(ws, """

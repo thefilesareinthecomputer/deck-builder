@@ -1,6 +1,7 @@
 """Charts, tables and pictures into placeholders. Colors and sizes come from tokens.yaml."""
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -8,7 +9,8 @@ from PIL import Image as PILImage
 from pptx.chart.data import CategoryChartData
 from pptx.dml.color import RGBColor
 from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION
-from pptx.enum.text import MSO_ANCHOR
+from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
+from pptx.oxml.xmlchemy import OxmlElement
 from pptx.util import Pt
 
 from deck_builder.brand.registry import Brand
@@ -34,6 +36,32 @@ def _rgb(brand: Brand, ref: Any) -> RGBColor | None:
     return RGBColor.from_string(hexv) if hexv else None
 
 
+def _rules(cell: Any, rule: RGBColor, row: int) -> None:
+    """Thin rules between body rows and no other borders, replacing the table style's white grid lines.
+
+    Body rows get the rule on both edges, since some renderers draw a shared edge from the lower cell's
+    top border. The header has none: its fill marks it.
+    """
+    tc_pr = cell._tc.get_or_add_tcPr()
+    tags = ("a:lnL", "a:lnR", "a:lnT", "a:lnB")
+    for tag in tags:
+        for old in tc_pr.findall(f"{{http://schemas.openxmlformats.org/drawingml/2006/main}}{tag[2:]}"):
+            tc_pr.remove(old)
+    ruled = {"a:lnT": row >= 2, "a:lnB": row >= 1}
+    for i, tag in enumerate(tags):  # borders come first in tcPr, before the fill
+        ln = OxmlElement(tag)
+        ln.set("w", "9525")  # 0.75 pt
+        if ruled.get(tag):
+            fill = OxmlElement("a:solidFill")
+            clr = OxmlElement("a:srgbClr")
+            clr.set("val", str(rule))
+            fill.append(clr)
+            ln.append(fill)
+        else:
+            ln.append(OxmlElement("a:noFill"))
+        tc_pr.insert(i, ln)
+
+
 def _take_geometry(ph: Any) -> tuple[int, int, int, int]:
     geo = (ph.left, ph.top, ph.width, ph.height)
     ph._element.getparent().remove(ph._element)
@@ -43,6 +71,21 @@ def _take_geometry(ph: Any) -> tuple[int, int, int, int]:
 def _alt(frame: Any, text: str) -> None:
     """Alt text on a chart or table, for screen readers; images get theirs from the deck."""
     frame._element.nvGraphicFramePr.cNvPr.set("descr", text[:1].upper() + text[1:])
+
+
+def _square_corners(chart: Any) -> None:
+    """PowerPoint draws a chart with rounded corners when c:roundedCorners is missing, so write it as off.
+
+    It belongs after c:date1904 and c:lang and before everything else in c:chartSpace.
+    """
+    cs = chart._chartSpace
+    ns = "{http://schemas.openxmlformats.org/drawingml/2006/chart}"
+    if cs.find(f"{ns}roundedCorners") is not None:
+        return
+    rc = OxmlElement("c:roundedCorners")
+    rc.set("val", "0")
+    lead = [el for el in cs if el.tag in (f"{ns}date1904", f"{ns}lang")]
+    cs.insert(cs.index(lead[-1]) + 1 if lead else 0, rc)
 
 
 def fill_chart(slide: Any, ph: Any, spec: Chart, brand: Brand) -> None:
@@ -89,6 +132,12 @@ def fill_chart(slide: Any, ph: Any, spec: Chart, brand: Brand) -> None:
                     s.format.fill.fore_color.rgb = c
     if not pie and hasattr(plot, "gap_width"):
         plot.gap_width = tok["gap_width"]
+    if not pie:
+        plot.vary_by_categories = False  # one color per series, never a rainbow across one series
+    _square_corners(chart)
+    values = [v for s in spec.series for v in s.values if v is not None]
+    if spec.type in ("column", "stacked-column", "bar", "stacked-bar") and values and min(values) >= 0:
+        chart.value_axis.minimum_scale = 0  # bars start at zero; a cut axis exaggerates differences
     legend = spec.legend if spec.legend is not None else (pie or len(spec.series) > 1)
     chart.has_legend = bool(legend)
     if legend:
@@ -112,6 +161,35 @@ def fill_chart(slide: Any, ph: Any, spec: Chart, brand: Brand) -> None:
         axis.tick_labels.number_format_is_linked = False
 
 
+NUMERIC = re.compile(r"^[+\-−]?[$€£]?\d[\d,.]*\s*(%|pts?|x)?$")
+
+
+def numeric_columns(spec: Table) -> list[bool]:
+    """Columns whose every filled body cell is a number, an amount, a percentage or a change in points."""
+    from deck_builder.validate import plain  # validate imports this module's table defaults
+
+    out = []
+    for c in range(len(spec.header)):
+        cells = [plain(row[c]).strip() for row in spec.rows if plain(row[c]).strip()]
+        out.append(bool(cells) and all(NUMERIC.match(v) for v in cells))
+    return out
+
+
+def column_widths(spec: Table, total: int) -> list[int]:
+    """Column widths in EMU that follow content length, so long names wrap less and short codes take less.
+
+    A column's weight is its longest cell in characters, the bold header counted a little wider, plus room
+    for cell padding and a status dot, capped at 33 so one long cell can't squeeze the others. The last
+    column takes the rounding remainder, so the widths sum to total.
+    """
+    ncols = len(spec.header)
+    weights = [min(33, 3 + max(6, round(len(spec.header[c]) * 1.15), *(len(row[c]) for row in spec.rows)))
+               for c in range(ncols)]
+    widths = [total * w // sum(weights) for w in weights]
+    widths[-1] = total - sum(widths[:-1])
+    return widths
+
+
 def fill_table(slide: Any, ph: Any, spec: Table, brand: Brand) -> None:
     """A native table in the placeholder: fills, fonts and status dots from tokens.yaml table, with alt text."""
     nrows, ncols = len(spec.rows) + 1, len(spec.header)
@@ -128,10 +206,14 @@ def fill_table(slide: Any, ph: Any, spec: Table, brand: Brand) -> None:
     for r in range(nrows):
         table.rows[r].height = row_h
     frame.height = row_h * nrows
+    for c, width in enumerate(column_widths(spec, frame.width)):
+        table.columns[c].width = width
+    numeric = numeric_columns(spec)
     header_text, body_text = _rgb(brand, tok.get("header_text")), _rgb(brand, tok.get("text"))
     fills = {"header": _rgb(brand, tok.get("header_fill")), "row": _rgb(brand, tok.get("row_fill")),
              "band": _rgb(brand, tok.get("band_fill"))}
     status = {str(k).strip().casefold(): _rgb(brand, v) for k, v in (tok.get("status") or {}).items()}
+    rule = _rgb(brand, tok.get("rule"))
     for r in range(nrows):
         for c in range(ncols):
             cell = table.cell(r, c)
@@ -143,6 +225,8 @@ def fill_table(slide: Any, ph: Any, spec: Table, brand: Brand) -> None:
                 cell.text_frame.paragraphs[0].add_run().text = "● "
             add_runs(cell.text_frame.paragraphs[0], value, code_font)
             for p in cell.text_frame.paragraphs:
+                if numeric[c]:
+                    p.alignment = PP_ALIGN.RIGHT  # figures line up by place value
                 for run in p.runs:
                     if tok.get("font"):
                         run.font.name = tok["font"]
@@ -160,6 +244,8 @@ def fill_table(slide: Any, ph: Any, spec: Table, brand: Brand) -> None:
                 cell.fill.fore_color.rgb = fill
             elif r:
                 cell.fill.background()  # no fill, so the default style's accent tint doesn't show through
+            if rule is not None:
+                _rules(cell, rule, r)
 
 
 def fill_picture(slide: Any, ph: Any, path: Path, alt: str, crop: bool) -> tuple[int, int, int, int]:

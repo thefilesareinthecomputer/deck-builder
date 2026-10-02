@@ -35,10 +35,10 @@ def built(tmp_path_factory):
     assert main(["init", "--dir", str(root)]) == 0
     for slug in SLUGS:
         assert main(["--config", cfg, "brand", "init", slug, "--from", str(DEMO / "brands" / slug / "brand.yaml")]) == 0
-    out = root / "showcase"
-    assert main(["--config", cfg, "build", str(DEMO / "showcase" / "deck.md"), "--data",
-                 str(DEMO / "showcase" / "brands.csv"), "--name", "{{brand}}.pptx", "-o", str(out)]) == 0
-    return cfg, out
+    for deck in ("showcase", "layouts"):
+        assert main(["--config", cfg, "build", str(DEMO / deck / "deck.md"), "--data",
+                     str(DEMO / deck / "brands.csv"), "--name", "{{brand}}.pptx", "-o", str(root / deck)]) == 0
+    return cfg, root / "showcase"
 
 
 @pytest.mark.parametrize("slug", SLUGS)
@@ -48,4 +48,14 @@ def test_showcase_renders_in_the_brand_fonts_with_no_flags(built, slug, capsys):
     code, res = run("--config", cfg, "render", str(out / f"{slug}.pptx"), capsys=capsys)
     assert code == 0, res["issues"]
     assert [i for i in res["issues"] if i["code"] == "MISSING_FONT"] == []
+    assert res["flagged_slides"] == []
+
+
+@pytest.mark.parametrize("slug", SLUGS)
+def test_every_layout_renders_with_no_flags(built, slug, capsys):
+    """The layouts fixture, every generated layout with realistic content, renders clean in each brand."""
+    cfg, showcase = built
+    capsys.readouterr()
+    code, res = run("--config", cfg, "render", str(showcase.parent / "layouts" / f"{slug}.pptx"), capsys=capsys)
+    assert code == 0, res["issues"]
     assert res["flagged_slides"] == []

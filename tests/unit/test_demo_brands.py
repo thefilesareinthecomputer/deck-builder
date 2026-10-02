@@ -30,3 +30,24 @@ def test_showcase_builds_clean_in_all_three_brands(demo_ws, capsys):
     assert code == 0, out["issues"]
     assert [i for i in out["issues"] if i["severity"] == "error"] == []
     assert sorted(Path(o["output"]).name for o in out["outputs"]) == sorted(f"{s}.pptx" for s in SLUGS)
+
+
+def test_layouts_deck_uses_every_layout_and_builds_clean_in_all_three_brands(demo_ws, capsys):
+    """The layouts fixture puts every generated layout but team on a slide, including the cases that
+    used to look unfinished: a short bullet list, a short table, a comparison and a two-column slide."""
+    import re
+
+    from pptx import Presentation
+
+    text = (DEMO / "layouts" / "deck.md").read_text()
+    used = set(re.findall(r"(?m)^layout: (\S+)$", text))
+    assert used == {"title", "section", "agenda", "content", "two-col", "comparison", "big-number", "chart",
+                    "table", "image", "image-right", "icon-row", "quote", "closing"}
+    capsys.readouterr()
+    code, out = cli_json(demo_ws, "build", str(DEMO / "layouts" / "deck.md"),
+                         "--data", str(DEMO / "layouts" / "brands.csv"), "--name", "{{brand}}.pptx",
+                         "-o", str(demo_ws / "layouts"), capsys=capsys)
+    assert code == 0, out["issues"]
+    assert [i for i in out["issues"] if i["severity"] == "error"] == []
+    dark = Presentation(str(demo_ws / "layouts" / "afterhours-soap.pptx")).slides[5].slide_layout
+    assert dark.name == "Big Number" and dark._element.get("showMasterSp") == "0"  # big_number: dark
