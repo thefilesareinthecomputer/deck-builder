@@ -2,11 +2,34 @@
 from __future__ import annotations
 
 import argparse
+import re
+import tempfile
 from pathlib import Path
+from typing import Any
 
 from deck_builder import config as cfgmod
 from deck_builder import docs, pipeline, validate
+from deck_builder.brand.registry import Brand
+from deck_builder.build.deck import build as build_deck
+from deck_builder.build.deck import manifest_path
 from deck_builder.errors import CODES, EnvError, Issue, Result
+from deck_builder.model import Deck
+from deck_builder.parse.csvfile import read_rows as read_csv_rows
+from deck_builder.parse.markdown import TOKEN
+
+SAFE = re.compile(r"[^\w.-]+")
+
+
+def read_data_rows(path: Path) -> list[dict[str, str]]:
+    if not path.is_file():
+        raise EnvError(f"data file not found: {path}")
+    if path.suffix.lower() == ".csv":
+        return read_csv_rows(path)
+    if path.suffix.lower() == ".xlsx":
+        from deck_builder.parse.workbook import read_table_rows
+
+        return read_table_rows(path)
+    raise EnvError(f"--data takes .csv or .xlsx, not {path.suffix!r}")
 
 
 def _cfg(args: argparse.Namespace) -> cfgmod.Config:
@@ -42,21 +65,91 @@ def explain(args: argparse.Namespace) -> Result:
     return r
 
 
+def _validated(path: Path, cfg: cfgmod.Config, r: Result, brand_slug: str | None,
+               row: dict[str, str] | None = None) -> tuple[Deck | None, Brand | None]:
+    """Parse and validate into r. Returns the resolved deck and brand, or (None, brand) if any error."""
+    loaded = pipeline.load_deck(path, row)
+    for i in loaded.issues:
+        r.add(i)
+    r.data["slides"] = len(loaded.deck.slides)
+    if any(i.code == "UNKNOWN_TOKEN" for i in loaded.issues):
+        return None, None
+    brand = pipeline.brand_for(loaded.deck, path, cfg, brand_slug)
+    r.data["brand"] = brand.slug
+    for p in brand.problems:
+        r.add(Issue("BRAND_INVALID", f"brand {brand.slug!r}: {p}"))
+    if not brand.valid:
+        return None, brand
+    resolved, issues = validate.resolve(loaded.deck, brand, path.parent)
+    for i in issues:
+        r.add(i)
+    return (resolved if r.ok else None), brand
+
+
 def check(args: argparse.Namespace) -> Result:
     cfg = _cfg(args)
     path = Path(args.deck)
     r = Result(command="check", data={"input": str(path)})
-    loaded = pipeline.load_deck(path)
-    for i in loaded.issues:
+    _validated(path, cfg, r, args.brand)
+    r.summary = f"{'ok' if r.ok else 'failed'} check {path.name}: {r.data['slides']} slides, {_tally(r)}"
+    return r
+
+
+def default_output(path: Path, deck: Deck | None, cfg: cfgmod.Config) -> Path:
+    """-o wins (handled by the caller); then front matter `output`; then <workspace>/out/<name>.pptx.
+
+    A file named deck.md or deck.xlsx takes its folder's name, so decks/q3/deck.md builds out/q3.pptx.
+    """
+    if deck is not None and deck.meta.get("output"):
+        return path.parent / str(deck.meta["output"])
+    name = path.parent.name if path.stem == "deck" else path.stem
+    out_dir = cfg.workspace / "out" if cfg.found else path.parent
+    return out_dir / f"{name}.pptx"
+
+
+def _cache_dir(cfg: cfgmod.Config) -> Path:
+    return cfg.workspace / ".cache" / "assets" if cfg.found else Path(tempfile.gettempdir()) / "deck-builder-cache"
+
+
+def _build_one(path: Path, cfg: cfgmod.Config, args: argparse.Namespace, out: Path | None,
+               row: dict[str, str] | None, r: Result) -> dict[str, Any] | None:
+    deck, brand = _validated(path, cfg, r, args.brand, row)
+    if deck is None or brand is None:
+        return None
+    out_path = out or default_output(path, deck, cfg)
+    manifest, issues = build_deck(deck, brand, path, out_path, _cache_dir(cfg))
+    for i in issues:
         r.add(i)
-    brand = pipeline.brand_for(loaded.deck, path, cfg, getattr(args, "brand", None))
-    r.data["brand"] = brand.slug
-    for p in brand.problems:
-        r.add(Issue("BRAND_INVALID", f"brand {brand.slug!r}: {p}"))
-    if brand.valid:
-        _, issues = validate.resolve(loaded.deck, brand, path.parent)
-        for i in issues:
+    return {"output": str(out_path), "manifest": str(manifest_path(out_path)), "slides": len(manifest["slides"])}
+
+
+def build(args: argparse.Namespace) -> Result:
+    cfg = _cfg(args)
+    path = Path(args.deck)
+    r = Result(command="build", data={"input": str(path)})
+    if not args.data:
+        done = _build_one(path, cfg, args, Path(args.output) if args.output else None, None, r)
+        if done:
+            r.data.update(done)
+            r.summary = f"{'ok' if r.ok else 'failed'} build {done['output']}: {done['slides']} slides, {_tally(r)}"
+        else:
+            r.summary = f"failed build {path.name}: {_tally(r)}"
+        return r
+
+    rows = read_data_rows(Path(args.data))
+    pattern = args.name or "{{_row}}.pptx"
+    out_dir = Path(args.output) if args.output else default_output(path, None, cfg).with_suffix("")
+    built = []
+    for n, row in enumerate(rows, start=1):
+        row = {**row, "_row": f"{n:03d}"}
+        name = TOKEN.sub(lambda m, row=row: SAFE.sub("-", str(row.get(m.group(1), m.group(0)))), pattern)
+        sub = Result(command="build")
+        done = _build_one(path, cfg, args, out_dir / name, row, sub)
+        for i in sub.issues:
+            i.message = f"row {n}: {i.message}"
             r.add(i)
-    r.data["slides"] = len(loaded.deck.slides)
-    r.summary = f"{'ok' if r.ok else 'failed'} check {path.name}: {len(loaded.deck.slides)} slides, {_tally(r)}"
+        if done:
+            built.append(done)
+    r.data["outputs"] = built
+    r.summary = f"{'ok' if r.ok else 'failed'} build {len(built)} of {len(rows)} decks into {out_dir}, {_tally(r)}"
     return r

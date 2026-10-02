@@ -9,7 +9,7 @@ from deck_builder.brand import registry
 from deck_builder.brand.registry import Brand
 from deck_builder.errors import EnvError, Issue
 from deck_builder.model import Deck
-from deck_builder.parse import csvfile, markdown
+from deck_builder.parse import csvfile, markdown, workbook
 
 FORMATS = {".md": "markdown", ".markdown": "markdown", ".csv": "csv", ".xlsx": "workbook"}
 
@@ -30,8 +30,6 @@ def load_deck(path: Path, row: dict[str, str] | None = None) -> Loaded:
     elif fmt == "csv":
         deck, issues = csvfile.parse(path)
     elif fmt == "workbook":
-        from deck_builder.parse import workbook
-
         deck, issues = workbook.parse(path, row)
     else:
         raise EnvError(f"unsupported input {path.suffix!r}; use .md, .xlsx or .csv")

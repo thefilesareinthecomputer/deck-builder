@@ -62,7 +62,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
     p.add_argument("deck")
     p.add_argument("--brand", help="brand slug (overrides the deck's brand:)")
     p.add_argument("--render", action="store_true", help="also build, render and measure")
-    p = add("build", "build a deck into a .pptx")
+    p = add("build", "build a deck into a .pptx", commands.build)
     p.add_argument("deck")
     p.add_argument("--brand", help="brand slug (overrides the deck's brand:)")
     p.add_argument("-o", "--output")
