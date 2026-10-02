@@ -26,6 +26,12 @@ the user and propose an engine or brand-kit change.
 
 ## Who does what
 
+When the deck has to come out of more material than fits here (a folder of documents, a
+knowledge base or vault), start with the `deck-decomposer-agent`: it returns `outline.md` (the
+storyline with a source for every slide, plus open questions) and a draft `deck.md` that passes
+`check`. Walk the user through the outline, co-author and proofread with them (or convert to
+`.xlsx` for their team), and only then build.
+
 For more than a handful of slides, hand the build loop to the `deck-builder-agent` subagent and
 keep this context for the storyline and the review. Give it the source material paths, the brand
 slug, the approved storyline, the deck's path and any constraints. It returns a short report;

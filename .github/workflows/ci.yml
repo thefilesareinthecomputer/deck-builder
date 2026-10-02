@@ -3,6 +3,12 @@ name: ci
 on:
   push:
   pull_request:
+  workflow_dispatch:
+  schedule:
+    # Weekly, Monday 13:00 UTC: re-audits the locked dependencies for newly published CVEs and
+    # re-runs the render tier against current LibreOffice and poppler, even when nobody pushed.
+    # Dependabot (.github/dependabot.yml) opens the update PRs; this catches what lands between them.
+    - cron: "0 13 * * 1"
 
 permissions:
   contents: read

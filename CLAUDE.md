@@ -18,9 +18,14 @@ If `uv run deck-builder brand list` reports no config, the user hasn't onboarded
 | Task | Skill or agent |
 |---|---|
 | Setup, missing tools, first deck | `deck-onboard` skill |
-| Brand kits: colors, fonts, logos, icons, layouts, templates | `deck-brand` skill |
+| Brand kits: the conversation with the user | `deck-brand` skill |
+| Brand kits: generating, checking and test-rendering a kit from those decisions | `deck-brand-agent` subagent |
+| A deck from a large body of documents, notes or a knowledge base or vault | `deck-decomposer-agent` subagent writes `outline.md` and a draft `deck.md`; the user co-authors and proofreads before anything is built |
 | Writing, converting, building, rendering decks | `deck-builder` skill |
 | The build loop for a deck of more than a handful of slides | `deck-builder-agent` subagent, then the review gate in the `deck-builder` skill |
+
+Subagents can't talk with the user. The main agent holds the conversation, hands each agent the
+decisions it needs, relays the questions they return, and reviews their work before the user sees it.
 
 ## Working on the engine itself
 
