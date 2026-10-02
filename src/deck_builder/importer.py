@@ -253,6 +253,16 @@ def chart_value(chart: Any, brand: Brand) -> tuple[Chart | None, str]:
     return value, "" if exact else f"chart type {chart.chart_type.name} imported as {kind}"
 
 
+def _extra_plot_series(chart: Any) -> list[str]:
+    """Series from every plot after the first: a combo chart's extra plots (such as a line layered over
+    a bar plot) would otherwise vanish, since only plots[0] becomes the field's chart."""
+    out = []
+    for plot in chart.plots[1:]:
+        for s in plot.series:
+            out.append(f"{s.name}: {', '.join(str(number(v)) for v in s.values)}")
+    return out
+
+
 # ---------------------------------------------------------------- the importer
 
 
@@ -339,6 +349,11 @@ class Importer:
                 if chart is None:
                     rep.unplaced.append(f"Chart {sh.name!r}: {why}")
                     continue
+                extra = _extra_plot_series(sh.chart)
+                if extra:
+                    rep.skipped.append(f"chart {sh.name!r} has {len(sh.chart.plots)} plots; only the first "
+                                       "is placed")
+                    rep.unplaced.append(f"Chart {sh.name!r} extra plot series (not placed): " + " / ".join(extra))
                 found.append(Found("chart", chart, f"chart {sh.name!r}", box, idx))
                 continue
             if getattr(sh, "has_table", False) and sh.has_table:

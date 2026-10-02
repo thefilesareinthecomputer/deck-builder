@@ -291,6 +291,53 @@ def test_a_messy_deck_imports_with_every_rough_edge_reported(ws, capsys, messy):
     assert deck.slides[3].fields["caption"] == "Opened in August."
 
 
+def combo_chart_pptx(path: Path) -> Path:
+    """A chart with two plots (a bar plot and a line plot): import reads chart.plots[0] only, so the
+    line plot's series must not vanish silently."""
+    prs = Presentation()
+    slide = prs.slides.add_slide(prs.slide_layouts[1])  # Title and Content
+    slide.shapes.title.text = "Cases and margin"
+    ph = slide.placeholders[1]
+    left, top, width, height = ph.left, ph.top, ph.width, ph.height
+    ph._element.getparent().remove(ph._element)
+
+    bar_data = CategoryChartData()
+    bar_data.categories = ["Jul", "Aug", "Sep"]
+    bar_data.add_series("Cases", (410, 378, 331))
+    gframe = slide.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED, left, top, width, height, bar_data)
+    bar_chart = gframe.chart
+
+    # A throwaway presentation just to get a valid <c:lineChart> element to graft on as a second plot.
+    helper = Presentation()
+    hslide = helper.slides.add_slide(helper.slide_layouts[1])
+    hph = hslide.placeholders[1]
+    line_data = CategoryChartData()
+    line_data.categories = ["Jul", "Aug", "Sep"]
+    line_data.add_series("Margin", (12, 14, 11))
+    hframe = hslide.shapes.add_chart(XL_CHART_TYPE.LINE, hph.left, hph.top, hph.width, hph.height, line_data)
+    line_elem = hframe.chart.plots[0]._element
+
+    plot_area = bar_chart.plots[0]._element.getparent()
+    plot_area.append(copy.deepcopy(line_elem))
+    assert len(bar_chart.plots) == 2
+
+    prs.save(str(path))
+    return path
+
+
+def test_import_lists_a_combo_charts_extra_plot_as_unplaced(ws, capsys, tmp_path):
+    src = combo_chart_pptx(tmp_path / "combo.pptx")
+    code, out = cli_json(ws, "import", str(src), str(ws / "imp"), "--brand", "stock", capsys=capsys)
+    assert code == 0, out
+    assert out["unplaced"] >= 1
+    deck = markdown.parse(ws / "imp" / "deck.md")[0]
+    chart = deck.slides[0].fields["chart"]
+    assert chart.series[0].name == "Cases" and chart.series[0].values == [410, 378, 331]  # the first plot, kept
+    assert "Margin" in deck.slides[0].notes and "12" in deck.slides[0].notes  # the second plot, not dropped
+    report = (ws / "imp" / "import-report.md").read_text()
+    assert "Margin" in report
+
+
 def test_a_deck_from_another_template_maps_onto_a_brand_by_placeholder_types(ws, capsys, messy):
     src = DEMO / "brands" / "briarfield-paper" / "brand.yaml"
     assert cli_json(ws, "brand", "init", "briarfield-paper", "--from", str(src), capsys=capsys)[0] == 0
