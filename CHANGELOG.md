@@ -34,7 +34,7 @@
 
 ### Changed
 
-- The design spec moved to `tasks/completed/SPEC-2026-10-02.md` now that the build is done; README has a "Rules the engine keeps" section, and every CLI argument and MCP tool parameter says what it takes.
+- With the build done, the design spec and the planning notes in `tasks/` are local working notes and no longer tracked; README has a "Rules the engine keeps" section, and every CLI argument and MCP tool parameter says what it takes.
 - Canonical `deck.md` front matter (from `convert` and `import`) is one `key: value` per line instead of a single YAML flow mapping. Content hashes change once as a result.
 - The neutral brand passes its own contrast check: links use `primary` (10.95:1, was 4.10:1) and the fourth chart color is `5B8FC7` (3.39:1, was `8FB3D9` at 2.18:1).
 

@@ -34,8 +34,8 @@ the workspace; put their input files inside it. The decomposer runs no commands 
 ## Working on the engine itself
 
 - `uv run pytest`, `uv run ruff check`, `uv run mypy` must pass before a commit.
-- `README.md` and the reference topics (`deck-builder docs`) describe how the engine behaves; the
-  original design spec is archived at `tasks/completed/SPEC-2026-10-02.md`.
+- `README.md` and the reference topics (`deck-builder docs`) describe how the engine behaves.
+  `tasks/` holds local working notes (the handoff, plans, the archived design spec) and isn't tracked.
 - Agent files load at session start: test an edited agent in a fresh process, e.g.
   `claude -p --agent deck-builder-agent --allowedTools mcp__deck-builder "<test prompt>"`.
 - When a skill needs something the CLI can't do, add it to the CLI. Skills hold no engine logic.

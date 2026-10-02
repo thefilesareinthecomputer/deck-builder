@@ -175,8 +175,6 @@ v0.1.0, with the changes since in [CHANGELOG.md](CHANGELOG.md). Known limits:
 - **Agents have no shell.** The subagents reach the engine only through `deck-builder mcp`, confined to the workspace. They can still write files the session allows, so keep client work outside the clone.
 - **Restraint.** Visual additions (slide numbers, footers, status dots) are the smallest mark that does the job.
 
-The original design spec, with its requirements and open decisions, is archived at [tasks/completed/SPEC-2026-10-02.md](tasks/completed/SPEC-2026-10-02.md).
-
 ---
 
 ## Development

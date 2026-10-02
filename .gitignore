@@ -15,14 +15,8 @@
 !/tests/
 !/docs/
 !/scripts/
-!/tasks/
 !/workspace/
-
-# tasks/ ships only these; scratch files there stay local
-/tasks/*
-!/tasks/plan.md
-!/tasks/handoff.md
-!/tasks/completed/
+# tasks/ (plans, handoffs, the archived design spec) is local working notes and never ships
 
 # .claude ships only the skills and the agent; local settings stay local
 /.claude/*
