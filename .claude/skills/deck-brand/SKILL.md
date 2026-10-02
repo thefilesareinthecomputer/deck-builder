@@ -39,7 +39,8 @@ Ask one topic at a time and show what you'll write before writing it.
   deck (`brand adopt` reads its theme), colors the user pastes. Name colors by role (`primary`,
   `accent`, `ink`, `surface`), not by hue.
 - **Theme slots.** Map `dk1`, `lt1`, `dk2`, `lt2`, `accent1` to `accent6`, `hlink`, `folHlink` to
-  palette names. Text needs contrast against its background; flag pairs that look too close.
+  palette names. Don't judge contrast by eye: `brand_check` reports `LOW_CONTRAST` for any pair
+  under the WCAG 2.2 threshold once the kit exists.
 - **Fonts.** A heading and a body family, each with a fallback that ships with Office. Ask whether
   the fonts are licensed for embedding and installed on every machine that renders.
 - **Logos.** PNG files with ids (`primary`, `mono`). Ask which one goes on the master, if any.
@@ -60,9 +61,9 @@ Once the decisions are made, hand the mechanical work to the `deck-brand-agent` 
 slug, the decisions, and the paths of the brand guide, template, logos and icons. It writes
 `brand.yaml`, generates or adopts the kit, checks it, test-renders it and returns proposed
 budgets and questions. Relay the questions, get the user's answers, and send it back if needed.
-It has no shell and runs the engine through the deck-builder MCP tools, which read only inside the
-workspace and the `brand_paths` folders: copy the user's guide, template, logos and icons into a
-scratch folder in the workspace first, and give it those paths.
+It has no shell and runs the engine through nine MCP tools, which read only inside the workspace and
+the `brand_paths` folders (the full map is `deck-builder docs agents`): copy the user's guide,
+template, logos and icons into a scratch folder in the workspace first, and give it those paths.
 The commands it runs, for doing it here instead:
 
 Run the CLI as `uv run deck-builder` inside the deck-builder clone, or `deck-builder` where it's
