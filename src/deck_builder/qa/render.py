@@ -12,7 +12,7 @@ from pptx.enum.shapes import PP_PLACEHOLDER
 
 from deck_builder.brand.registry import Brand
 from deck_builder.build.deck import manifest_path
-from deck_builder.errors import Issue
+from deck_builder.errors import EnvError, Issue
 from deck_builder.qa import backends, fonts, images, measure
 
 FLAG_CODES = {"OVERFLOW_MEASURED", "EMPTY_PLACEHOLDER", "ASSET_LOW_RES"}
@@ -54,6 +54,9 @@ def render(pptx: Path, backend: str, dpi: int, batch: int, pages: list[int] | No
            brand: Brand | None) -> Rendered:
     out_dir = pptx.with_name(pptx.stem + ".render")
     if out_dir.exists():
+        # only ever delete a folder this command made: it holds deck.pdf, or nothing
+        if not (out_dir / "deck.pdf").is_file() and any(out_dir.iterdir()):
+            raise EnvError(f"{out_dir} exists and wasn't made by deck-builder render; move it and retry")
         shutil.rmtree(out_dir)
     out_dir.mkdir(parents=True)
     pdf = out_dir / "deck.pdf"

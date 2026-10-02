@@ -27,7 +27,8 @@ def rasterize(pdf: Path, out_dir: Path, size: tuple[int, int], pages: list[int] 
     for n in wanted:
         prefix = out_dir / f"page-{n}"
         subprocess.run(["pdftoppm", "-png", "-scale-to-x", str(size[0]), "-scale-to-y", str(size[1]), "-f", str(n),
-                        "-l", str(n), "-singlefile", str(pdf), str(prefix)], check=True, capture_output=True,
+                        "-l", str(n), "-singlefile", str(pdf.resolve()), str(prefix.resolve())], check=True,
+                       capture_output=True,
                        timeout=120)
         target = out_dir / f"slide-{n:0{width}d}.png"
         prefix.with_suffix(".png").replace(target)

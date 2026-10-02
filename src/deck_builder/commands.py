@@ -225,20 +225,34 @@ def _init_brand(args: argparse.Namespace, cfg: cfgmod.Config, r: Result) -> Resu
     return r
 
 
+def inside(base: Path, rel: str) -> Path:
+    """base/rel, refusing anything that would land outside base (absolute paths, `..`, symlinks out)."""
+    p = Path(rel)
+    full = (base / p).resolve()
+    if p.is_absolute() or ".." in p.parts or not full.is_relative_to(base.resolve()):
+        raise EnvError(f"{rel!r} must be a relative path inside {base}")
+    return full
+
+
 def init_kit(meta: dict[str, Any], src: Path, target: Path) -> None:
-    """Write a generated kit: brand.yaml and its assets copied in, template.potx and tokens.yaml generated."""
+    """Write a generated kit: brand.yaml and its assets copied in, template.potx and tokens.yaml generated.
+
+    Asset paths in brand.yaml are confined to the source folder and the kit, so a brand.yaml from
+    elsewhere can't read or overwrite files outside them.
+    """
     target.mkdir(parents=True, exist_ok=True)
     src_dir = src.parent.resolve()
+    rels = [str(p) for p in (meta.get("logos") or {}).values()]
+    icons_dir = (meta.get("icons") or {}).get("dir")
+    if icons_dir and inside(src_dir, icons_dir).is_dir():
+        rels += [str(Path(icons_dir) / p.name) for p in sorted(inside(src_dir, icons_dir).glob("*.png"))]
+    pairs = [(inside(src_dir, rel), inside(target, rel)) for rel in rels]  # validate all before writing
     if src.resolve() != (target / "brand.yaml").resolve():
         shutil.copyfile(src, target / "brand.yaml")
-        rels = [str(p) for p in (meta.get("logos") or {}).values()]
-        icons_dir = (meta.get("icons") or {}).get("dir")
-        if icons_dir and (src_dir / icons_dir).is_dir():
-            rels += [str(Path(icons_dir) / p.name) for p in sorted((src_dir / icons_dir).glob("*.png"))]
-        for rel in rels:
-            if (src_dir / rel).is_file():
-                (target / rel).parent.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(src_dir / rel, target / rel)
+        for source, dest in pairs:
+            if source.is_file():
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source, dest)
     potx, tokens = generate.generate(meta, src_dir)
     (target / "template.potx").write_bytes(potx)
     stale = target / "template.pptx"
@@ -255,7 +269,9 @@ def _kit_dir(args: argparse.Namespace, cfg: cfgmod.Config) -> Path:
     root = Path(args.out) if args.out else cfg.brand_paths[0]
     target = root / args.slug
     if (target / "brand.yaml").exists() and not args.force:
-        raise EnvError(f"{target} already holds a brand kit; pass --force to replace its generated files")
+        replaced = "template, tokens.yaml and brand.yaml" if args.action == "adopt" else "template.potx and tokens.yaml"
+        raise EnvError(f"{target} already holds a brand kit; --force replaces its {replaced}, discarding tuned "
+                       "budgets and edits")
     return target
 
 

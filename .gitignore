@@ -18,6 +18,11 @@
 !/tasks/
 !/workspace/
 
+# tasks/ ships only these; scratch files there stay local
+/tasks/*
+!/tasks/plan.md
+!/tasks/handoff.md
+
 # .claude ships only the skills and the agent; local settings stay local
 /.claude/*
 !/.claude/skills/
@@ -26,6 +31,13 @@
 # workspace/ ships as an empty placeholder; init fills it locally
 /workspace/*
 !/workspace/README.md
+
+# secrets, anywhere, even inside allowlisted folders
+.env
+.env.*
+*.pem
+*.key
+*.p12
 
 # generated anywhere
 __pycache__/

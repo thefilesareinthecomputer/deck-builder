@@ -59,7 +59,7 @@ def norm(token: str) -> str:
 
 def pdf_words(pdf: Path) -> list[tuple[float, float, list[Word]]]:
     """Per page: (width, height, words), in points from the top-left."""
-    out = subprocess.run(["pdftotext", "-bbox-layout", str(pdf), "-"], capture_output=True, text=True,
+    out = subprocess.run(["pdftotext", "-bbox-layout", str(pdf.resolve()), "-"], capture_output=True, text=True,
                          check=True, timeout=120).stdout
     root = ET.fromstring(re.sub(r"<!DOCTYPE[^>]*>", "", out))
     pages = []

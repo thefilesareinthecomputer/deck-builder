@@ -12,12 +12,20 @@ from deck_builder.errors import EnvError
 
 POTX_CT = b"application/vnd.openxmlformats-officedocument.presentationml.template.main+xml"
 PPTX_CT = b"application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"
+MAX_UNPACKED = 200 * 2**20  # a template that unpacks larger than this is refused (zip bombs)
 
 
 def open_template(path: Path) -> Any:
     """Open a .pptx or .potx. python-pptx rejects the .potx content type, so it's patched in memory."""
     if not path.is_file():
         raise EnvError(f"template not found: {path}")
+    try:
+        with zipfile.ZipFile(path) as z:
+            size = sum(i.file_size for i in z.infolist())
+    except zipfile.BadZipFile as e:
+        raise EnvError(f"{path} isn't a PowerPoint file") from e
+    if size > MAX_UNPACKED:
+        raise EnvError(f"{path} unpacks to {size // 2**20} MB; templates over {MAX_UNPACKED // 2**20} MB are refused")
     if path.suffix.lower() != ".potx":
         return Presentation(str(path))
     buf = io.BytesIO()

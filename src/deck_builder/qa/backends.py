@@ -54,7 +54,7 @@ def libreoffice(pptx: Path, pdf: Path) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         profile = Path(tmp, "profile").as_uri()  # throwaway profile: never touches the user's LibreOffice
         cmd = [exe, f"-env:UserInstallation={profile}", "--headless", "--norestore", "--convert-to", "pdf",
-               "--outdir", tmp, str(pptx)]
+               "--outdir", tmp, str(pptx.resolve())]  # absolute, so a name can't read as an option
         try:
             proc = subprocess.run(cmd, capture_output=True, text=True, timeout=LO_TIMEOUT)
         except subprocess.TimeoutExpired as e:

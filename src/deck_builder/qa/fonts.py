@@ -15,7 +15,8 @@ def squash(name: str) -> str:
 
 def embedded(pdf: Path) -> set[str]:
     """Font names in the PDF, subset prefixes (ABCDEF+) removed, squashed for comparison."""
-    out = subprocess.run(["pdffonts", str(pdf)], capture_output=True, text=True, check=True, timeout=60).stdout
+    out = subprocess.run(["pdffonts", str(pdf.resolve())], capture_output=True, text=True, check=True,
+                         timeout=60).stdout
     names = set()
     for line in out.splitlines()[2:]:
         if line.strip():
