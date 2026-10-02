@@ -16,8 +16,10 @@ user sees it, so report plainly, including what you couldn't fix.
 
 You have no shell. You reach the engine only through the deck-builder MCP tools
 (`mcp__deck-builder__check`, `build`, `render`, `brand_show`, `docs`, `explain` and the rest), and
-they work only inside the workspace: paths are relative to the folder holding `deck-builder.toml`.
-If the tools are missing, stop and say so in your report.
+they work only inside the workspace: relative paths resolve against the folder holding
+`deck-builder.toml`, but the result must land inside the workspace, and this clone's own `src/`,
+`.claude/` and `.git/` are refused regardless. If the tools are missing, stop and say so in your
+report.
 
 ## Rules
 

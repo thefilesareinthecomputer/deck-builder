@@ -186,8 +186,8 @@ def test_brand_tools(server, ws):
     assert [b["slug"] for b in call(server, "brand_list")[1]["brands"]] == ["stock"]
     assert "layouts" in call(server, "brand_show", slug="stock")[1]
     assert call(server, "brand_check", slug="stock")[1]["ok"]
-    shutil.copytree(DEMO / "brands" / "briarfield-paper", ws / "src" / "briarfield-paper")
-    err, out = call(server, "brand_init", slug="briarfield-paper", **{"from": "src/briarfield-paper/brand.yaml"})
+    shutil.copytree(DEMO / "brands" / "briarfield-paper", ws / "incoming" / "briarfield-paper")
+    err, out = call(server, "brand_init", slug="briarfield-paper", **{"from": "incoming/briarfield-paper/brand.yaml"})
     assert not err, out
     Presentation().save(str(ws / "client.pptx"))
     err, out = call(server, "brand_adopt", slug="client", template="client.pptx")
@@ -230,6 +230,45 @@ def test_dot_dot_out_of_the_workspace_is_refused(server, ws, outside):
 def test_a_symlink_out_of_the_workspace_is_refused(server, ws, outside):
     (ws / "decks" / "linked").symlink_to(outside)
     refused(server, "check", deck="decks/linked/deck.md")
+
+
+@pytest.mark.parametrize("rel", [".claude/settings.json", ".git/config", "src/deck_builder/cli.py"])
+def test_the_clones_own_folders_are_refused_even_inside_the_workspace(server, ws, rel):
+    p = ws / rel
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text("x", encoding="utf-8")
+    assert "part of this clone's own files" in refused(server, "check", deck=str(p))
+
+
+@pytest.mark.parametrize("name", ["AGENTS.md", "CLAUDE.md", "deck-builder.toml"])
+def test_the_clones_own_filenames_are_refused_even_inside_the_workspace(server, ws, name):
+    p = ws / "decks" / name
+    p.write_text("x", encoding="utf-8")
+    assert "part of this clone's own files" in refused(server, "check", deck=str(p))
+
+
+def test_example_decks_from_init_check_and_build_through_mcp(tmp_path):
+    """The clone layout: deck-builder.toml beside src/, .claude/ and AGENTS.md, workspace a subfolder."""
+    from deck_builder.cli import main as cli_main
+
+    (tmp_path / "src" / "deck_builder").mkdir(parents=True)
+    (tmp_path / "src" / "deck_builder" / "cli.py").write_text("# engine source\n", encoding="utf-8")
+    (tmp_path / ".claude").mkdir()
+    (tmp_path / ".claude" / "settings.json").write_text("{}", encoding="utf-8")
+    (tmp_path / "AGENTS.md").write_text("# repo instructions\n", encoding="utf-8")
+    assert cli_main(["init", "--dir", str(tmp_path)]) == 0
+
+    srv = mcp.Server(cfgmod.load(str(tmp_path / "deck-builder.toml")))
+    err, out = call(srv, "check", deck="workspace/decks/quarterly-review/deck.md")
+    assert not err and out["ok"], out
+    err, out = call(srv, "build", deck="workspace/decks/quarterly-review/deck.md")
+    assert not err, out
+
+    assert "part of this clone's own files" in refused(srv, "check", deck=str(tmp_path / "src" / "deck_builder" /
+                                                                               "cli.py"))
+    assert "part of this clone's own files" in refused(srv, "check",
+                                                        deck=str(tmp_path / ".claude" / "settings.json"))
+    assert "part of this clone's own files" in refused(srv, "check", deck=str(tmp_path / "AGENTS.md"))
 
 
 @pytest.mark.parametrize("name, args", [
