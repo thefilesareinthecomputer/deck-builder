@@ -161,6 +161,10 @@ CODES: dict[str, tuple[str, str]] = {
         "The PowerPoint render backend hasn't been verified on a real Mac yet.",
         "Treat the render as provisional; run scripts/probe_powerpoint.sh to verify the backend.",
     ),
+    "STALE_BUILD": (
+        "The deck source recorded in the .pptx's manifest was edited after the .pptx was built.",
+        "Rebuild the deck before trusting this render.",
+    ),
     "SKILL_CONFLICT": (
         "`skills install` found a file or folder where it would put a link, and left it alone.",
         "Remove or rename the existing skill or agent if this clone's version should replace it, then rerun.",

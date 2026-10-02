@@ -45,6 +45,22 @@ def hidden_slide_numbers(prs: Any) -> list[int]:
     return [n for n, slide in enumerate(prs.slides, start=1) if slide._element.get("show") == "0"]
 
 
+def stale_build_check(pptx: Path, manifest: dict[str, Any] | None) -> list[Issue]:
+    """Warn when the deck source the manifest points at was edited after this .pptx was built."""
+    if not manifest:
+        return []
+    src = manifest.get("input", {}).get("path")
+    if not src:
+        return []
+    source = Path(src)
+    if not source.is_file():
+        return []
+    if source.stat().st_mtime > pptx.stat().st_mtime:
+        return [Issue("STALE_BUILD", f"{source.name} was edited after {pptx.name} was built",
+                     severity="warning")]
+    return []
+
+
 def empty_placeholders(pptx: Path) -> list[Issue]:
     issues = []
     for n, slide in enumerate(Presentation(str(pptx)).slides, start=1):
@@ -86,6 +102,7 @@ def render(pptx: Path, backend: str, dpi: int, batch: int, pages: list[int] | No
                             severity="warning"))
     mpath = manifest_path(pptx)
     manifest: dict[str, Any] | None = json.loads(mpath.read_text()) if mpath.is_file() else None
+    issues += stale_build_check(pptx, manifest)
     issues += measure.overflow(pptx, pdf, manifest, visible)
     issues += empty_placeholders(pptx)
     if brand is not None:

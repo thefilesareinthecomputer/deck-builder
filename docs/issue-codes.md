@@ -39,4 +39,5 @@ Generated from the engine by `deck-builder docs codes`. Fix by code, not by mess
 | `MISSING_FONT` | The renderer used another font than the brand's, or its fallback: the font isn't installed where the deck rendered. | Install the brand fonts where decks render. Don't change content to fit a substitute font; a PowerPoint render shows the real fonts. |
 | `OFFICE_REPAIR` | PowerPoint couldn't open or export the built file, or stopped on a dialog such as a repair prompt. | A repair prompt on an engine-built file is an engine defect; report it with the input and manifest. |
 | `RENDER_UNVERIFIED` | The PowerPoint render backend hasn't been verified on a real Mac yet. | Treat the render as provisional; run scripts/probe_powerpoint.sh to verify the backend. |
+| `STALE_BUILD` | The deck source recorded in the .pptx's manifest was edited after the .pptx was built. | Rebuild the deck before trusting this render. |
 | `SKILL_CONFLICT` | `skills install` found a file or folder where it would put a link, and left it alone. | Remove or rename the existing skill or agent if this clone's version should replace it, then rerun. |

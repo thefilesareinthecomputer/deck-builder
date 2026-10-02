@@ -207,7 +207,8 @@ def build(deck: Deck, brand: Brand, deck_path: Path, out_path: Path, cache_dir: 
     manifest = {
         "engine": __version__,
         "brand": {"slug": brand.slug, "version": brand.version, "template_sha256": template_sha},
-        "input": {"file": deck_path.name, "sha256": input_sha, "content_sha256": content_sha},
+        "input": {"file": deck_path.name, "path": str(deck_path.resolve()), "sha256": input_sha,
+                  "content_sha256": content_sha},
         "output": {"file": out_path.name, "sha256": hashlib.sha256(blob).hexdigest(),
                    "content_sha256": content_digest(blob)},
         "slides": slides,
