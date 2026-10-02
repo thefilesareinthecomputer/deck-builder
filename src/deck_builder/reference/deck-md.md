@@ -49,6 +49,9 @@ Source: the Q3 shipment ledger.
 | table | A pipe table, or a ```` ```table ```` block with `header:` and `rows:` |
 | chart | A ```` ```chart ```` block, below |
 
+A body cell whose trimmed value matches a `table.status` key in tokens.yaml, case-insensitively, gets
+a colored dot before its text; the word itself still prints, so the color is never the only signal.
+
 ````markdown
 ```chart
 type: column          # column | stacked-column | bar | stacked-bar | line | pie | doughnut

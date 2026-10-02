@@ -183,6 +183,7 @@ table:
   header_fill: primary
   header_text: background
   band_fill: surface
+  status: {Green: "15803D", Amber: "B45309", Red: "B91C1C"}
 layouts:
   content:
     template_layout: "Content"
@@ -201,6 +202,9 @@ layouts:
 
 Field kinds: `text`, `bullets`, `table`, `chart`, `image`, `icon`. Chart and table fonts come from the template theme unless `font` is set.
 
+`table.status` maps exact cell values, case-insensitively, to a palette name or hex; a body cell whose
+trimmed text matches a key gets a colored dot before its text, the word itself unchanged.
+
 ### 5.4 Registry: durable, discoverable, callable
 
 A brand is any directory under a `brand_paths` entry that contains a `brand.yaml`. The registry is computed on each run; there is no database.
@@ -209,7 +213,7 @@ A brand is any directory under a `brand_paths` entry that contains a `brand.yaml
 |---|---|
 | `brand list [--json]` | Every brand found: slug, name, version, path, valid or not |
 | `brand show <slug> [--json]` | The compact contract: layouts, their fields, kinds and budgets, palette names, logo and icon ids. This is what the LLM reads before writing a deck. |
-| `brand check <slug> [--json]` | Schemas valid; every `template_layout` exists in the template; every field `idx` exists on its layout; every logo and icon file exists; color pairs meet WCAG 2.2 contrast, as `LOW_CONTRAST` warnings (4.5:1 for dk1 on lt1 and lt2, lt1 on dk2, hlink on lt1; 3:1 for the icon color and chart series colors on lt1) |
+| `brand check <slug> [--json]` | Schemas valid; every `template_layout` exists in the template; every field `idx` exists on its layout; every logo and icon file exists; color pairs meet WCAG 2.2 contrast, as `LOW_CONTRAST` warnings (4.5:1 for dk1 on lt1 and lt2, lt1 on dk2, hlink on lt1; 3:1 for the icon color and chart series colors on lt1, and for each `table.status` color on the table's row fill, band fill and lt1) |
 | `brand init <slug> --from brand.yaml` | Generates `template.potx`, `tokens.yaml` and recolored assets from `brand.yaml` ([section 5.5](#55-brand-generation)) |
 | `brand adopt <slug> --template FILE` | Wraps an existing template: copies it in, writes a starter `tokens.yaml` from `inspect`, and a `brand.yaml` skeleton with the template's theme colors and fonts filled in |
 
