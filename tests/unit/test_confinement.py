@@ -214,6 +214,23 @@ def test_a_value_that_would_start_a_heading_or_image_line_is_refused(ws, capsys,
     assert "row 1: column 'note' would start a heading or image line" in out["issues"][0]["message"]
 
 
+@pytest.mark.parametrize("value", ["layout: title", "title: x", "| a | b |"])
+def test_a_value_that_would_start_a_field_line_or_table_row_is_refused(ws, capsys, value):
+    code, out = bulk(ws, capsys, BULK, f'client,note\nAcme,"{value}"\n')
+    assert code == 1
+    assert "row 1: column 'note' would start a heading or image line" in out["issues"][0]["message"]
+
+
+def test_a_field_line_injected_with_no_blank_line_cant_override_the_layout(ws, capsys):
+    # the template puts the data value immediately after `layout:`, with no blank line between them, so a
+    # value that looks like another field line would otherwise be read as one by the head-of-slide scan
+    tmpl = "---\nbrand: stock\n---\n\n## {{client}} review\nlayout: content\n{{note}}\n"
+    code, out = bulk(ws, capsys, tmpl, 'client,note\nAcme,"layout: title"\n')
+    assert code == 1
+    assert "BAD_DATA_VALUE" in codes(out)
+    assert not out.get("outputs")
+
+
 def test_an_empty_value_cant_move_the_next_one_to_the_line_start(ws, capsys):
     body = "---\nbrand: stock\n---\n\n## {{client}} review\nlayout: content\n\n{{pad}}{{note}}\n"
     code, out = bulk(ws, capsys, body, 'client,pad,note\nAcme,,"![x](assets/a.png)"\n')

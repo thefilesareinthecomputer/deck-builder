@@ -19,8 +19,9 @@ NUMBERED = re.compile(r"^(\s*)\d+[.)]\s+(.*)$")
 TOKEN = re.compile(r"\{\{\s*([\w.-]+)\s*\}\}")
 NOTES = re.compile(r"^(Notes|\?\?\?):?\s*$")
 STRAY_HEADING = re.compile(r"^#{1,6}\s")
-# A line that changes a deck's structure: a heading, an image, a fence, or the start of speaker notes.
-STRUCTURE = re.compile(r"^\s*(#|!\[|```|(Notes|\?\?\?):?\s*$)")
+# A line that changes a deck's structure: a heading, an image, a fence, a field line, a pipe-table row,
+# or the start of speaker notes.
+STRUCTURE = re.compile(r"^\s*(#|!\[|```|\||(?:[a-z_][\w-]*:(?:\s|$))|(Notes|\?\?\?):?\s*$)")
 
 
 def _unescape_notes_line(ln: str) -> str:
