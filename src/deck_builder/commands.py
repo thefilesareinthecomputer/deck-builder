@@ -629,6 +629,9 @@ def assets_cmd(args: argparse.Namespace) -> Result:
     for it in items:
         if it.get("unknown"):
             r.add(Issue("UNKNOWN_ASSET", f"{it['id']} isn't defined in brand {brand.slug!r}"))
+        elif it.get("outside"):
+            where = f"brand {brand.slug!r}'s kit" if str(it["id"]).startswith("brand:") else "the deck's folder"
+            r.add(Issue("ASSET_OUTSIDE", f"{it['id']} resolves outside {where}"))
         elif it.get("missing"):
             r.add(Issue("MISSING_IMAGE", f"{it['id']}: {it['path']} not found"))
     lines = []

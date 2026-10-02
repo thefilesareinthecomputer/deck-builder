@@ -28,7 +28,7 @@ from deck_builder.build.text import CODE_FONT_DEFAULT
 from deck_builder.build.visuals import CHART_TYPES
 from deck_builder.model import Bullets, Chart, Deck, Image, Series, Slide, Table, Value
 from deck_builder.parse.markdown import number
-from deck_builder.validate import IMAGE_EXT
+from deck_builder.validate import IMAGE_EXT, confined
 from deck_builder.write.markdown import table_md
 
 FURNITURE = {PP_PLACEHOLDER.DATE, PP_PLACEHOLDER.FOOTER, PP_PLACEHOLDER.SLIDE_NUMBER}
@@ -276,13 +276,15 @@ class Importer:
         self.numbered = False  # any slide shows a slide number
         self.can_number = False  # any slide's layout has a slide-number placeholder
         self.known: dict[str, tuple[str, str]] = {}  # image sha256 -> (kind, brand ref)
+        # logos: and icons: dir come from brand.yaml; confine each to the kit before it's hashed or
+        # decoded, the same boundary `check` enforces for a deck's own asset references (A4).
         for lid, rel in (brand.meta.get("logos") or {}).items():
             p = brand.path / str(rel)
-            if p.is_file():
+            if p.is_file() and confined(p, brand.path):
                 self.known.setdefault(sha256_file(p), ("image", f"brand:logo/{lid}"))
         icons = brand.meta.get("icons") or {}
         icon_dir = brand.path / str(icons.get("dir", ""))
-        if icons.get("dir") and icon_dir.is_dir():
+        if icons.get("dir") and icon_dir.is_dir() and confined(icon_dir, brand.path):
             colors = {icons.get("default_color")}
             for ls in (brand.tokens.get("layouts") or {}).values():
                 colors |= {fs.get("color") for fs in (ls.get("fields") or {}).values() if fs.get("kind") == "icon"}
@@ -291,6 +293,8 @@ class Importer:
                 if not hexv:
                     continue
                 for png in sorted(icon_dir.glob("*.png")):
+                    if not confined(png, brand.path):
+                        continue
                     self.known.setdefault(sha256_file(recolor_icon(png, hexv, cache_dir)),
                                           ("icon", f"brand:icon/{png.stem}"))
 
