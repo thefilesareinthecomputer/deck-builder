@@ -6,9 +6,13 @@ All notable changes to this project are listed here. The format follows [Keep a 
 
 ### Changed
 
-- Generated kits follow a design standard, described in the new `deck-builder docs design` topic. Type is sized for projection: bold 32 pt titles, 24 pt single-column body, 20 pt two-column text, 16 pt tables. Short single-column and two-column content sits at the optical center of its area instead of hugging the top. Comparison columns sit on tinted panels with the heading inside, and two-column slides get a thin divider. Title, section, closing and big-number slides get one short accent rule, bullets and agenda numbers take the primary color, and the agenda is a numbered list. Regenerate a kit with `brand init <slug> --force` to get the new look.
+- Generated kits follow a design standard, described in the new `deck-builder docs design` topic. Type is sized for projection: bold 32 pt titles, 24 pt single-column body, 20 pt two-column text, 18 pt tables. Short single-column and two-column content sits at the optical center of its area instead of hugging the top. Comparison columns sit on tinted panels with the heading inside, and two-column slides get a thin divider. Title, section, closing and big-number slides get one short accent rule, bullets and agenda numbers take the primary color, and the agenda is a numbered list. Regenerate a kit with `brand init <slug> --force` to get the new look.
 - Generated tables have a dark header, thin rules between rows and no vertical lines, with column widths that follow the content and numeric columns right-aligned. Bar and column charts with no negative values start their value axis at zero. `brand init` writes every table key to `tokens.yaml` (`row_fill`, `text`, `rule`, `row_height_factor`), and the row budget follows the placeholder height.
-- The MCP server confines paths to the workspace and refuses the clone's own `src/`, `.claude/` and `.git/` folders and its `AGENTS.md`, `CLAUDE.md` and `deck-builder.toml`, whatever the config says. Relative paths still resolve against the config folder.
+- The MCP server confines paths to the workspace and refuses the clone's own `src/`, `.claude/` and `.git/` folders and its `AGENTS.md`, `CLAUDE.md` and `deck-builder.toml`, whatever the config says, compared case-insensitively. Relative paths still resolve against the config folder. Paths the engine derives from an argument (the manifest beside a build, the render folder, import output, the deck file in a folder, discovered kits) pass the same check, and a symlinked kit is skipped.
+- `auto` rendering prefers LibreOffice, the verified backend; `check` takes `--backend`.
+- Rebuilding refuses to replace a .pptx that was edited after it was built, unless `--force`; the .pptx and its manifest are written together. Bulk builds refuse output names that collide.
+- `brand adopt` keeps only masters, layouts and the theme from a .pptx, and drops external relationships and embedded objects; `import --adopt` never regenerates an existing kit. A kit holding both `template.potx` and `template.pptx`, or two fields on one placeholder, is invalid.
+- Imported hyperlinks keep only http, https and mailto; imported notes that look like deck.md structure are escaped, and an import whose deck.md wouldn't reparse to the same slides fails with `IMPORT_LOSSY`.
 
 ### Added
 
@@ -17,17 +21,25 @@ All notable changes to this project are listed here. The format follows [Keep a 
 - `generate.type` in `brand.yaml` sets the type scale (title, title weight, subtitle, body, two-column, icon text, table, big number), and character budgets are computed from it. `generate.body_anchor: top` keeps body text at the top; `generate.big_number: dark` puts the big number on the primary color.
 - An optional `takeaway:` field on content, two-column, chart and table slides: one sentence in a full-width band in the primary color at the bottom. Nothing is drawn when it's left out, and `import` gives it back only from a matching placeholder.
 - `tests/fixtures/demo-brands/layouts/`: every generated layout with realistic content, built and rendered in all three demo brands. Two demo brands exercise `generate.type` and `big_number: dark`.
-- `doctor` warns when the running package is an editable install, since agents' MCP server then runs the clone's source live.
+- Kits record what made them: `tokens.yaml` `generated:` holds the engine version and a hash of the brand.yaml sections and master logo that shape the template. `brand check` warns `KIT_STALE` when they change, and `brand init <slug> --force` regenerates a kit from its own brand.yaml.
+- New issue codes: `TABLE_TALL` (a table estimated taller than its area), `STALE_BUILD` (the deck changed after its .pptx was built), `AMBIGUOUS_DECK` (a folder with two deck files), `IMPORT_LOSSY`, `KIT_STALE`.
+- `render` and `check --render` report hidden slides and map PDF pages to the right slide numbers around them.
+- `deck-builder docs agents`: one map of which agent owns each command and MCP tool; each subagent's tool allowlist names its MCP tools.
+- `tests/scenarios/`: structurally different kits and decks run through the real CLI path, with per-step `--json` size budgets and byte-identical builds across workspaces.
+- `doctor` warns when the `deck-builder` serving the agents' MCP tools is an editable install, since it then runs the clone's source live.
 - The workspace folder roles are documented once (`workspace/README.md`, `docs workflow`): `source/` and `references/` for read-only inputs, `notes.md` for working notes, `scratch/` for disposable output. `init` creates `source/` in its example decks.
 
 ### Fixed
 
 - Charts write `roundedCorners` off, which PowerPoint otherwise draws as rounded chart corners, and keep one color per series instead of varying colors across a single series.
-- A `brand_paths` entry that resolves to the home folder, the filesystem root or the config folder or one of its parents is refused.
+- A `brand_paths` entry or a `workspace` value that resolves to the home folder, the filesystem root or a parent of the config folder is refused.
+- Overflow measurement: tables are measured against their area, so table words no longer land on the footer and real overruns are reported; list numbers, a chart's own text and words a renderer splits mid-word are attributed correctly.
+- Bold or italic around inline code renders; a low-resolution image flags its slide in `check --render`; the asset inventory refuses paths `check` refuses; extra plots in an imported combo chart are reported; front matter dates are validated; bulk values can't inject a field line.
 
 ### Docs
 
 - The skills and agents route any edit to an existing deck through the `deck-builder` skill, use one delegation threshold and one two-round stop rule stated in AGENTS.md, treat engine changes during deck work as a separate task, cite grounding facts from outside the workspace in a dated `source/grounding-<date>.md`, and read `docs design` before writing slides.
+- README: `uv tool install .` is the main setup, with global skills and the clone as the other paths, and pipx or pip for machines without uv; a Design section; a Fix up an existing deck section for fonts, formatting and slide numbers.
 
 ## 0.1.0 - 2026-10-02
 
