@@ -56,6 +56,7 @@ generate:                        # read only by `brand init`
   slide_size: "16:9"             # 16:9 | 4:3
   layout_set: standard           # minimal | standard | full
   logo_on_master: primary        # a logo id, or leave out
+  slide_numbers: true            # a small number at the bottom left of content slides (default true)
 ```
 
 ## Layout sets

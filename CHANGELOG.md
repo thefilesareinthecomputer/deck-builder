@@ -4,6 +4,7 @@
 
 ### Added
 
+- Slide numbers and an optional footer, kept minimal: a 10 pt muted number at the bottom left of content slides, on the logo's line, and `footer: <text>` in front matter for a short text after it. No date, no boxes. `slide_numbers: false` turns numbers off for a deck, `generate.slide_numbers: false` for a brand. Adopted templates' own slide-number placeholders now appear on slides. `brand show`, `check` and `build` report them.
 - `deck-builder mcp`: the engine as MCP tools over stdio (hand-written JSON-RPC, no new dependency), for agents without a shell. Each tool runs the CLI's own parser and handler and returns its `--json` object; every path is confined to the workspace, brand writes to a `brand_paths` folder. `doctor` reports whether it answers.
 - `brand add-asset <slug> <png> --as logo/<id>|icon/<id>` copies a PNG into a kit.
 - `import <deck.pptx> <out> --brand <slug> | --adopt <new-slug>`: an existing deck back into `deck.md`, its images (named by slide and content hash) and `import-report.md`. Layouts map by name or by best fit on placeholder types; placeholders map to fields; runs become inline markup, tables pipe tables, charts chart blocks, notes `Notes:`; brand logos and icons are recognized by hash. Content that can't be placed goes to the slide's notes and the report, SmartArt, media, embedded objects and groups are reported, linked images are never fetched, and local formatting is dropped and counted. The `deck-builder` skill has a "Refresh an existing deck" path.

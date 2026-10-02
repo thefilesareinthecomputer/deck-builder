@@ -165,7 +165,7 @@ The engine does all the deterministic work, so the model spends its tokens on co
 v0.1.0, with the changes since in [CHANGELOG.md](CHANGELOG.md). Known limits:
 
 - The PowerPoint render backend hasn't been verified on a Mac with PowerPoint yet. Its results include the warning `RENDER_UNVERIFIED` until `scripts/probe_powerpoint.sh` passes; LibreOffice renders are a close proxy.
-- Generated layouts have no slide numbers or footers yet, and table cells take the table's fills rather than per-value colors.
+- Table cells take the table's fills rather than per-value colors.
 - Icons are PNG alpha masks; SVG isn't supported.
 
 [SPEC.md](SPEC.md) has the full design and the open decisions.

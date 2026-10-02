@@ -18,6 +18,9 @@ table:
   header_fill: primary
   header_text: background
   band_fill: surface
+furniture:                       # written by brand init; a record, not a setting
+  slide_numbers: true            # from brand.yaml generate.slide_numbers
+  color: muted                   # numbers and footers: muted, or ink when muted is under 4.5:1
 layouts:
   content:                       # the name decks use: `layout: content`
     template_layout: Content     # the layout's name in the template

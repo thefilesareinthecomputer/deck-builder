@@ -10,6 +10,8 @@ date: 2026-01-15               # created and modified dates; default 2000-01-01
 default_layout: content        # used when a slide has no layout:
 slide_level: 2                 # heading level that starts a slide (default 2)
 output: ../../out/quarterly-review.pptx   # relative to this file; a .pptx in its folder or in out/
+footer: Confidential           # optional small text after the slide number; no footer without it
+slide_numbers: false           # optional; slide numbers are on by default where the brand has them
 ---
 
 ## Paper volume grew 12% in Q3         <- one heading = one slide
