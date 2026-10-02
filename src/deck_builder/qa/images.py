@@ -16,18 +16,25 @@ COLS = 4
 PAD, LABEL = 10, 22
 
 
-def rasterize(pdf: Path, out_dir: Path, size: tuple[int, int], pages: list[int] | None, total: int) -> list[Path]:
-    """size is the exact PNG size in pixels; renderers' PDF page sizes can be a fraction of a point off."""
+def rasterize(pdf: Path, out_dir: Path, size: tuple[int, int], pages: list[int] | None, total: int,
+             visible: list[int]) -> list[Path]:
+    """size is the exact PNG size in pixels; renderers' PDF page sizes can be a fraction of a point off.
+
+    `visible` is the deck's slide numbers in PDF page order: a hidden slide has no PDF page at all, so
+    PDF page i is visible[i - 1], not slide i. PNGs are named by the real slide number regardless.
+    """
     missing = tools.poppler_missing()
     if missing:
         raise EnvError(f"poppler isn't installed ({', '.join(missing)} missing): {tools.install_hint('poppler')}")
     width = max(2, len(str(total)))
-    wanted = pages or list(range(1, total + 1))
+    slide_to_page = {slide: page for page, slide in enumerate(visible, start=1)}
+    wanted = [n for n in (pages or visible) if n in slide_to_page]
     out = []
     for n in wanted:
-        prefix = out_dir / f"page-{n}"
-        subprocess.run(["pdftoppm", "-png", "-scale-to-x", str(size[0]), "-scale-to-y", str(size[1]), "-f", str(n),
-                        "-l", str(n), "-singlefile", str(pdf.resolve()), str(prefix.resolve())], check=True,
+        page = slide_to_page[n]
+        prefix = out_dir / f"page-{page}"
+        subprocess.run(["pdftoppm", "-png", "-scale-to-x", str(size[0]), "-scale-to-y", str(size[1]), "-f", str(page),
+                        "-l", str(page), "-singlefile", str(pdf.resolve()), str(prefix.resolve())], check=True,
                        capture_output=True,
                        timeout=120)
         target = out_dir / f"slide-{n:0{width}d}.png"

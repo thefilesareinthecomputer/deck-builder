@@ -92,6 +92,24 @@ def test_powerpoint_backend_results_are_marked_unverified(project, capsys, monke
     assert "RENDER_UNVERIFIED" in [i["code"] for i in out["issues"]]
 
 
+def test_render_skips_a_hidden_slide_without_crashing(project, capsys, tmp_path):
+    from pptx import Presentation
+
+    deck = project / "workspace" / "decks" / "quarterly-review" / "deck.md"
+    pptx = tmp_path / "quarterly-review.pptx"
+    run("--config", cfg(project), "build", str(deck), "-o", str(pptx), capsys=capsys)
+    prs = Presentation(str(pptx))
+    prs.slides[5]._element.set("show", "0")  # hide the 6th of 12 slides
+    prs.save(str(pptx))
+    code, out = run("--config", cfg(project), "render", str(pptx), capsys=capsys)
+    assert code == 0, out["issues"]
+    assert out["hidden_slides"] == [6]
+    render_dir = Path(out["render_dir"])
+    names = sorted(p.name for p in render_dir.glob("slide-*.png"))
+    assert names == [f"slide-{n:02d}.png" for n in range(1, 13) if n != 6]
+    assert out["flagged_slides"] == []
+
+
 def test_workbook_resaved_by_libreoffice_builds_identically(project, capsys, tmp_path):
     import subprocess
 

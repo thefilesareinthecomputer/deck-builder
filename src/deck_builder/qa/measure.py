@@ -119,10 +119,16 @@ def overshoot(box: Box, words: list[Box]) -> float:
     return max(over, default=0.0)
 
 
-def overflow(pptx: Path, pdf: Path, manifest: dict[str, Any] | None = None) -> list[Issue]:
+def overflow(pptx: Path, pdf: Path, manifest: dict[str, Any] | None = None,
+            visible: list[int] | None = None) -> list[Issue]:
+    """`visible` maps PDF page order to real slide numbers (see images.rasterize); default is 1..N, every
+    slide visible."""
     slide_w, slides = text_shapes(pptx)
+    if visible is None:
+        visible = list(range(1, len(slides) + 1))
     issues = []
-    for n, ((page_w, _, words), (shapes, visuals)) in enumerate(zip(pdf_words(pdf), slides, strict=False), start=1):
+    for n, (page_w, _, words) in zip(visible, pdf_words(pdf), strict=False):
+        shapes, visuals = slides[n - 1]
         scale = page_w / slide_w if slide_w else 1.0
         assigned: dict[int, list[Word]] = {}
         for w in words:
