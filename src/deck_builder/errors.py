@@ -98,6 +98,11 @@ CODES: dict[str, tuple[str, str]] = {
         "An image path doesn't exist, or the image is a web address.",
         "Fix the path; paths resolve relative to the deck file. Download a web image into the deck folder first.",
     ),
+    "ASSET_OUTSIDE": (
+        "An image path resolves outside the deck's folder, or a brand asset outside its kit, through an absolute "
+        "path, `..` or a symlink. A deck can't pull files from elsewhere on the machine into a deliverable.",
+        "Copy the image into the deck's folder and use its path relative to the deck file.",
+    ),
     "BANNED_PATTERN": (
         "Slide text or notes match one of the brand's banned patterns.",
         "Reword the text. The pattern list is in the brand's brand.yaml under lint.",
@@ -109,6 +114,11 @@ CODES: dict[str, tuple[str, str]] = {
     "UNKNOWN_TOKEN": (
         "A {{token}} in a bulk template has no matching data column.",
         "Fix the token name or add the column to the data file.",
+    ),
+    "BAD_DATA_VALUE": (
+        "A bulk data cell holds a line break, or a value that would start a heading or image line where its "
+        "{{token}} sits, which would change the deck's structure instead of filling in text.",
+        "Keep each cell to one line of plain text; put headings and images in the template, not the data.",
     ),
     "CSV_NO_SHEETS": (
         "A CSV input references a chart or table sheet, which CSV can't hold.",

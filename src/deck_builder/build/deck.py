@@ -17,7 +17,7 @@ from deck_builder.brand.registry import Brand
 from deck_builder.build.normalize import content_digest, normalize
 from deck_builder.build.text import CODE_FONT_DEFAULT, fill_text
 from deck_builder.build.visuals import fill_chart, fill_picture, fill_table
-from deck_builder.errors import Issue
+from deck_builder.errors import EnvError, Issue
 from deck_builder.model import Chart, Deck, Icon, Image, Slide, Table
 from deck_builder.validate import plain, resolve_asset, text_of
 
@@ -58,10 +58,12 @@ class Builder:
         path, _ = resolve_asset(ref, self.brand, self.deck_dir)
         assert path is not None  # validation guarantees it resolves
         brand_asset = ref.startswith("brand:")
+        source = (path.resolve().relative_to(self.brand.path.resolve()) if brand_asset
+                  else path.resolve().relative_to(self.deck_dir.resolve()))  # validation confines both
         if color:
             path = recolor_icon(path, color, self.cache_dir)
         geo = fill_picture(slide, ph, path, alt, crop=not brand_asset)
-        fentry["asset"] = {"ref": ref, "sha256": sha256_file(path)}
+        fentry["asset"] = {"ref": ref, "source": source.as_posix(), "sha256": sha256_file(path)}
         if _dpi(path, geo, crop=not brand_asset) < MIN_DPI:
             self.issues.append(Issue("ASSET_LOW_RES", f"{ref!r} shows below {MIN_DPI} DPI at this size",
                                      severity="warning", **at))
@@ -115,6 +117,9 @@ def build(deck: Deck, brand: Brand, deck_path: Path, out_path: Path, cache_dir: 
           keep_template_slides: bool = False) -> tuple[dict[str, Any], list[Issue]]:
     """content_sha identifies the deck's content independent of its file format (see pipeline.content_sha)."""
     assert brand.template is not None
+    if out_path.exists() and not manifest_path(out_path).is_file():
+        raise EnvError(f"{out_path} exists and has no {manifest_path(out_path).name} beside it, so deck-builder "
+                       "didn't build it; move it or write somewhere else")
     prs = tpl.open_template(brand.template)
     if not keep_template_slides:
         tpl.remove_all_slides(prs)

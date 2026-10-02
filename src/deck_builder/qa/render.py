@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-import shutil
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -17,6 +17,7 @@ from deck_builder.qa import backends, fonts, images, measure
 
 FLAG_CODES = {"OVERFLOW_MEASURED", "EMPTY_PLACEHOLDER", "ASSET_LOW_RES"}
 VISUAL = {PP_PLACEHOLDER.PICTURE, PP_PLACEHOLDER.CHART, PP_PLACEHOLDER.TABLE}
+RENDER_FILES = re.compile(r"deck\.pdf|slide-\d+\.png|contact-\d+\.png")
 
 
 @dataclass
@@ -54,11 +55,14 @@ def render(pptx: Path, backend: str, dpi: int, batch: int, pages: list[int] | No
            brand: Brand | None) -> Rendered:
     out_dir = pptx.with_name(pptx.stem + ".render")
     if out_dir.exists():
-        # only ever delete a folder this command made: it holds deck.pdf, or nothing
+        # only ever touch a folder this command made (it holds deck.pdf, or nothing), and in it only the files
+        # render writes, so anything else kept there survives
         if not (out_dir / "deck.pdf").is_file() and any(out_dir.iterdir()):
             raise EnvError(f"{out_dir} exists and wasn't made by deck-builder render; move it and retry")
-        shutil.rmtree(out_dir)
-    out_dir.mkdir(parents=True)
+        for f in out_dir.iterdir():
+            if f.is_file() and RENDER_FILES.fullmatch(f.name):
+                f.unlink()
+    out_dir.mkdir(parents=True, exist_ok=True)
     pdf = out_dir / "deck.pdf"
     backends.to_pdf(backend, pptx, pdf)
     prs = Presentation(str(pptx))

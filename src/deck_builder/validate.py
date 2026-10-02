@@ -44,18 +44,26 @@ def text_of(value: Value) -> str:
     return str(value)
 
 
+def _asset_id(ref: str) -> str | None:
+    """The id in brand:logo/<id> or brand:icon/<id>; None if it could name a path."""
+    aid = ref.split("/", 1)[1]
+    return None if not aid or "/" in aid or "\\" in aid or ".." in aid else aid
+
+
 def resolve_asset(ref: str, brand: Brand, deck_dir: Path) -> tuple[Path | None, str | None]:
     """A reference -> (file path, error code or None)."""
     if ref.startswith("brand:logo/"):
-        rel = (brand.meta.get("logos") or {}).get(ref.split("/", 1)[1])
+        lid = _asset_id(ref)
+        rel = (brand.meta.get("logos") or {}).get(lid) if lid else None
         if not rel:
             return None, "UNKNOWN_ASSET"
         return brand.path / str(rel), None
     if ref.startswith("brand:icon/"):
+        iid = _asset_id(ref)
         icons_dir = (brand.meta.get("icons") or {}).get("dir")
-        if not icons_dir:
+        if not iid or not icons_dir:
             return None, "UNKNOWN_ASSET"
-        p = brand.path / str(icons_dir) / f"{ref.split('/', 1)[1]}.png"
+        p = brand.path / str(icons_dir) / f"{iid}.png"
         return (p, None) if p.is_file() else (None, "UNKNOWN_ASSET")
     if ref.startswith("brand:"):
         return None, "UNKNOWN_ASSET"
@@ -248,10 +256,16 @@ def _check_asset(name: str, ref: str, brand: Brand, deck_dir: Path, at: dict[str
     if err:
         return [Issue(err, f"{ref!r} isn't defined in brand {brand.slug!r}", field=name, **at)]
     assert path is not None
+    root = brand.path if ref.startswith("brand:") else deck_dir
+    if not path.resolve().is_relative_to(root.resolve()):  # resolve() follows symlinks
+        where = f"brand {brand.slug!r}'s kit" if ref.startswith("brand:") else "the deck's folder"
+        return [Issue("ASSET_OUTSIDE", f"{ref!r} is outside {where}; copy the image into it and use that path",
+                      field=name, **at)]
     if path.suffix.lower() == ".svg":
         return [Issue("ASSET_FORMAT", f"{ref!r} is SVG; convert it to PNG", field=name, **at)]
     if path.suffix.lower() not in IMAGE_EXT:
         return [Issue("ASSET_FORMAT", f"{ref!r}: unsupported image type {path.suffix}", field=name, **at)]
     if not path.is_file():
-        return [Issue("MISSING_IMAGE", f"{ref!r} not found at {path}", field=name, **at)]
+        return [Issue("MISSING_IMAGE", f"{ref!r} not found; paths resolve relative to the deck file",
+                      field=name, **at)]
     return []

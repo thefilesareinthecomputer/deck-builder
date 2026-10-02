@@ -25,9 +25,11 @@ Generated from the engine by `deck-builder docs codes`. Fix by code, not by mess
 | `ASSET_FORMAT` | An image is in a format PowerPoint placeholders can't take, such as SVG. | Convert it to PNG or JPEG. |
 | `ASSET_LOW_RES` | An image is smaller than its placeholder at 150 DPI and will look soft. | Use a larger source image. |
 | `MISSING_IMAGE` | An image path doesn't exist, or the image is a web address. | Fix the path; paths resolve relative to the deck file. Download a web image into the deck folder first. |
+| `ASSET_OUTSIDE` | An image path resolves outside the deck's folder, or a brand asset outside its kit, through an absolute path, `..` or a symlink. A deck can't pull files from elsewhere on the machine into a deliverable. | Copy the image into the deck's folder and use its path relative to the deck file. |
 | `BANNED_PATTERN` | Slide text or notes match one of the brand's banned patterns. | Reword the text. The pattern list is in the brand's brand.yaml under lint. |
 | `MAX_SLIDES` | The deck has more slides than the brand allows. | Cut or merge slides. |
 | `UNKNOWN_TOKEN` | A {{token}} in a bulk template has no matching data column. | Fix the token name or add the column to the data file. |
+| `BAD_DATA_VALUE` | A bulk data cell holds a line break, or a value that would start a heading or image line where its {{token}} sits, which would change the deck's structure instead of filling in text. | Keep each cell to one line of plain text; put headings and images in the template, not the data. |
 | `CSV_NO_SHEETS` | A CSV input references a chart or table sheet, which CSV can't hold. | Use an .xlsx workbook, or remove the sheet: reference. |
 | `CONVERT_LOSSY` | The target format can't hold everything in the input, such as charts in CSV. | Convert to .xlsx or .md instead. |
 | `LOW_CONTRAST` | Two brand colors that sit on each other don't meet WCAG 2.2 contrast: 4.5:1 for text (ink on background or surface, background on primary, links on background), 3:1 for icons and chart series. | Darken or lighten one color of the pair in the brand's palette, then `brand init` again. Change brand colors only with the brand owner's say-so. |

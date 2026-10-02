@@ -31,7 +31,14 @@ def substitute(text: str, row: dict[str, str] | None, file: str, issues: list[Is
         if key not in row:
             issues.append(Issue("UNKNOWN_TOKEN", f"{{{{{key}}}}} has no data column", file=file))
             return m.group(0)
-        return str(row[key])
+        value = str(row[key])
+        line_start = not text[text.rfind("\n", 0, m.start()) + 1 : m.start()].strip()
+        if "\n" in value or "\r" in value:
+            issues.append(Issue("BAD_DATA_VALUE", f"column {key!r} holds a line break", file=file))
+        elif line_start and value.lstrip().startswith(("#", "![")):
+            issues.append(Issue("BAD_DATA_VALUE", f"column {key!r} would start a heading or image line: "
+                                f"{value[:40]!r}", file=file))
+        return value
 
     return TOKEN.sub(rep, text)
 
@@ -185,7 +192,7 @@ def parse(path: Path, row: dict[str, str] | None = None) -> tuple[Deck, list[Iss
     issues: list[Issue] = []
     name = path.name
     raw = substitute(path.read_text(encoding="utf-8"), row, name, issues)
-    if issues:  # an unknown bulk token: anything parsed past it would be noise
+    if issues:  # an unknown token or an unsafe data value: anything parsed past it would be noise
         return Deck(meta={}, slides=[], source=str(path)), issues
     meta, body, offset = split_front_matter(raw, name, issues)
     sv = meta.get("spec_version", SPEC_VERSION)

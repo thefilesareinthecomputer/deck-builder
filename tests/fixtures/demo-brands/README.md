@@ -14,7 +14,7 @@ Three original, fictional companies for testing a presentation builder. Each bra
 - `brand-guide.md`: Human-readable specifications and asset notes.
 - `assets/logo.png` and `assets/logo-mono.png`: Transparent RGBA logos, 1600 x 368 pixels.
 - `assets/icons/*.png`: Six transparent RGBA icons, 256 x 256 pixels: box, delivery, document, growth, people, and spark.
-- `assets/hero.png`: Brand-specific RGB illustration, 2400 x 1350 pixels.
+- `assets/hero.png`: Brand-specific RGB illustration, 2400 x 1350 pixels. The showcase deck uses copies in `showcase/assets/`, because a deck's images must sit inside its own folder.
 - `assets/svg/*.svg`: Editable source art for every PNG.
 
 The PNGs are ready for image-placement tests; the SVGs allow source editing and rerendering. Fonts are specified by family and fallback, with no font binaries bundled. All names and artwork were made for these fixtures; they refer to no real company or film property.

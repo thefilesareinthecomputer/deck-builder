@@ -57,7 +57,7 @@ layout: table
 layout: image
 caption: Opened in August, with same-day delivery for the northern accounts.
 
-![The new north warehouse](../brands/{{brand}}/assets/hero.png)
+![The new north warehouse](assets/{{brand}}-hero.png)
 
 ## What changes in Q4
 layout: icon-row

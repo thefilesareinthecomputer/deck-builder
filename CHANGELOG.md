@@ -14,6 +14,14 @@
 - README rewritten around a three-brand showcase; `scripts/readme_images.py` regenerates its images.
 - AGENTS.md holds the agent instructions; CLAUDE.md imports it.
 
+### Security
+
+- A deck image must resolve, symlinks followed, inside the deck's folder, and a brand asset inside its kit; anything else is the new error `ASSET_OUTSIDE`, in every mode and per bulk row. Logo and icon ids containing `/`, `\` or `..` are `UNKNOWN_ASSET`. Image messages name the reference as written, not the resolved path. The manifest records each image's source file.
+- Front matter `output:` must be a `.pptx` inside the deck's folder or `<workspace>/out/`; `-o` takes a `.pptx` path or a folder; a build never replaces an existing file that has no manifest beside it.
+- Bulk data values with a line break, or that would start a heading or image line, are the new error `BAD_DATA_VALUE` for that row.
+- Re-rendering deletes only the files render writes, not the whole `.render/` folder.
+- The showcase fixture's hero images moved into `showcase/assets/`, since a deck's images must sit inside its folder.
+
 ### Fixed
 
 - `build deck.md` run inside the deck's own folder names the output after that folder instead of writing `out/.pptx`.

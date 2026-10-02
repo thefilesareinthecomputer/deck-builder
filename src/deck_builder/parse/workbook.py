@@ -119,7 +119,7 @@ def parse(path: Path, row: dict[str, str] | None = None) -> tuple[Deck, list[Iss
         rows = _rows(wb[sheet])
         return chart_from_rows(rows) if sheet.lower().startswith("chart") else table_from_rows(rows)
 
-    if any(i.code == "UNKNOWN_TOKEN" for i in issues):
+    if any(i.code in ("UNKNOWN_TOKEN", "BAD_DATA_VALUE") for i in issues):
         return Deck(meta={}, slides=[], source=str(path)), issues
     slides = slides_from_rows(records, name, issues, sheet_resolver=resolve_sheet)
     wb.close()

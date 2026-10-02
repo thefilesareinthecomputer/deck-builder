@@ -87,7 +87,7 @@ def _validated(path: Path, cfg: cfgmod.Config, r: Result, brand_slug: str | None
     for i in loaded.issues:
         r.add(i)
     r.data["slides"] = len(loaded.deck.slides)
-    if any(i.code == "UNKNOWN_TOKEN" for i in loaded.issues):
+    if any(i.code in ("UNKNOWN_TOKEN", "BAD_DATA_VALUE") for i in loaded.issues):
         return None, None
     brand = pipeline.brand_for(loaded.deck, path, cfg, brand_slug)
     r.data["brand"] = brand.slug
@@ -534,7 +534,12 @@ def default_output(path: Path, deck: Deck | None, cfg: cfgmod.Config) -> Path:
     A file named deck.md or deck.xlsx takes its folder's name, so decks/q3/deck.md builds out/q3.pptx.
     """
     if deck is not None and deck.meta.get("output"):
-        return path.parent / str(deck.meta["output"])
+        out = path.parent / str(deck.meta["output"])
+        roots = [path.parent.resolve()] + ([(cfg.workspace / "out").resolve()] if cfg.found else [])
+        if out.suffix.lower() != ".pptx" or not any(out.resolve().is_relative_to(r) for r in roots):
+            raise EnvError(f"front matter output: {deck.meta['output']!r} must be a .pptx inside the deck's folder"
+                           f"{' or the workspace out/ folder' if cfg.found else ''}")
+        return out
     name = path.resolve().parent.name if path.stem == "deck" else path.stem
     out_dir = cfg.workspace / "out" if cfg.found else path.parent
     return out_dir / f"{name}.pptx"
@@ -564,6 +569,8 @@ def build(args: argparse.Namespace) -> Result:
         out = Path(args.output) if args.output else None
         if out is not None and (out.is_dir() or args.output.endswith(("/", os.sep))):
             out = out / default_output(path, None, cfg).name  # -o a folder: the default name inside it
+        elif out is not None and out.suffix.lower() != ".pptx":
+            raise EnvError(f"-o takes a .pptx path or an existing folder, not {args.output!r}")
         done = _build_one(path, cfg, args, out, None, r)
         if done:
             r.data.update(done)

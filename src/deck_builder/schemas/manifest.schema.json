@@ -37,8 +37,12 @@
                 "chars": {"type": "integer"},
                 "asset": {
                   "type": "object",
-                  "required": ["ref", "sha256"],
-                  "properties": {"ref": {"type": "string"}, "sha256": {"type": "string"}}
+                  "required": ["ref", "source", "sha256"],
+                  "properties": {
+                    "ref": {"type": "string"},
+                    "source": {"type": "string", "description": "the file, relative to the deck's folder, or to the brand kit for brand: refs"},
+                    "sha256": {"type": "string"}
+                  }
                 }
               }
             }

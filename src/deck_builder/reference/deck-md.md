@@ -9,7 +9,7 @@ author: Sales Ops
 date: 2026-01-15               # created and modified dates; default 2000-01-01
 default_layout: content        # used when a slide has no layout:
 slide_level: 2                 # heading level that starts a slide (default 2)
-output: ../../out/quarterly-review.pptx   # paths resolve relative to this file
+output: ../../out/quarterly-review.pptx   # relative to this file; a .pptx in its folder or in out/
 ---
 
 ## Paper volume grew 12% in Q3         <- one heading = one slide
@@ -44,7 +44,7 @@ Source: the Q3 shipment ledger.
 |---|---|
 | text | One paragraph, or a `key: value` field |
 | bullets | `- item` lines; numbered lines also work |
-| image | `![alt text](assets/photo.png)`, or `![alt](brand:logo/primary)`; local files only |
+| image | `![alt text](assets/photo.png)`, or `![alt](brand:logo/primary)`; files inside the deck's folder only |
 | icon | `brand:icon/<id>` as the field value |
 | table | A pipe table, or a ```` ```table ```` block with `header:` and `rows:` |
 | chart | A ```` ```chart ```` block, below |
@@ -70,3 +70,5 @@ Charts are native PowerPoint charts with their data embedded, so they stay edita
 
 `{{column}}` anywhere in the file is replaced from a data row:
 `deck-builder build template.md --data rows.csv --name "{{client}}.pptx"` builds one deck per row.
+Data values are one line of plain text: a line break, or a value that would start a heading or image
+line, is `BAD_DATA_VALUE` for that row.

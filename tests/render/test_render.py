@@ -1,5 +1,6 @@
 """Render tier: needs LibreOffice and poppler. Run with `uv run pytest -m render`; CI runs it too."""
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -103,10 +104,7 @@ def test_workbook_resaved_by_libreoffice_builds_identically(project, capsys, tmp
     subprocess.run([tools.soffice(), f"-env:UserInstallation={profile}", "--headless", "--convert-to", "xlsx",
                     "--outdir", str(resaved_dir), str(xlsx)], check=True, capture_output=True, timeout=300)
     resaved = resaved_dir / "deck.xlsx"
-    for p in (src, resaved):
-        p_assets = p.parent / "assets"
-        if not p_assets.exists():
-            p_assets.symlink_to(src.parent / "assets")
+    shutil.copytree(src.parent / "assets", resaved_dir / "assets")  # a symlink out of the folder is refused
     capsys.readouterr()
     outs = []
     for p in (src, resaved):

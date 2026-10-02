@@ -252,6 +252,8 @@ A deck calls a brand by slug (`brand: pemberton` in front matter, or the `deck` 
 | Layout and field | `tokens.yaml` | `layout: <name>` and field names in the deck |
 | Placeholder | The template | `idx` in `tokens.yaml` only; decks never name an `idx` |
 
+**R-6.0** A deck can't pull a file from elsewhere on the machine into a deliverable. A deck image must resolve, symlinks followed, inside the deck's folder, and a brand asset inside its kit; anything else is the error `ASSET_OUTSIDE`, in every mode and for every bulk row. Logo and icon ids containing `/`, `\` or `..` are `UNKNOWN_ASSET`. Messages name the reference as written, never the resolved path. AC: tests for an absolute path, `..`, a symlink out of the folder, path-like ids and a bulk row.
+
 ### 6.2 Inventory
 
 `deck-builder assets <brand-slug | deck-file> [--json]` lists every asset: id, class, path, SHA-256, pixel size for images, and source or license where declared. For a deck it also lists which slides use each asset.
@@ -266,7 +268,7 @@ A deck calls a brand by slug (`brand: pemberton` in front matter, or the `deck` 
 
 ### 6.4 Mapping into the deliverable
 
-The build writes `<deck>.manifest.json` beside the PPTX: for each slide, its logical layout, template layout, and each field with its placeholder `idx`, value kind, character count, the shape name of a text field (so the render step can name the field that overflowed) and any asset id with its hash; plus the brand slug, version and template hash, the engine version, the input file's hash, and the deck's content hash. The content hash is the SHA-256 of the deck's canonical markdown, so it's the same whichever format the deck was written in. The manifest is deterministic and is what agents read instead of opening the PPTX. The PPTX custom properties hold `deck-builder:engine`, `deck-builder:brand`, `deck-builder:brand-version`, `deck-builder:template-sha256` and `deck-builder:content-sha256`; the input file's own hash stays out of the PPTX, so one deck builds the same file from `.md`, `.xlsx` or `.csv`.
+The build writes `<deck>.manifest.json` beside the PPTX: for each slide, its logical layout, template layout, and each field with its placeholder `idx`, value kind, character count, the shape name of a text field (so the render step can name the field that overflowed) and any asset with its reference, its source file (relative to the deck's folder, or to the kit for `brand:` references) and its hash; plus the brand slug, version and template hash, the engine version, the input file's hash, and the deck's content hash. The content hash is the SHA-256 of the deck's canonical markdown, so it's the same whichever format the deck was written in. The manifest is deterministic and is what agents read instead of opening the PPTX. The PPTX custom properties hold `deck-builder:engine`, `deck-builder:brand`, `deck-builder:brand-version`, `deck-builder:template-sha256` and `deck-builder:content-sha256`; the input file's own hash stays out of the PPTX, so one deck builds the same file from `.md`, `.xlsx` or `.csv`.
 
 Derived assets (recolored icons) are cached in `workspace/.cache/assets/<sha256>.png`, keyed by source content and color.
 
@@ -304,7 +306,9 @@ The `slides` sheet alone. `sheet:` references are an error (`CSV_NO_SHEETS`).
 
 ### 7.4 Bulk
 
-A `deck.md` or workbook with `{{column}}` tokens plus `--data rows.csv|.xlsx` builds one deck per row. Unknown tokens raise `UNKNOWN_TOKEN`. `--name` sets the file name pattern.
+A `deck.md` or workbook with `{{column}}` tokens plus `--data rows.csv|.xlsx` builds one deck per row. Unknown tokens raise `UNKNOWN_TOKEN`. `--name` sets the file name pattern. Data values are text, never structure: a value holding a line break, or one that would start a heading or image line where its token sits, raises `BAD_DATA_VALUE` for that row.
+
+Builds write only where they should: front matter `output:` must be a `.pptx` inside the deck's folder or `<workspace>/out/`, `-o` takes a `.pptx` path or a folder, and a build never replaces an existing file that has no manifest beside it. Re-rendering deletes only the files render writes (`deck.pdf`, `slide-NN.png`, `contact-NN.png`).
 
 ## 8. convert
 
@@ -352,7 +356,7 @@ Format references (`deck-md`, `workbook`, `brand-yaml`, `tokens-yaml`, `workflow
 
 A stable, documented enum. Skills key fixes off codes, never off message text.
 
-`PARSE`, `SPEC_VERSION`, `SCHEMA`, `UNKNOWN_BRAND`, `BRAND_DUPLICATE`, `BRAND_INVALID`, `TEMPLATE_MISMATCH`, `UNKNOWN_LAYOUT`, `UNKNOWN_FIELD`, `MISSING_FIELD`, `KIND_MISMATCH`, `BUDGET_CHARS`, `BUDGET_BULLETS`, `BUDGET_BULLET_CHARS`, `BUDGET_LEVEL`, `TABLE_SHAPE`, `CHART_SHAPE`, `UNKNOWN_ASSET`, `ASSET_FORMAT`, `ASSET_LOW_RES`, `MISSING_IMAGE`, `BANNED_PATTERN`, `MAX_SLIDES`, `UNKNOWN_TOKEN`, `CSV_NO_SHEETS`, `CONVERT_LOSSY`, `LOW_CONTRAST`, `OVERFLOW_MEASURED`, `EMPTY_PLACEHOLDER`, `MISSING_FONT`, `OFFICE_REPAIR`, `RENDER_UNVERIFIED`, `SKILL_CONFLICT`. `ASSET_LOW_RES`, `LOW_CONTRAST`, `MISSING_FONT`, `RENDER_UNVERIFIED` and `SKILL_CONFLICT` are warnings; the rest are errors.
+`PARSE`, `SPEC_VERSION`, `SCHEMA`, `UNKNOWN_BRAND`, `BRAND_DUPLICATE`, `BRAND_INVALID`, `TEMPLATE_MISMATCH`, `UNKNOWN_LAYOUT`, `UNKNOWN_FIELD`, `MISSING_FIELD`, `KIND_MISMATCH`, `BUDGET_CHARS`, `BUDGET_BULLETS`, `BUDGET_BULLET_CHARS`, `BUDGET_LEVEL`, `TABLE_SHAPE`, `CHART_SHAPE`, `UNKNOWN_ASSET`, `ASSET_FORMAT`, `ASSET_LOW_RES`, `MISSING_IMAGE`, `ASSET_OUTSIDE`, `BANNED_PATTERN`, `MAX_SLIDES`, `UNKNOWN_TOKEN`, `BAD_DATA_VALUE`, `CSV_NO_SHEETS`, `CONVERT_LOSSY`, `LOW_CONTRAST`, `OVERFLOW_MEASURED`, `EMPTY_PLACEHOLDER`, `MISSING_FONT`, `OFFICE_REPAIR`, `RENDER_UNVERIFIED`, `SKILL_CONFLICT`. `ASSET_LOW_RES`, `LOW_CONTRAST`, `MISSING_FONT`, `RENDER_UNVERIFIED` and `SKILL_CONFLICT` are warnings; the rest are errors.
 
 **R-9.1** Every code's cause and fix live in one table in the engine (`errors.CODES`). `docs/issue-codes.md` is generated from it by `deck-builder docs codes`, and every code is exercised by at least one test. AC: a test compares the committed file with fresh output, and a test asserts each code appears in a test file.
 
