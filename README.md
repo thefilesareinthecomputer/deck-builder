@@ -1,22 +1,47 @@
-# deck-builder
+<h1 align="center">deck-builder</h1>
 
-Branded, fully editable PowerPoint decks from markdown or a spreadsheet, using a real PowerPoint template as the design system.
+<p align="center">
+  Branded, fully editable PowerPoint decks from markdown or a spreadsheet,<br>
+  using a real PowerPoint template as the design system.
+</p>
 
-![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue) ![License: MIT](https://img.shields.io/badge/license-MIT-green)
+<p align="center">
+  <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white">
+  <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2EA44F">
+</p>
+
+<p align="center">
+  <a href="#quick-start"><b>Quick start</b></a> &nbsp;|&nbsp;
+  <a href="#how-it-works"><b>How it works</b></a> &nbsp;|&nbsp;
+  <a href="#write-a-deck"><b>Write a deck</b></a> &nbsp;|&nbsp;
+  <a href="#brands"><b>Brands</b></a> &nbsp;|&nbsp;
+  <a href="#commands"><b>Commands</b></a> &nbsp;|&nbsp;
+  <a href="#claude-code"><b>Claude Code</b></a>
+</p>
+
+<br>
 
 <p align="center">
   <img src="docs/images/showcase.png" width="100%" alt="The same deck built in three brands: a dark green paper supplier set in Georgia, a navy office-systems company set in Avenir Next, and a charcoal soap maker set in Helvetica Neue. Each column shows the title slide, a native column chart and an image slide.">
 </p>
-<p align="center"><sub>One <code>deck.md</code>, built with three brand kits.</sub></p>
+<p align="center"><sub>One <code>deck.md</code>, built with three brand kits. Every chart is a native PowerPoint chart and every word is editable.</sub></p>
+
+<br>
 
 You or an agent write the content, and the engine handles layout, styling and validation. Every slide fills a placeholder in the template, and content that doesn't fit fails a check with a code that says how to fix it.
 
-- **Editable output.** Real text in template placeholders, native charts and tables, speaker notes and alt text.
-- **Markdown or Excel.** `deck.md` and `deck.xlsx` convert into each other without loss, and either one builds the deck.
-- **Brands as data.** A brand kit is a template plus two YAML files. Generate one from your colors, fonts and logo, or wrap an existing template.
-- **Existing decks, made consistent.** `import` turns a .pptx back into `deck.md`, drops one-off formatting and reports what needs a decision.
-- **Visual QA.** Renders with PowerPoint or LibreOffice, measures where every word landed, and flags only the slides that need a look.
-- **Deterministic and local.** The same input builds the same file, and the engine makes no network calls.
+<table>
+  <tr>
+    <td width="33%" valign="top"><b>Editable output</b><br>Real text in template placeholders, native charts and tables, speaker notes and alt text.</td>
+    <td width="33%" valign="top"><b>Markdown or Excel</b><br><code>deck.md</code> and <code>deck.xlsx</code> convert into each other without loss, and either one builds the deck.</td>
+    <td width="33%" valign="top"><b>Brands as data</b><br>A brand kit is a template plus two YAML files. Generate one from your colors, fonts and logo, or wrap an existing template.</td>
+  </tr>
+  <tr>
+    <td valign="top"><b>Existing decks, made consistent</b><br><code>import</code> turns a .pptx back into <code>deck.md</code>, drops one-off formatting and reports what needs a decision.</td>
+    <td valign="top"><b>Visual QA</b><br>Renders with PowerPoint or LibreOffice, measures where every word landed, and flags only the slides that need a look.</td>
+    <td valign="top"><b>Deterministic and local</b><br>The same input builds the same file, and the engine makes no network calls.</td>
+  </tr>
+</table>
 
 ## Quick start
 
@@ -30,13 +55,12 @@ uv run deck-builder init          # workspace/, config, the neutral brand, two e
 uv run deck-builder check workspace/decks/quarterly-review --render
 ```
 
-The last command validates the example deck, builds `workspace/out/quarterly-review.pptx`, and writes slide PNGs and a contact sheet next to it.
+The last command validates the example deck, builds `workspace/out/quarterly-review.pptx`, and writes slide PNGs and a contact sheet next to it. To work in another folder, install the CLI once with `uv tool install --editable /path/to/deck-builder`, then run `deck-builder init` there.
 
-To work in another folder, install the CLI once with `uv tool install --editable /path/to/deck-builder`, then run `deck-builder init` there.
+> [!TIP]
+> **Using Claude Code?** Open the clone and start a session. Onboarding runs these steps with you, then sets up your own brand.
 
-With Claude Code, open the clone and start a session. Onboarding runs these steps with you and then sets up your brand. `deck-builder skills install` adds the skills and agents to `~/.claude` for use in other repos.
-
-## How a deck gets built
+## How it works
 
 ```mermaid
 flowchart LR
@@ -56,9 +80,9 @@ flowchart LR
 </p>
 <p align="center"><sub>A render's contact sheet. Flagged slides get a red border, so a reviewer reads one image instead of nine.</sub></p>
 
-## A deck
+## Write a deck
 
-One `##` heading is one slide. `key: value` lines fill the layout's fields, and the rest fills its body.
+One `##` heading is one slide. `key: value` lines fill the layout's fields, and the rest fills its body. These three slides are the first column of the image at the top:
 
 ````markdown
 ---
@@ -66,23 +90,27 @@ brand: briarfield-paper
 title: Briarfield Paper Co. Q3 review
 ---
 
-## 18%
-layout: big-number
-caption: Growth in copy paper volume, Q2 to Q3
-
-Notes:
-Source: the Q3 shipment ledger.
+## Briarfield Paper Co. Q3 review
+layout: title
+subtitle: Volume, delivery and the plan for Q4
 
 ## Cases shipped by month
 layout: chart
 
 ```chart
 type: column
+number_format: '#,##0'
+labels: true
 categories: [Jul, Aug, Sep]
 series:
   - name: Core line
     values: [9800, 10400, 11250]
+  - name: Specialty
+    values: [3100, 3050, 3120]
 ```
+
+Notes:
+Source: the Q3 shipment ledger.
 
 ## The new north warehouse
 layout: image
@@ -91,7 +119,7 @@ caption: "Opened in August: same-day delivery for the northern accounts."
 ![The new north warehouse](assets/hero.png)
 ````
 
-Field values are YAML, so quote a value that contains `: `. `deck-builder brand show <slug>` lists a brand's layouts, fields and character budgets. The showcase at the top is [this deck](tests/fixtures/demo-brands/showcase/deck.md), built into all three brands with `build --data`.
+Field values are YAML, so quote a value that contains `: `. `deck-builder brand show <slug>` lists a brand's layouts, fields and character budgets. The [full showcase deck](tests/fixtures/demo-brands/showcase/deck.md) builds into all three brands in one command with `build --data`.
 
 ## Brands
 
@@ -129,9 +157,7 @@ A deck names its brand with `brand: <slug>`, and `--brand` overrides it for one 
 | `docs [topic]`, `explain <CODE>` | Reference topics and issue-code fixes for the installed version |
 | `skills install` | Link this clone's skills and agents into `~/.claude` |
 
-A `<deck>` is a `.md`, `.xlsx` or `.csv` file, or a folder holding one. Every command takes `--json`. Exit codes are 0 for success, 1 for issues to fix and 2 for usage or environment problems.
-
-`deck-builder docs` lists the reference topics for the installed version, and [docs/issue-codes.md](docs/issue-codes.md) lists every issue code.
+A `<deck>` is a `.md`, `.xlsx` or `.csv` file, or a folder holding one. Every command takes `--json`. Exit codes are 0 for success, 1 for issues to fix and 2 for usage or environment problems. `deck-builder docs` lists the reference topics, and [docs/issue-codes.md](docs/issue-codes.md) lists every issue code.
 
 ## Claude Code
 
@@ -144,7 +170,10 @@ A `<deck>` is a `.md`, `.xlsx` or `.csv` file, or a folder holding one. Every co
 | `deck-brand-agent` | Builds or adopts a brand kit and tunes its budgets with a test render |
 | `deck-builder-agent` | Runs the check, build and render loop on a larger deck in its own context |
 
-The agents have no shell. They reach the engine only through its MCP server (`deck-builder mcp`), confined to the workspace, so the CLI has to be on PATH (`uv tool install --editable <clone>`). They can still write files the session allows, so keep client work outside the clone. What an agent reads goes to Anthropic, as in any Claude Code session.
+The agents have no shell. They reach the engine only through its MCP server (`deck-builder mcp`), confined to the workspace, so the CLI has to be on PATH (`uv tool install --editable <clone>`). `deck-builder skills install` adds the skills and agents to `~/.claude` for use in other repos.
+
+> [!NOTE]
+> The engine is local, but what an agent reads goes to Anthropic, as in any Claude Code session. Agents can still write files the session allows, so keep client work outside the clone.
 
 ## Rules the engine keeps
 
