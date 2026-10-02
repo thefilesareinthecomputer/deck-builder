@@ -24,7 +24,7 @@ CODES: dict[str, tuple[str, str]] = {
     ),
     "SCHEMA": (
         "brand.yaml, tokens.yaml or a manifest doesn't match its JSON Schema.",
-        "Fix the listed keys; `deck-builder schema brand|tokens` prints the schema.",
+        "Fix the listed keys; `deck-builder schema brand` or `deck-builder schema tokens` prints the schema.",
     ),
     "UNKNOWN_BRAND": (
         "The deck names a brand slug that no brand_paths entry contains.",
@@ -127,20 +127,22 @@ CODES: dict[str, tuple[str, str]] = {
         "Fill the field or use a layout without it.",
     ),
     "MISSING_FONT": (
-        "The renderer substituted a font the brand specifies.",
-        "Install the brand fonts on this machine. Don't adjust content to fit a substitute font.",
+        "The renderer used another font than the brand's, or its fallback. Under LibreOffice this can mean it "
+        "didn't apply the template's theme font even though the font is installed.",
+        "Install the brand fonts where decks render. Don't change content to fit a substitute font; a "
+        "PowerPoint render shows the real fonts.",
     ),
     "OFFICE_REPAIR": (
-        "PowerPoint reported the built file needs repair.",
-        "This is an engine defect. Report it with the input and manifest.",
+        "PowerPoint couldn't open or export the built file, or stopped on a dialog such as a repair prompt.",
+        "A repair prompt on an engine-built file is an engine defect; report it with the input and manifest.",
     ),
     "RENDER_UNVERIFIED": (
         "The PowerPoint render backend hasn't been verified on a real Mac yet.",
         "Treat the render as provisional; run scripts/probe_powerpoint.sh to verify the backend.",
     ),
-    "NOT_IMPLEMENTED": (
-        "The command exists in the spec but isn't built in this version yet.",
-        "Check `deck-builder --version` and the changelog.",
+    "SKILL_CONFLICT": (
+        "`skills install` found a file or folder where it would put a link, and left it alone.",
+        "Remove or rename the existing skill or agent if this clone's version should replace it, then rerun.",
     ),
 }
 

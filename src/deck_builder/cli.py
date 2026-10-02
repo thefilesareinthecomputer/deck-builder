@@ -11,18 +11,9 @@ import sys
 from collections.abc import Callable
 
 from deck_builder import __version__, commands
-from deck_builder.errors import EXIT_ENV, EnvError, Issue, Result
+from deck_builder.errors import EXIT_ENV, EnvError, Result
 
 Handler = Callable[[argparse.Namespace], Result]
-
-
-def _not_implemented(name: str) -> Handler:
-    def run(args: argparse.Namespace) -> Result:
-        r = Result(command=name, ok=False, exit_code=EXIT_ENV)
-        r.issues.append(Issue("NOT_IMPLEMENTED", f"`{name}` isn't built in {__version__} yet"))
-        return r
-
-    return run
 
 
 def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
@@ -35,10 +26,10 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
     sub = ap.add_subparsers(dest="command", metavar="<command>")
     handlers: dict[str, Handler] = {}
 
-    def add(name: str, help_: str, handler: Handler | None = None) -> argparse.ArgumentParser:
+    def add(name: str, help_: str, handler: Handler) -> argparse.ArgumentParser:
         p = sub.add_parser(name, help=help_, description=help_)
         p.add_argument("--json", action="store_true", help="print one JSON object")
-        handlers[name] = handler or _not_implemented(name)
+        handlers[name] = handler
         return p
 
     p = add("docs", "print a reference topic; no topic lists them", commands.docs_cmd)
@@ -86,10 +77,10 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
     p.add_argument("--dpi", type=int, help="PNG resolution (default from config, 96)")
     p = add("schema", "print a JSON Schema", commands.schema_cmd)
     p.add_argument("name", choices=["brand", "tokens", "manifest"])
-    p = add("skills", "link this repo's skills and agent into another Claude Code setup")
+    p = add("skills", "link this clone's skills and agent into another Claude Code setup", commands.skills_cmd)
     p.add_argument("action", choices=["install"])
-    p.add_argument("--target")
-    p.add_argument("--yes", action="store_true")
+    p.add_argument("--target", help="the Claude Code folder to link into (default: ~/.claude)")
+    p.add_argument("--yes", action="store_true", help="create the links; without it, only show the plan")
     return ap, handlers
 
 

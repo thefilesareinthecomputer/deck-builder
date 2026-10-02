@@ -15,7 +15,7 @@ import yaml
 
 from deck_builder import assets as asset_inventory
 from deck_builder import config as cfgmod
-from deck_builder import docs, doctor, pipeline, validate
+from deck_builder import docs, doctor, pipeline, skills, validate
 from deck_builder.brand import generate, kit, registry, schema
 from deck_builder.brand import inspect as brand_inspect
 from deck_builder.brand.registry import Brand
@@ -377,6 +377,26 @@ def _pages(spec: str | None) -> list[int] | None:
         return sorted({int(x) for x in spec.split(",") if x.strip()})
     except ValueError as e:
         raise EnvError("--slides takes slide numbers separated by commas, e.g. 3,7") from e
+
+
+def skills_cmd(args: argparse.Namespace) -> Result:
+    clone = skills.find_clone(Path.cwd())
+    target = Path(args.target).expanduser() if args.target else Path("~/.claude").expanduser()
+    links = skills.plan(clone, target)
+    if args.yes:
+        skills.apply(links)
+    r = Result(command="skills install", data={
+        "clone": str(clone), "target": str(target), "applied": bool(args.yes),
+        "links": [{"source": str(x.source), "target": str(x.target), "status": x.status} for x in links]})
+    for x in links:
+        if x.status == "conflict":
+            r.add(Issue("SKILL_CONFLICT", f"{x.target} exists and isn't a link to this clone; left as is",
+                        severity="warning"))
+    lines = [f"{x.status:<9} {x.target} -> {x.source}" for x in links]
+    if not args.yes and any(x.status == "create" for x in links):
+        lines.append("nothing changed; rerun with --yes to create these links")
+    r.summary = "\n".join(lines)
+    return r
 
 
 def doctor_cmd(args: argparse.Namespace) -> Result:

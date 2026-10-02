@@ -77,6 +77,20 @@ def test_render_selected_slides_only(project, capsys):
     assert sorted(p.name for p in Path(out["render_dir"]).glob("slide-*.png")) == ["slide-02.png", "slide-05.png"]
 
 
+def test_powerpoint_backend_results_are_marked_unverified(project, capsys, monkeypatch):
+    """LibreOffice stands in for PowerPoint; the result must still say the backend is unverified."""
+    from deck_builder.qa import backends
+
+    monkeypatch.setattr(backends, "choose", lambda requested: "powerpoint")
+    monkeypatch.setattr(backends, "powerpoint", backends.libreoffice)
+    deck = project / "workspace" / "decks" / "quarterly-review" / "deck.md"
+    run("--config", cfg(project), "build", str(deck), capsys=capsys)
+    pptx = project / "workspace" / "out" / "quarterly-review.pptx"
+    code, out = run("--config", cfg(project), "render", str(pptx), "--slides", "1", capsys=capsys)
+    assert out["backend"] == "powerpoint"
+    assert "RENDER_UNVERIFIED" in [i["code"] for i in out["issues"]]
+
+
 def test_workbook_resaved_by_libreoffice_builds_identically(project, capsys, tmp_path):
     import subprocess
 
