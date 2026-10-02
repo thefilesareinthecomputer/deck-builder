@@ -266,11 +266,11 @@ A deck calls a brand by slug (`brand: pemberton` in front matter, or the `deck` 
 
 ### 6.4 Mapping into the deliverable
 
-The build writes `<deck>.manifest.json` beside the PPTX: for each slide, its logical layout, template layout, and each field with its placeholder `idx`, value kind, character count and any asset id with its hash; plus the brand slug, version and template hash, the engine version, and the input file's hash. The manifest is deterministic and is what agents read instead of opening the PPTX. The same values are stamped into the PPTX custom properties (`deck-builder:brand`, `deck-builder:brand-version`, `deck-builder:engine`, `deck-builder:input-sha256`).
+The build writes `<deck>.manifest.json` beside the PPTX: for each slide, its logical layout, template layout, and each field with its placeholder `idx`, value kind, character count, the shape name of a text field (so the render step can name the field that overflowed) and any asset id with its hash; plus the brand slug, version and template hash, the engine version, the input file's hash, and the deck's content hash. The content hash is the SHA-256 of the deck's canonical markdown, so it's the same whichever format the deck was written in. The manifest is deterministic and is what agents read instead of opening the PPTX. The PPTX custom properties hold `deck-builder:engine`, `deck-builder:brand`, `deck-builder:brand-version`, `deck-builder:template-sha256` and `deck-builder:content-sha256`; the input file's own hash stays out of the PPTX, so one deck builds the same file from `.md`, `.xlsx` or `.csv`.
 
-Derived assets (recolored icons) are cached in `workspace/.cache/assets/<sha256>.png`, keyed by source hash, color and size.
+Derived assets (recolored icons) are cached in `workspace/.cache/assets/<sha256>.png`, keyed by source content and color.
 
-**R-6.1** Every asset embedded in a PPTX appears in its manifest with a matching hash. AC: golden test cross-checks manifest hashes against the media parts in the zip.
+**R-6.1** Every asset embedded in a PPTX appears in its manifest with a matching hash. AC: a test cross-checks manifest hashes against the media parts in the zip.
 
 ## 7. Inputs
 
@@ -291,8 +291,9 @@ As the prototype's `references/spec-format.md`, plus:
 |---|---|
 | `deck` | Two columns, `key` and `value`: the front matter |
 | `slides` | One row per slide. Columns: `slide` (number, informational), `layout`, `title`, one column per field name, `notes`. Columns whose header starts with `#` are helpers and ignored. |
-| `chart:<id>` | One chart: option rows (`type`, `number_format`, `labels`, `legend`, `title`, `colors`), a blank row, then a grid with categories down the first column and one series per column |
-| `table:<id>` | One table: header row, then data rows |
+| `chart-NN-<field>` | One chart: option rows (`type`, `number_format`, `labels`, `legend`, `title`, `colors`), a blank row, then a grid with categories down the first column and one series per column. Excel forbids `:` in sheet names, so the kind is a prefix. |
+| `table-NN-<field>` | One table: header row, then data rows |
+| `_lists` | Hidden; the layout dropdown's values and each layout field's character budget, for the live counts |
 | `README` | Instructions for people; ignored |
 
 In `slides`, a cell value `sheet:<id>` places that chart or table. Bullets are lines starting `- `, two spaces per nesting level. Cells are read as values only, so re-saving in Excel, SharePoint or LibreOffice doesn't change the result.
@@ -315,21 +316,21 @@ A `deck.md` or workbook with `{{column}}` tokens plus `--data rows.csv|.xlsx` bu
 
 The supported team path is: write `deck.md`, `convert` to `deck.xlsx`, share it for editing, `build deck.xlsx`. Converting back to markdown works at any point.
 
-**R-8.1** Round trip holds for every example deck. AC: test does md to xlsx to md and xlsx to md to xlsx, asserting model equality and identical build hashes.
+**R-8.1** Round trip holds for every example deck, and one deck builds the same file from any format. AC: tests convert md to xlsx to md and md to xlsx to md to xlsx, asserting model equality, byte-stable canonical forms on the second pass, and byte-identical PPTX files from the `.md`, the `.xlsx` and the converted-back `.md`. `convert` itself parses its output back and refuses with `CONVERT_LOSSY` if anything changed.
 **R-8.2** A workbook edited and re-saved by LibreOffice still builds identically. AC: render-tier test re-saves through `soffice --convert-to xlsx` and rebuilds.
 
 ## 9. CLI
 
 ```
-deck-builder init                                   # workspace, config, neutral brand
-deck-builder doctor [--json]                        # deps, tools, render backends, permissions
-deck-builder brand list|show|check|init|adopt ...   # section 5.4
-deck-builder inspect <template> [--yaml|--json]     # layouts and placeholders
+deck-builder init [--dir D]                         # workspace, config, neutral brand, example decks
+deck-builder doctor [--powerpoint] [--json]         # deps, tools, render backends; --powerpoint tests automation
+deck-builder brand list|show|check|init|adopt ...   # section 5.4; init and adopt take --out and --force
+deck-builder inspect <template> [--yaml|--json]     # layouts, placeholders, theme
 deck-builder assets <brand|deck> [--json]           # section 6.2
-deck-builder check <deck> [--render] [--json]       # validate; --render also builds, renders, measures
+deck-builder check <deck> [--render] [--json]       # validate; --render also builds to the default output, renders, measures
 deck-builder build <deck> [-o OUT] [--data ROWS --name PATTERN] [--json]
-deck-builder convert <in> <out> [--json]
-deck-builder render <pptx> [--backend B] [--slides 3,7] [--json]
+deck-builder convert <in> <out> [--force] [--json]  # never overwrites without --force
+deck-builder render <pptx> [--backend B] [--slides 3,7] [--dpi N] [--json]
 deck-builder schema brand|tokens|manifest
 deck-builder docs [topic]                           # reference topics shipped with the engine
 deck-builder explain <CODE>                         # cause and fix for one issue code
@@ -343,16 +344,16 @@ Format references (`deck-md`, `workbook`, `brand-yaml`, `tokens-yaml`, `workflow
 
 - Exit `0` success, `1` validation issues, `2` usage or environment errors.
 - Human output is terse: one summary line on success, one line per issue: `error BUDGET_CHARS deck.md:23 slide 4 body: 433 chars, budget 420`.
-- `--json` prints one object: `ok`, `command`, `input`, `output`, `slides`, `issues[]` (`severity`, `code`, `file`, `line`, `slide`, `field`, `message`, `actual`, `limit`), plus command-specific keys (`backend`, `flagged_slides`, `contact_sheets`, `manifest`).
+- `--json` prints one object: `ok`, `command`, `input`, `output`, `slides`, `issues[]` (`severity`, `code`, `file`, `line`, `slide`, `field`, `message`, `actual`, `limit`), plus command-specific keys (`backend`, `render_dir`, `slide_png`, `flagged_slides` as `{slide, codes}`, `contact_sheets`, `manifest`, `content_sha256`). An environment error (exit 2) puts `error` and, where one applies, `code` in the object.
 - All issues are collected before exiting.
 
 ### 9.2 Issue codes
 
 A stable, documented enum. Skills key fixes off codes, never off message text.
 
-`SPEC_VERSION`, `SCHEMA`, `UNKNOWN_BRAND`, `BRAND_DUPLICATE`, `BRAND_INVALID`, `TEMPLATE_MISMATCH`, `UNKNOWN_LAYOUT`, `UNKNOWN_FIELD`, `MISSING_FIELD`, `KIND_MISMATCH`, `BUDGET_CHARS`, `BUDGET_BULLETS`, `BUDGET_BULLET_CHARS`, `BUDGET_LEVEL`, `TABLE_SHAPE`, `CHART_SHAPE`, `UNKNOWN_ASSET`, `ASSET_FORMAT`, `ASSET_LOW_RES`, `MISSING_IMAGE`, `BANNED_PATTERN`, `MAX_SLIDES`, `UNKNOWN_TOKEN`, `CSV_NO_SHEETS`, `CONVERT_LOSSY`, `OVERFLOW_MEASURED`, `EMPTY_PLACEHOLDER`, `MISSING_FONT`, `OFFICE_REPAIR`, `RENDER_UNVERIFIED`, `NOT_IMPLEMENTED` (a specified command not yet built; removed from use by 0.1.0).
+`PARSE`, `SPEC_VERSION`, `SCHEMA`, `UNKNOWN_BRAND`, `BRAND_DUPLICATE`, `BRAND_INVALID`, `TEMPLATE_MISMATCH`, `UNKNOWN_LAYOUT`, `UNKNOWN_FIELD`, `MISSING_FIELD`, `KIND_MISMATCH`, `BUDGET_CHARS`, `BUDGET_BULLETS`, `BUDGET_BULLET_CHARS`, `BUDGET_LEVEL`, `TABLE_SHAPE`, `CHART_SHAPE`, `UNKNOWN_ASSET`, `ASSET_FORMAT`, `ASSET_LOW_RES`, `MISSING_IMAGE`, `BANNED_PATTERN`, `MAX_SLIDES`, `UNKNOWN_TOKEN`, `CSV_NO_SHEETS`, `CONVERT_LOSSY`, `OVERFLOW_MEASURED`, `EMPTY_PLACEHOLDER`, `MISSING_FONT`, `OFFICE_REPAIR`, `RENDER_UNVERIFIED`, `SKILL_CONFLICT`. `ASSET_LOW_RES`, `MISSING_FONT`, `RENDER_UNVERIFIED` and `SKILL_CONFLICT` are warnings; the rest are errors.
 
-**R-9.1** Every code's cause and fix live in one table in the engine (`errors.CODES`). `docs/issue-codes.md` is generated from it by `deck-builder docs codes`, and every code is raised by at least one test. AC: a test compares the committed file with fresh output, and a test asserts each code is raised somewhere in the suite.
+**R-9.1** Every code's cause and fix live in one table in the engine (`errors.CODES`). `docs/issue-codes.md` is generated from it by `deck-builder docs codes`, and every code is exercised by at least one test. AC: a test compares the committed file with fresh output, and a test asserts each code appears in a test file.
 
 ### 9.3 skills install
 
@@ -376,14 +377,14 @@ python-pptx output isn't byte-stable on its own: zip entry timestamps and the ch
 - Core properties: `created` and `modified` from front matter `date`, `lastModifiedBy` and `creator` from `author` or empty, `description` empty, `revision` 1.
 - The embedded workbook's own properties get the same treatment.
 
-**R-10.1** Building the same input twice, at different times, gives identical SHA-256. AC: golden test builds each example twice with a clock offset.
+**R-10.1** Building the same input twice, at different times, gives identical SHA-256. AC: a test builds twice more than two seconds apart, past the zip timestamp resolution. Byte equality holds on one machine; across machines a different zlib can change compressed bytes, which is why the manifest also records `content_sha256` over the uncompressed parts.
 
 ## 11. Text fit
 
 python-pptx can't measure rendered text. Three layers, cheapest first:
 
 1. **Budgets.** Characters, bullets, bullet length and nesting per field. Always on.
-2. **Measured.** After rendering, `pdftotext -bbox-layout` gives every word's position. Each filled field's words are located on the page and compared with the placeholder rectangle from the PPTX. Text past the box raises `OVERFLOW_MEASURED` with the overrun in points. Exact on PowerPoint's PDF; a close proxy on LibreOffice's.
+2. **Measured.** After rendering, `pdftotext -bbox-layout` gives every word's position. Each word is assigned to the nearest text shape whose text contains it, words inside charts and tables are left out, and any assigned word more than 3 pt outside its shape raises `OVERFLOW_MEASURED` with the overrun in points and the field name from the manifest. Exact on PowerPoint's PDF; a close proxy on LibreOffice's. The assignment is a heuristic: text that overflows into a neighboring shape containing the same words can go unreported.
 3. **Font metrics.** Pre-render wrapping with Pillow and the brand font files. Deferred past v0.1.0.
 
 Autofit stays off in generated templates.
@@ -397,11 +398,11 @@ Autofit stays off in generated templates.
 
 `--backend auto` (default) prefers PowerPoint, then LibreOffice, else exits 2 with an install hint. The JSON result names the backend that ran.
 
-Output: `<deck>.render/` with `deck.pdf`, `slide-NN.png` and `contact-NN.png` (one per `contact_batch` slides).
+Output: `<deck>.render/` with `deck.pdf`, `slide-NN.png` and `contact-NN.png` (one per `contact_batch` slides). Slide PNGs are sized from the slide dimensions times `dpi` (1280x720 for 16:9 at 96), not from the PDF page, whose size can differ by a fraction of a point between renderers.
 
 ### 12.1 Flagged slides
 
-`render --json` and `check --render --json` return `flagged_slides`: slides with `OVERFLOW_MEASURED`, `EMPTY_PLACEHOLDER`, `MISSING_FONT` or `ASSET_LOW_RES`. Agents open PNGs for flagged slides only, plus contact sheets. At the default 1280x720, one slide image costs about 1,200 tokens, so this replaces per-slide viewing as the default QA path.
+`render --json` and `check --render --json` return `flagged_slides`: slides with `OVERFLOW_MEASURED`, `EMPTY_PLACEHOLDER` or `ASSET_LOW_RES`, each with its codes. `MISSING_FONT` is reported for the deck, not per slide. Agents open PNGs for flagged slides only, plus contact sheets, where flagged slides have a red frame. At the default 1280x720, one slide image costs about 1,200 tokens; a contact sheet of 20 thumbnails is about one megapixel and costs about the same.
 
 ### 12.2 PowerPoint backend (macOS)
 
@@ -414,7 +415,7 @@ AppleScript via `osascript`; no extra Python dependencies.
 
 - One render at a time, enforced by a lock file in the container folder.
 - Timeout 180 s per deck; on timeout, report and leave PowerPoint running.
-- Automation permission: a denial (osascript error -1743) exits 2 with the System Settings path to grant it. `doctor` checks this.
+- Automation permission: a denial (osascript error -1743) exits 2 with the System Settings path to grant it. `doctor --powerpoint` checks it; plain `doctor` doesn't, because the check launches PowerPoint.
 - Until `probe_powerpoint.sh` has passed on a real Mac, every PowerPoint-backed result includes the warning `RENDER_UNVERIFIED`.
 
 ### 12.3 LibreOffice backend
@@ -423,7 +424,7 @@ Headless, with a throwaway user profile per run and a 300 s timeout. Only render
 
 ### 12.4 Font check
 
-`pdffonts` on the rendered PDF compares embedded fonts with `brand.yaml` fonts. A substitute raises `MISSING_FONT`.
+`pdffonts` on the rendered PDF compares embedded fonts with `brand.yaml` fonts. A font rendered with its declared fallback, or with something else, raises the warning `MISSING_FONT`. LibreOffice can render a template's theme font with its own default even when the font is installed, so the warning is a fidelity note under LibreOffice and a real substitution under PowerPoint.
 
 ## 13. Claude Code layer
 
@@ -527,13 +528,13 @@ System tools: poppler (GPL, invoked as a CLI) for rendering and measurement; Lib
 
 ## 17. Testing
 
-- **Unit:** parsers, writers, validation, every issue code, config resolution, registry, bulk substitution.
-- **Golden:** build every example against the neutral brand and compare SHA-256 and slide XML with committed snapshots. Updates are deliberate (`pytest --update-golden`).
-- **Round trip:** R-8.1 for every example.
-- **Validity:** every built file reopens in python-pptx and passes a content-types check.
-- **Render** (marked `render`): LibreOffice build, render, measured overflow, font check, R-8.2.
-- **Office** (marked `office`): the PowerPoint backend, run by hand on a Mac before each release.
-- **Static:** ruff, mypy, a check that no engine module imports `socket`, `urllib`, `http`, `requests` or `httpx`, and the `RGBColor(`/`Pt(` lint.
+- **Unit** (`tests/unit`): parsers, writers, validation, every issue code, config resolution, registry, bulk substitution, generation of all three layout sets, `init` idempotence, and the PowerPoint backend's failure paths with `osascript` simulated.
+- **Determinism:** rebuilds are byte-identical (R-10.1), generated kits are byte-identical, and one deck builds the same file from any format (R-8.1). Committed golden snapshots are deferred, because compressed bytes can differ across zlib versions; see [section 20](#20-open-decisions).
+- **Round trip:** R-8.1 for every example deck.
+- **Validity:** every built file reopens in python-pptx.
+- **Render** (`tests/render`, marked `render`, skipped without LibreOffice and poppler): the example deck renders with no flags, measured overflow on a deliberately long slide, selected-slide renders, the unverified PowerPoint marking, and R-8.2.
+- **Office** (marked `office`): the PowerPoint backend on a real Mac, run by hand before each release (`docs/release-checklist.md`).
+- **Static** (`tests/unit/test_static.py`): no engine module imports a network library, `RGBColor(`/`Pt(` appear only in the token reader (with a positive control), `yaml.safe_load` only. Plus ruff and mypy.
 
 ## 18. CI
 
@@ -541,10 +542,10 @@ GitHub Actions on every push and pull request, Ubuntu:
 
 | Job | Runs | Enforces |
 |---|---|---|
-| lint | ruff, mypy, static checks | Code quality, no network imports |
-| test | unit, golden, round trip, validity | Determinism and lossless convert |
-| audit | `pip-audit` against `uv.lock` | No dependencies with known CVEs |
-| render | Installs `libreoffice-impress` and `poppler-utils`, runs the render tier | The render path works on a clean machine |
+| lint | ruff, mypy | Code quality and types |
+| test | unit, determinism, round trip, validity, static rules | Determinism, lossless convert, no network imports |
+| audit | `pip-audit` on the locked runtime dependencies, exported from `uv.lock` | No dependencies with known CVEs |
+| render | Installs `libreoffice-impress`, `poppler-utils` and `fonts-liberation`, runs the render tier | The render path works on a clean machine |
 
 The Office tier never runs in CI.
 
@@ -563,6 +564,8 @@ The Office tier never runs in CI.
 |---|---|---|
 | Bundle a starter icon subset (Lucide, ISC) in the package | No; the user supplies icons, and the neutral brand ships six drawn for the repo | Repo owner |
 | SVG icons, converted with `rsvg-convert` | Not in v0.1.0; PNG alpha masks only | Repo owner |
+| Committed golden snapshots compared on content hash (uncompressed parts) rather than file bytes | Not in v0.1.0; determinism is tested by rebuilding | Repo owner |
+| Slide numbers and footers on generated layouts (python-pptx doesn't copy those placeholders to slides) | Not in v0.1.0 | Repo owner |
 | Diagrams from text (Graphviz or Mermaid) rendered into image placeholders | Not in v0.1.0 | Repo owner |
 | Support for a local model driving the CLI | Future work; the CLI already allows it | Repo owner |
 | Publish to PyPI | No; install from a pinned git tag | Repo owner |
