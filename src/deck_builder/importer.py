@@ -508,7 +508,9 @@ class Importer:
             notes = slide.notes_slide.notes_text_frame.text.strip()
         if rep.unplaced:
             lines = "\n".join(f"- {u}" for u in rep.unplaced)
-            notes = (notes + "\n\n" if notes else "") + f"Unplaced from the original:\n{lines}"
+            # rstrip: an unplaced table's own dump ends with a newline that a reparse would trim anyway,
+            # so trim it here too; otherwise this slide's notes could never round-trip through deck.md.
+            notes = ((notes + "\n\n" if notes else "") + f"Unplaced from the original:\n{lines}").rstrip()
         rep.title = title
         return Slide(title=title, layout=key, fields=fields, notes=notes), rep
 

@@ -15,7 +15,7 @@ from pptx.opc.constants import RELATIONSHIP_TYPE as RT
 from pptx.oxml.ns import qn
 from pptx.util import Inches, Pt
 
-from conftest import cli_json, write_deck
+from conftest import cli_json, codes, write_deck
 from deck_builder import pipeline, validate
 from deck_builder.brand import registry
 from deck_builder.cli import main
@@ -386,6 +386,51 @@ def test_import_takes_only_a_pptx(ws, capsys):
     deck = write_deck(ws, STRICT)
     code, out = cli_json(ws, "import", str(deck), str(ws / "imp"), "--brand", "stock", capsys=capsys)
     assert code == 2 and "import takes an existing .pptx file" in out["error"]
+
+
+DANGEROUS_NOTES = (
+    "Before the gap.\n"
+    "## Appendix\n"
+    "layout: title\n"
+    "Not a real slide; this is notes text, not slide 2.\n"
+    "Notes:\n"
+    "Nested marker, still notes.\n"
+    "```fence\n"
+    "inside notes\n"
+    "```\n"
+    "![not an image](nowhere.png)\n"
+    "After the gap."
+)
+
+
+def notes_pptx(path: Path, notes: str) -> Path:
+    prs = Presentation()
+    slide = prs.slides.add_slide(prs.slide_layouts[1])
+    slide.shapes.title.text = "Opening"
+    slide.placeholders[1].text_frame.text = "Point one"
+    slide.notes_slide.notes_text_frame.text = notes
+    prs.save(str(path))
+    return path
+
+
+def test_notes_with_heading_like_lines_round_trip_as_one_slide(ws, capsys, tmp_path):
+    src = notes_pptx(tmp_path / "danger.pptx", DANGEROUS_NOTES)
+    code, out = cli_json(ws, "import", str(src), str(ws / "imp"), "--brand", "stock", capsys=capsys)
+    assert code == 0, out
+    assert out["slides"] == 1
+    imported = markdown.parse(ws / "imp" / "deck.md")[0]
+    assert len(imported.slides) == 1
+    assert imported.slides[0].notes == DANGEROUS_NOTES
+
+
+def test_import_fails_loudly_when_the_round_trip_changes_structure(ws, capsys, messy, monkeypatch):
+    import deck_builder.commands as commands_mod
+
+    monkeypatch.setattr(commands_mod.md_writer, "write",
+                        lambda deck: "---\nbrand: stock\n---\n\n## Only\nlayout: title\n")
+    code, out = cli_json(ws, "import", str(messy), str(ws / "imp"), "--brand", "stock", capsys=capsys)
+    assert code == 1
+    assert "IMPORT_LOSSY" in codes(out)
 
 
 def test_a_template_theme_cant_read_local_files_through_xml_entities(tmp_path):

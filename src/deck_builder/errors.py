@@ -128,6 +128,11 @@ CODES: dict[str, tuple[str, str]] = {
         "The target format can't hold everything in the input, such as charts in CSV.",
         "Convert to .xlsx or .md instead.",
     ),
+    "IMPORT_LOSSY": (
+        "The deck.md import wrote doesn't reparse to the same slides it extracted from the .pptx: some "
+        "content, often in speaker notes, collided with deck.md's own syntax.",
+        "Open the named slide in deck.md, reword the colliding line, then run `deck-builder check`.",
+    ),
     "LOW_CONTRAST": (
         "Two brand colors that sit on each other don't meet WCAG 2.2 contrast: 4.5:1 for text (ink on "
         "background or surface, background on primary, links on background), 3:1 for icons and chart series.",

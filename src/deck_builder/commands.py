@@ -534,10 +534,19 @@ def import_cmd(args: argparse.Namespace) -> Result:
             (out / "assets" / name).write_bytes(blob)
     deck_md = out / "deck.md"
     deck_md.write_text(md_writer.write(imp.deck), encoding="utf-8")
-    back, _ = markdown_parser.parse(deck_md)
+    back, back_issues = markdown_parser.parse(deck_md)
     mismatched = [n for n, (a, b) in enumerate(zip(imp.deck.slides, back.slides, strict=False), start=1) if a != b]
     report = out / "import-report.md"
     report.write_text(importer.report_md(src, brand, bool(args.adopt), imp, mismatched), encoding="utf-8")
+    if back_issues or len(back.slides) != len(imp.deck.slides) or mismatched:
+        if back_issues:
+            detail = "; ".join(i.message for i in back_issues)
+        elif len(back.slides) != len(imp.deck.slides):
+            detail = f"{len(imp.deck.slides)} slides became {len(back.slides)} on reparse"
+        else:
+            detail = f"slide(s) {', '.join(map(str, mismatched))} differ after reparse"
+        r.add(Issue("IMPORT_LOSSY", f"{deck_md.name} didn't reparse to the deck import produced: {detail}",
+                    file=deck_md.name))
     unplaced = sum(len(x.unplaced) for x in imp.reports)
     dropped = sum(sum(x.dropped.values()) for x in imp.reports)
     r.data.update({"output": str(deck_md), "report": str(report), "brand": brand.slug, "slides": len(imp.reports),

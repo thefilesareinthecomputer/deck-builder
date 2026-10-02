@@ -23,6 +23,13 @@ STRAY_HEADING = re.compile(r"^#{1,6}\s")
 STRUCTURE = re.compile(r"^\s*(#|!\[|```|(Notes|\?\?\?):?\s*$)")
 
 
+def _unescape_notes_line(ln: str) -> str:
+    """Undo write.markdown's `_protect_notes`: a leading backslash there always means this line was
+    escaped (either it matched STRUCTURE, or it already started with a backslash), so stripping exactly
+    one restores the original, whatever it was."""
+    return ln[1:] if ln.startswith("\\") else ln
+
+
 def substitute(text: str, row: dict[str, str] | None, file: str, issues: list[Issue]) -> str:
     """Bulk mode: replace {{column}} tokens from a data row."""
     if row is None:
@@ -244,7 +251,7 @@ def parse(path: Path, row: dict[str, str] | None = None) -> tuple[Deck, list[Iss
         notes = ""
         for k, ln in enumerate(rest):
             if NOTES.match(ln.strip()):
-                notes = "\n".join(rest[k + 1 :]).strip()
+                notes = "\n".join(_unescape_notes_line(x) for x in rest[k + 1 :]).strip()
                 rest = rest[:k]
                 break
 
