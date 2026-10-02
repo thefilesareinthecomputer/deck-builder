@@ -39,6 +39,26 @@ def _resolve(root: Path, p: str) -> Path:
     return q if q.is_absolute() else (root / q)
 
 
+def _widens_reach(full: Path, root: Path) -> str | None:
+    """A reason this brand_paths entry would widen the MCP server's reach, or None if it's fine."""
+    if full == Path.home().resolve():
+        return "the user's home folder"
+    if full.parent == full:  # a filesystem root such as / or C:\
+        return "the filesystem root"
+    if full == root or full in root.parents:
+        return "the config folder or one of its ancestors"
+    return None
+
+
+def _brand_path(root: Path, path: Path, entry: str) -> Path:
+    full = _resolve(root, entry)
+    reason = _widens_reach(full.resolve(), root)
+    if reason is not None:
+        raise EnvError(f"{path}: brand_paths entry {entry!r} resolves to {reason}; use a folder dedicated to "
+                       "brand kits")
+    return full
+
+
 def _find_upward(start: Path) -> Path | None:
     for d in [start, *start.parents]:
         cand = d / FILENAME
@@ -79,7 +99,7 @@ def load(explicit: str | None = None, cwd: Path | None = None) -> Config:
         raise EnvError(f"{path}: invalid TOML: {e}") from e
     root = path.parent.resolve()
     ws = _resolve(root, str(raw.get("workspace", "workspace")))
-    brand_paths = [_resolve(root, str(p)) for p in raw.get("brand_paths", [str(ws / "brands")])]
+    brand_paths = [_brand_path(root, path, str(p)) for p in raw.get("brand_paths", [str(ws / "brands")])]
     r = raw.get("render", {}) or {}
     render = RenderConfig(
         backend=str(r.get("backend", "auto")),

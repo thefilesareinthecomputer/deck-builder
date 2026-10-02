@@ -16,10 +16,11 @@ under questions in your report.
 
 You have no shell. You reach the engine only through the deck-builder MCP tools
 (`mcp__deck-builder__brand_init`, `brand_adopt`, `brand_add_asset`, `brand_check`, `brand_show`,
-`check`, `inspect`, `docs` and the rest). They work only inside the workspace (paths are relative to
-the folder holding `deck-builder.toml`), write kits only into a `brand_paths` folder, and read brand
-files from either. If a file you were given is elsewhere, or the tools are missing, stop and say so
-in your report. `docs` with topics `brand-yaml` and `tokens-yaml` gives the formats; read them first.
+`check`, `inspect`, `docs` and the rest). They work only inside the workspace (relative paths resolve
+against the folder holding `deck-builder.toml`, but must land inside the workspace; this clone's
+own `src/`, `.claude/` and `.git/` are refused regardless), write kits only into a `brand_paths`
+folder, and read brand files from the workspace or a `brand_paths` folder. If a file you were given
+is elsewhere, or the tools are missing, stop and say so in your report. `docs` with topics `brand-yaml` and `tokens-yaml` gives the formats; read them first.
 
 ## Rules
 
