@@ -46,6 +46,7 @@ LOGO_H, LOGO_BOTTOM = 0.42, 0.25  # the master logo's height and its gap to the 
 FURNITURE_PT, FURNITURE_H = 10, 0.3
 NUMBER_W = 0.4  # a two-digit number at 10 pt is about 0.15 in, so the footer starts about 0.25 in after it
 FOOTER_IDX, NUMBER_IDX = 20, 21
+FURNITURE_KINDS = {"SLIDE_NUMBER": "sldNum", "FOOTER": "ftr", "DATE": "dt"}  # dt never gets a box
 SLIDENUM_FIELD = "{B6F15528-21DE-4FAA-801E-634DDDAF4B2B}"  # any fixed id keeps builds byte-identical
 PH_TYPE = {"title": "title", "body": "body", "pic": "pic", "chart": "chart", "tbl": "tbl"}
 KIND_FOR = {"pic": "image", "chart": "chart", "tbl": "table"}
@@ -128,25 +129,49 @@ def _sp(shape_id: int, ph: PH) -> str:
             f"<p:spPr>{xfrm}</p:spPr>{body}</p:sp>")
 
 
-def _furniture_sp(shape_id: int, kind: str, idx: int) -> str:
-    """A layout's slide-number or footer placeholder; position and style come from the master."""
+def furniture_boxes(w_in: float, h_in: float, numbers: bool) -> dict[str, tuple[float, float, float]]:
+    """kind -> (x, y, w) in inches: the number at the margin, the footer after it, centered on the logo's line."""
+    y = h_in - LOGO_BOTTOM - LOGO_H / 2 - FURNITURE_H / 2
+    footer_x = 0.6 + NUMBER_W if numbers else 0.6
+    boxes = {"ftr": (footer_x, y, w_in / 2 - footer_x)}
+    if numbers:
+        boxes["sldNum"] = (0.6, y, NUMBER_W)
+    return boxes
+
+
+def _furniture_text(color: str) -> str:
+    """Plain 10 pt text in one color: no box, fill, rule or bullet. The left inset matches the title's and
+    body's, so the text lines up with theirs."""
+    return ('<a:bodyPr lIns="91440" tIns="0" rIns="0" bIns="0" anchor="ctr" wrap="none"/><a:lstStyle>'
+            f'<a:lvl1pPr algn="l"><a:buNone/><a:defRPr sz="{FURNITURE_PT * 100}" b="0"><a:solidFill>'
+            f'<a:srgbClr val="{color}"/></a:solidFill></a:defRPr></a:lvl1pPr></a:lstStyle>')
+
+
+def _furniture_sp(shape_id: int, kind: str, idx: int, box: tuple[float, float, float], color: str) -> str:
+    """A layout's slide-number or footer placeholder, fully specified: LibreOffice doesn't inherit these
+    from the master."""
     name = {"sldNum": "Slide Number Placeholder", "ftr": "Footer Placeholder"}[kind]
     para = (f'<a:fld id="{SLIDENUM_FIELD}" type="slidenum"><a:rPr lang="en-US"/><a:t>&#8249;#&#8250;</a:t></a:fld>'
             if kind == "sldNum" else '<a:endParaRPr lang="en-US"/>')
+    x, y, w = box
     return (f'<p:sp><p:nvSpPr><p:cNvPr id="{shape_id}" name="{name} {shape_id - 1}"/>'
             f'<p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr><p:ph type="{kind}" sz="quarter" idx="{idx}"/>'
-            f'</p:nvPr></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:lstStyle/><a:p>{para}</a:p></p:txBody></p:sp>')
+            f'</p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x="{emu(x)}" y="{emu(y)}"/>'
+            f'<a:ext cx="{emu(w)}" cy="{emu(FURNITURE_H)}"/></a:xfrm></p:spPr>'
+            f"<p:txBody>{_furniture_text(color)}<a:p>{para}</a:p></p:txBody></p:sp>")
 
 
-def layout_xml(ld: LayoutDef, numbers: bool = True) -> bytes:
+def layout_xml(ld: LayoutDef, boxes: dict[str, tuple[float, float, float]] | None = None,
+               color: str = "6B7280") -> bytes:
     bg = ""
     if ld.background:
         bg = (f'<p:bg><p:bgPr><a:solidFill><a:schemeClr val="{ld.background}"/></a:solidFill>'
               "<a:effectLst/></p:bgPr></p:bg>")
     sps = "".join(_sp(i + 2, ph) for i, ph in enumerate(ld.phs))
-    if not ld.hide_master:  # title, section and closing slides carry no furniture
+    if boxes and not ld.hide_master:  # title, section and closing slides get no furniture
         n = len(ld.phs) + 2
-        sps += _furniture_sp(n, "ftr", FOOTER_IDX) + (_furniture_sp(n + 1, "sldNum", NUMBER_IDX) if numbers else "")
+        sps += "".join(_furniture_sp(n + i, kind, {"ftr": FOOTER_IDX, "sldNum": NUMBER_IDX}[kind], box, color)
+                       for i, (kind, box) in enumerate(boxes.items()))
     show = ' showMasterSp="0"' if ld.hide_master else ""
     return (f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<p:sldLayout {NSDECL} preserve="1"{show}>'
             f'<p:cSld name="{escape(ld.name)}">{bg}<p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/>'
@@ -155,7 +180,8 @@ def layout_xml(ld: LayoutDef, numbers: bool = True) -> bytes:
             f"{sps}</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sldLayout>").encode()
 
 
-def replace_layouts(prs: Any, defs: list[LayoutDef], numbers: bool = True) -> None:
+def replace_layouts(prs: Any, defs: list[LayoutDef], boxes: dict[str, tuple[float, float, float]] | None = None,
+                    color: str = "6B7280") -> None:
     master = prs.slide_masters[0]
     for layout in list(master.slide_layouts):
         master.slide_layouts.remove(layout)
@@ -165,7 +191,7 @@ def replace_layouts(prs: Any, defs: list[LayoutDef], numbers: bool = True) -> No
     next_id = 2147483649
     for n, ld in enumerate(defs, start=1):
         part = SlideLayoutPart(PackURI(f"/ppt/slideLayouts/slideLayout{n}.xml"), CT.PML_SLIDE_LAYOUT, package,
-                               parse_xml(layout_xml(ld, numbers)))
+                               parse_xml(layout_xml(ld, boxes, color)))
         part.relate_to(master_part, RT.SLIDE_MASTER)
         rid = master_part.relate_to(part, RT.SLIDE_LAYOUT)
         el = etree.SubElement(lst, qn("p:sldLayoutId"))
@@ -186,27 +212,20 @@ def furniture_color(meta: dict[str, Any]) -> tuple[str, str]:
     return ("ink" if "ink" in palette else slots["dk1"]), slots["dk1"]
 
 
-def _style_furniture(ph: Any, x: float, y: float, w: float, color: str) -> None:
-    """Plain 10 pt text in one color: no box, fill, rule or bullet, starting exactly at x."""
+def _style_furniture(ph: Any, box: tuple[float, float, float], color: str) -> None:
+    x, y, w = box
     ph.left, ph.top, ph.width, ph.height = emu(x), emu(y), emu(w), emu(FURNITURE_H)
     body = ph.text_frame._txBody
-    body_pr = body.find(qn("a:bodyPr"))
-    for inset in ("lIns", "tIns", "rIns", "bIns"):
-        body_pr.set(inset, "0")
-    body_pr.set("anchor", "ctr")
-    body_pr.set("wrap", "none")
-    lst = body.find(qn("a:lstStyle"))
-    for child in list(lst):
-        lst.remove(child)
-    lst.append(parse_xml(f'<a:lvl1pPr {NSDECL} algn="l"><a:buNone/><a:defRPr sz="{FURNITURE_PT * 100}" b="0">'
-                         f'<a:solidFill><a:srgbClr val="{color}"/></a:solidFill></a:defRPr></a:lvl1pPr>'))
+    styled = parse_xml(f"<p:txBody {NSDECL}>{_furniture_text(color)}</p:txBody>")
+    for tag in ("a:bodyPr", "a:lstStyle"):
+        body.replace(body.find(qn(tag)), styled.find(qn(tag)))
 
 
-def style_master(prs: Any, w_in: float, h_in: float, numbers: bool = True, color: str = "6B7280") -> None:
+def style_master(prs: Any, w_in: float, h_in: float, boxes: dict[str, tuple[float, float, float]] | None = None,
+                 color: str = "6B7280") -> None:
     """Fit the master's placeholders to the new size and set the type scale the layouts inherit."""
     master = prs.slide_masters[0]
-    line = h_in - LOGO_BOTTOM - LOGO_H / 2 - FURNITURE_H / 2  # centered on the logo's center line
-    footer_x = 0.6 + NUMBER_W if numbers else 0.6
+    boxes = boxes or {}
     for ph in list(master.placeholders):
         t = ph.placeholder_format.type
         name = t.name if t is not None else ""
@@ -214,12 +233,12 @@ def style_master(prs: Any, w_in: float, h_in: float, numbers: bool = True, color
             ph.left, ph.top, ph.width, ph.height = emu(0.6), emu(0.45), emu(w_in - 1.2), emu(1.05)
         elif name == "BODY":
             ph.left, ph.top, ph.width, ph.height = emu(0.6), emu(1.7), emu(w_in - 1.2), emu(h_in - 2.5)
-        elif name == "DATE" or (name == "SLIDE_NUMBER" and not numbers):
-            ph._element.getparent().remove(ph._element)  # no date, ever; no number when they're off
-        elif name == "SLIDE_NUMBER":
-            _style_furniture(ph, 0.6, line, NUMBER_W, color)
-        elif name == "FOOTER":
-            _style_furniture(ph, footer_x, line, w_in / 2 - footer_x, color)
+        elif name in FURNITURE_KINDS:
+            box = boxes.get(FURNITURE_KINDS[name])
+            if box:
+                _style_furniture(ph, box, color)
+            else:
+                ph._element.getparent().remove(ph._element)  # no date, ever; no number when they're off
     tx = master._element.find(qn("p:txStyles"))
     if tx is None:
         return
@@ -348,9 +367,10 @@ def generate(meta: dict[str, Any], source_dir: Path) -> tuple[bytes, dict[str, A
     master = prs.slide_masters[0]
     theme_part = master.part.part_related_by(RT.THEME)
     write_theme(theme_part, slot_colors(meta), meta.get("fonts") or {})
-    numbers = bool(gen.get("slide_numbers", True))
-    style_master(prs, w_in, h_in, numbers, furniture_color(meta)[1])
-    replace_layouts(prs, defs, numbers)
+    boxes = furniture_boxes(w_in, h_in, bool(gen.get("slide_numbers", True)))
+    color = furniture_color(meta)[1]
+    style_master(prs, w_in, h_in, boxes, color)
+    replace_layouts(prs, defs, boxes, color)
     logo_id = gen.get("logo_on_master")
     if logo_id:
         rel = (meta.get("logos") or {}).get(logo_id)

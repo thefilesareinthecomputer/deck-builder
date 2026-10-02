@@ -134,12 +134,15 @@ def test_content_slides_get_their_number_and_title_section_closing_get_none(ws, 
     assert got == [{}, {"SLIDE_NUMBER": "2"}, {}, {"SLIDE_NUMBER": "4"}, {}]
 
 
-def test_the_number_inherits_position_and_style_from_the_layout(ws, capsys):
+def test_the_number_keeps_the_layouts_position_and_style(ws, capsys):
     init_brand(ws, capsys)
     slide = Presentation(str(build(ws, capsys))).slides[1]
-    num = furniture(slide.placeholders)["SLIDE_NUMBER"]
-    assert num._element.find("{*}spPr/{*}xfrm") is None and num._element.find("{*}txBody/{*}bodyPr").attrib == {}
-    assert num._element.find(".//{*}fld").get("type") == "slidenum"
+    num = furniture(slide.placeholders)["SLIDE_NUMBER"]._element
+    src = furniture(slide.slide_layout.placeholders)["SLIDE_NUMBER"]._element
+    for part in ("{*}spPr", "{*}txBody/{*}bodyPr", "{*}txBody/{*}lstStyle"):
+        shape = [(e.tag, dict(e.attrib)) for e in num.find(part).iter()]
+        assert shape == [(e.tag, dict(e.attrib)) for e in src.find(part).iter()], part
+    assert num.find(".//{*}fld").get("type") == "slidenum"
 
 
 def test_a_footer_appears_only_when_the_deck_sets_one(ws, capsys):

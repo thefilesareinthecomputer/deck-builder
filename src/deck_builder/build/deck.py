@@ -43,8 +43,9 @@ def furniture_settings(meta: dict[str, Any]) -> tuple[bool, str | None]:
 def add_furniture(slide: Any, layout: Any, n: int, numbers: bool, footer: str | None) -> None:
     """Copy the layout's slide-number placeholder (and its footer when there's text for it) onto the slide.
 
-    python-pptx never copies these. The copy keeps the template's styling: it names the layout's
-    placeholder and inherits position and type from it. Dates are never copied.
+    python-pptx never copies these. The whole placeholder is copied, so the template's position and
+    styling stay as they are (LibreOffice doesn't inherit them), and only its text is replaced. Dates
+    are never copied.
     """
     tree = slide.shapes._spTree
     next_id = max((int(e.get("id", 0)) for e in tree.iter(qn("p:cNvPr"))), default=1) + 1
@@ -58,12 +59,13 @@ def add_furniture(slide: Any, layout: Any, n: int, numbers: bool, footer: str | 
             para = f'<a:r><a:rPr lang="en-US"/><a:t>{escape(footer)}</a:t></a:r>'
         else:
             continue
-        nv = copy.deepcopy(ph._element.find(qn("p:nvSpPr")))
-        nv.find(qn("p:cNvPr")).set("id", str(next_id))
+        sp = copy.deepcopy(ph._element)
+        sp.find(f"{qn('p:nvSpPr')}/{qn('p:cNvPr')}").set("id", str(next_id))
         next_id += 1
-        sp = parse_xml(f'<p:sp {nsdecls("p", "a")}><p:spPr/><p:txBody><a:bodyPr/><a:lstStyle/><a:p>{para}</a:p>'
-                       "</p:txBody></p:sp>")
-        sp.insert(0, nv)
+        body = sp.find(qn("p:txBody"))
+        for p in body.findall(qn("a:p")):
+            body.remove(p)
+        body.append(parse_xml(f'<a:p {nsdecls("a")}>{para}</a:p>'))
         tree.append(sp)
 
 
