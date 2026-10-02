@@ -53,6 +53,23 @@ class Brand:
         return list((self.tokens.get("layouts") or {}).keys())
 
 
+def _duplicate_idx_problems(tokens: dict[str, Any]) -> list[str]:
+    """Two fields naming the same placeholder idx in one layout would fill, then clear, one placeholder."""
+    problems: list[str] = []
+    for lname, ls in (tokens.get("layouts") or {}).items():
+        if not isinstance(ls, dict):
+            continue
+        by_idx: dict[Any, list[str]] = {}
+        for fname, fs in (ls.get("fields") or {}).items():
+            if isinstance(fs, dict) and "idx" in fs:
+                by_idx.setdefault(fs["idx"], []).append(fname)
+        for idx, fnames in by_idx.items():
+            if len(fnames) > 1:
+                problems.append(f"layout {lname!r}: fields {', '.join(sorted(fnames))} share placeholder "
+                                f"idx {idx!r}; give each field its own idx")
+    return problems
+
+
 def _load_yaml(path: Path, problems: list[str]) -> dict[str, Any]:
     if not path.is_file():
         problems.append(f"missing {path.name}")
@@ -72,13 +89,20 @@ def load_kit(path: Path) -> Brand:
     problems: list[str] = []
     meta = _load_yaml(path / "brand.yaml", problems)
     tokens = _load_yaml(path / "tokens.yaml", problems)
-    template = next((path / n for n in TEMPLATE_NAMES if (path / n).is_file()), None)
-    if template is None:
+    present = [n for n in TEMPLATE_NAMES if (path / n).is_file()]
+    template = path / present[0] if present else None
+    if not present:
         problems.append("missing template.potx or template.pptx")
+    elif len(present) > 1:
+        problems.append(f"both {present[0]} and {present[1]} are in this kit; keep the one this kit actually "
+                        f"uses and remove the other (brand init writes template.potx, adopt writes "
+                        "template.pptx; a kit never needs both)")
     slug = str(meta.get("slug") or path.name)
     if meta and slug != path.name:
         problems.append(f"slug {slug!r} doesn't match folder name {path.name!r}")
     schema_errors = (schema.errors("brand", meta) if meta else []) + (schema.errors("tokens", tokens) if tokens else [])
+    if tokens and not schema_errors:
+        problems += _duplicate_idx_problems(tokens)
     return Brand(slug=slug, path=path, meta=meta, tokens=tokens, template=template, problems=problems,
                  schema_errors=schema_errors)
 
@@ -128,5 +152,8 @@ def explicit(template: Path, tokens: Path) -> Brand:
     data = _load_yaml(tokens, problems)
     if not template.is_file():
         problems.append(f"template not found: {template}")
+    schema_errors = schema.errors("tokens", data) if data else []
+    if data and not schema_errors:
+        problems += _duplicate_idx_problems(data)
     return Brand(slug="(explicit)", path=tokens.parent, meta={}, tokens=data, template=template,
-                 problems=problems, schema_errors=schema.errors("tokens", data) if data else [])
+                 problems=problems, schema_errors=schema_errors)

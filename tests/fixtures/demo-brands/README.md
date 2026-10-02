@@ -17,4 +17,6 @@ Three original, fictional companies for testing a presentation builder. Each bra
 - `assets/hero.png`: Brand-specific RGB illustration, 2400 x 1350 pixels. The showcase deck uses copies in `showcase/assets/`, because a deck's images must sit inside its own folder.
 - `assets/svg/*.svg`: Editable source art for every PNG.
 
+Two decks use the brands. `showcase/deck.md` builds into all three with `build --data showcase/brands.csv` and makes the README images. `layouts/deck.md` puts every generated layout but `team` on a slide with realistic content, including the cases that used to look unfinished (a short list, a short table, a comparison, two columns), and the tests build and render it in all three brands. Cubicle Nine is a read-mode brand (decks sent and read on screen) and Afterhours Soapworks uses a dark big-number slide, so the `generate` options are exercised.
+
 The PNGs are ready for image-placement tests; the SVGs allow source editing and rerendering. Fonts are specified by family and fallback, with no font binaries bundled. All names and artwork were made for these fixtures; they refer to no real company or film property.

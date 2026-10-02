@@ -4,9 +4,11 @@ The transport is MCP's stdio framing (newline-delimited JSON-RPC 2.0), written h
 engine keeps no network library. Each tool builds the argv the CLI would get, runs it through the
 CLI's own parser and handler, and returns the JSON that `--json` prints, so the two surfaces can't
 drift apart. Paths are confined before anything runs: decks, data and outputs must resolve inside
-the workspace root (the config file's folder), brand writes inside a configured brand_paths entry,
-and brand reads inside either. Anything else is refused. With the server missing, an agent that
-relies on it can run nothing.
+the workspace (relative paths resolve against the config file's folder first, then the result must
+land inside the workspace), brand writes inside a configured brand_paths entry, and brand reads
+inside either. This clone's own .claude, .git and src folders, and files named AGENTS.md, CLAUDE.md
+or deck-builder.toml, are refused regardless. Anything else outside the allowed areas is refused
+too. With the server missing, an agent that relies on it can run nothing.
 """
 from __future__ import annotations
 
@@ -150,7 +152,8 @@ class Server:
     def __init__(self, cfg: cfgmod.Config) -> None:
         assert cfg.path is not None
         self.cfg = cfg
-        self.root = cfg.path.parent.resolve()
+        self.root = cfg.path.parent.resolve()  # relative paths resolve against this, as they always have
+        self.workspace = cfg.workspace.resolve()
         self.brands = [p.resolve() for p in cfg.brand_paths]
         from deck_builder import cli  # the CLI's own parser and handlers
 
@@ -158,6 +161,13 @@ class Server:
         self.parser, self.handlers = cli.build_parser()
 
     # -- confinement
+
+    def _off_limits(self, full: Path) -> bool:
+        """This clone's own files: refused no matter what the workspace or brand_paths allow."""
+        if full.name in {"AGENTS.md", "CLAUDE.md", "deck-builder.toml"}:
+            return True
+        return any(full == d or full.is_relative_to(d) for d in
+                   (self.root / ".claude", self.root / ".git", self.root / "src"))
 
     def _path(self, arg: Arg, value: str) -> str:
         if arg.path == SLUG_OR_ROOT and jsonschema.Draft202012Validator(SLUG).is_valid(value):
@@ -167,8 +177,10 @@ class Server:
             full = (p if p.is_absolute() else self.root / p).resolve()  # follows symlinks
         except (ValueError, OSError) as e:  # a NUL byte, a symlink loop
             raise Refused(f"{arg.name}: {value!r} isn't a usable path ({e})") from None
-        allowed = {ROOT: [self.root], SLUG_OR_ROOT: [self.root], BRAND_WRITE: self.brands,
-                   BRAND_READ: [self.root, *self.brands]}[str(arg.path)]
+        if self._off_limits(full):
+            raise Refused(f"{arg.name}: {value!r} is part of this clone's own files, not the workspace")
+        allowed = {ROOT: [self.workspace], SLUG_OR_ROOT: [self.workspace], BRAND_WRITE: self.brands,
+                   BRAND_READ: [self.workspace, *self.brands]}[str(arg.path)]
         if not any(full.is_relative_to(a) for a in allowed):
             where = {ROOT: "the workspace", SLUG_OR_ROOT: "the workspace", BRAND_WRITE: "a brand_paths folder",
                      BRAND_READ: "the workspace or a brand_paths folder"}[str(arg.path)]
@@ -223,7 +235,7 @@ class Server:
             # Checking an argument path doesn't confine what a command derives from it afterward (a
             # manifest beside a build output, a render folder beside a .pptx, a slug appended to a
             # brand path, ...); guard() catches those for the whole call, wherever the engine derives one.
-            with contextlib.redirect_stdout(sys.stderr), confine.scoped(self.root, *self.brands):
+            with contextlib.redirect_stdout(sys.stderr), confine.scoped(self.workspace, *self.brands):
                 result = self.cli.run(self.handlers[args.command], args)
         except Exception as e:  # an engine bug: report it, keep serving
             return _text(f"internal error: {type(e).__name__}: {e}", error=True)
@@ -250,9 +262,10 @@ class Server:
                 "capabilities": {"tools": {"listChanged": False}},
                 "serverInfo": {"name": "deck-builder", "version": __version__},
                 "instructions": (
-                    f"deck-builder tools, confined to the workspace at {self.root} (brand tools also reach "
-                    "the configured brand_paths folders); relative paths resolve against the workspace, and "
-                    "anything else is refused. The usual loop: brand_show and docs "
+                    f"deck-builder tools, confined to the workspace at {self.workspace} (brand tools also reach "
+                    "the configured brand_paths folders); relative paths resolve against the folder holding "
+                    "deck-builder.toml, but the result must land inside the workspace, and this clone's own "
+                    ".claude, .git and src folders are refused regardless. The usual loop: brand_show and docs "
                     "deck-md once, write the deck file, check until it has no errors (explain gives each "
                     "code's fix), then check with render: true and read only the flagged slides' PNGs."),
             })

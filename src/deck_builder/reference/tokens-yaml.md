@@ -13,11 +13,16 @@ chart:                           # styling for charts the engine draws; colors a
   text_color: ink
   gridline_color: "E5E7EB"
   colors: [primary, accent, muted]
-table:
-  font_size: 14
+table:                           # brand init writes every key, so each is visible and tunable
+  font_size: 16                  # body cells; from brand.yaml generate.type.table
+  header_font_size: 16
+  row_height_factor: 2.0         # row height as a multiple of the font size
   header_fill: primary
   header_text: background
-  band_fill: surface
+  row_fill: background
+  text: ink
+  rule: "D1D4D3"                 # a thin rule between body rows, and no vertical lines; leave out for none
+  # band_fill: surface           # optional: fill every other body row instead of, or as well as, rules
   status: {Green: "15803D", Amber: "B45309", Red: "B91C1C"}  # exact cell value -> dot color, case-insensitive
 furniture:                       # written by brand init; a record, not a setting
   slide_numbers: true            # from brand.yaml generate.slide_numbers
@@ -42,7 +47,7 @@ layouts:
 | `required` | `check` fails when the field is empty |
 | `max_chars` | Characters after inline markup is removed |
 | `max_bullets`, `max_bullet_chars`, `max_level` | Bullet count, per-bullet length, deepest nesting (0 = flat) |
-| `max_rows`, `max_cols` | Table limits, header row not counted in rows |
+| `max_rows`, `max_cols` | Table limits, header row not counted in rows; `brand init` sets rows to what fits the placeholder at one line per row |
 | `color` | Icon fields: the palette name or hex the icon is recolored to |
 
 ## Tuning budgets

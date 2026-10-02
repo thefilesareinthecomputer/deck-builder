@@ -28,6 +28,7 @@ def test_build_writes_pptx_and_manifest(ws, capsys):
     m = json.loads(manifest.read_text())
     assert [s["layout"] for s in m["slides"]][:3] == ["title", "content", "big-number"]
     assert m["brand"]["slug"] == "stock"
+    assert Path(m["input"]["path"]) == (ws / "decks" / "deck.md").resolve()
 
 
 def test_default_output_uses_folder_name_for_deck_md(ws, capsys):
@@ -112,6 +113,17 @@ def test_build_stops_on_check_errors(ws, capsys):
     assert "output" not in out
 
 
+def test_a_non_iso_date_is_a_clean_check_issue_not_a_build_crash(ws, capsys):
+    body = "---\nbrand: stock\ndate: Q3 2026\n---\n\n## A\nlayout: title\n"
+    code, out = cli_json(ws, "check", str(write_deck(ws, body)), capsys=capsys)
+    assert code == 1
+    assert "PARSE" in codes(out)
+    assert any("date" in i["message"] for i in out["issues"])
+    code, out = build(ws, capsys, body)
+    assert code == 1
+    assert "output" not in out
+
+
 def test_bulk_builds_one_deck_per_row(ws, capsys):
     tmpl = write_deck(ws, "---\nbrand: stock\n---\n\n## {{client}} review\nlayout: title\nsubtitle: For {{contact}}\n",
                       name="pitch.md")
@@ -121,3 +133,29 @@ def test_bulk_builds_one_deck_per_row(ws, capsys):
     assert code == 0, out["issues"]
     names = sorted(Path(o["output"]).name for o in out["outputs"])
     assert names == ["Copperline-Foods.pptx", "Halvorsen-Freight.pptx"]
+
+
+def test_bulk_refuses_case_insensitive_filename_collisions_before_building(ws, capsys):
+    tmpl = write_deck(ws, "---\nbrand: stock\n---\n\n## {{client}} review\nlayout: title\nsubtitle: For {{contact}}\n",
+                      name="pitch.md")
+    data = ws / "decks" / "clients.csv"
+    data.write_text("client,contact\nAcme,Ops lead\nACME,Buyer\n")
+    out_dir = ws / "out" / "clients"
+    code, out = cli_json(ws, "build", str(tmpl), "--data", str(data), "--name", "{{client}}.pptx",
+                         "-o", str(out_dir), capsys=capsys)
+    assert code == 2
+    assert "Acme.pptx" in out["error"] and "1" in out["error"] and "2" in out["error"]
+    assert not out_dir.exists() or not list(out_dir.iterdir())
+
+
+def test_bulk_refuses_an_unresolved_token_in_the_name_pattern(ws, capsys):
+    tmpl = write_deck(ws, "---\nbrand: stock\n---\n\n## {{client}} review\nlayout: title\nsubtitle: For {{contact}}\n",
+                      name="pitch.md")
+    data = ws / "decks" / "clients.csv"
+    data.write_text("client,contact\nHalvorsen Freight,Ops lead\n")
+    out_dir = ws / "out" / "clients"
+    code, out = cli_json(ws, "build", str(tmpl), "--data", str(data), "--name", "{{nope}}.pptx",
+                         "-o", str(out_dir), capsys=capsys)
+    assert code == 2
+    assert "nope" in out["error"]
+    assert not out_dir.exists() or not list(out_dir.iterdir())

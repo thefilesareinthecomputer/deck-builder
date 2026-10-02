@@ -92,6 +92,7 @@ subtitle: Volume, delivery and the plan for Q4
 
 ## Cases shipped by month
 layout: chart
+takeaway: The core line grew every month while specialty held flat
 
 ```chart
 type: column
@@ -170,15 +171,15 @@ deck-builder includes skills and agents for Claude Code. Describe the deck you n
 | `deck-brand-agent` | Builds or adopts a brand kit and tunes its budgets with a test render |
 | `deck-builder-agent` | Runs the check, build and render loop on a larger deck in its own context |
 
-The agents have no shell access. They reach the engine only through its MCP server (`deck-builder mcp`), which is confined to the workspace, so the CLI must be on your PATH (`uv tool install --editable .` from the repository). `deck-builder skills install` makes the skills and agents available in other projects.
+The agents have no shell access. They reach the engine only through its MCP server (`deck-builder mcp`), confined to the workspace (and the configured `brand_paths` folders for brand tools) and refusing this clone's own `src/`, `.claude/` and `.git/` regardless of those settings; the CLI must be on your PATH (`uv tool install --editable .` from the repository). `deck-builder skills install` makes the skills and agents available in other projects.
 
 > [!NOTE]
-> The engine runs locally, but content an agent reads is sent to Anthropic, as in any Claude Code session. Agents can write any file the session permits, so keep client work outside the repository.
+> The engine runs locally, but content an agent reads is sent to Anthropic, as in any Claude Code session. The MCP server confines the engine's own tools; each agent's own Write and Edit tools are limited only by its instructions, not by code, so keep client work outside the clone.
 
 ## Principles
 
 - **Content in, design out.** Decks contain text, data and image references. Layout, typography and color come only from the brand kit, and budgets are never relaxed to make content fit.
-- **Confined by default.** A deck reads images only from its own folder, a build writes only the `.pptx` files it creates, and bulk data cannot add slides or images. Imported decks are treated as untrusted input.
+- **Confined by default.** A deck reads images only from its own folder, a build writes only the `.pptx` files it creates, and bulk data cannot add slides or images. Imported decks are treated as untrusted input. The MCP server's tools are confined to the workspace (and `brand_paths` for brand tools) and refuse this clone's own `src/`, `.claude/` and `.git/`; an agent's own Write and Edit tools are limited only by its instructions, not by code.
 - **Restraint.** Visual additions such as slide numbers, footers and status dots use the smallest mark that does the job.
 
 ## Status

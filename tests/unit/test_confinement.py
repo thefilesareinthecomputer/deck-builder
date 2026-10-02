@@ -65,6 +65,37 @@ def test_a_previous_build_is_replaced(ws, capsys):
     assert code == 0, out["issues"]
 
 
+def test_a_hand_edited_build_output_is_never_replaced(ws, capsys):
+    deck = write_deck(ws, GOOD)
+    code, out = cli_json(ws, "build", str(deck), capsys=capsys)
+    assert code == 0, out["issues"]
+    pptx = Path(out["output"])
+    before = pptx.read_bytes()
+    pptx.write_bytes(before + b"hand-edited bytes appended after the build")
+    code, out = cli_json(ws, "build", str(deck), capsys=capsys)
+    assert code == 2
+    assert "pass --force" in out["error"] or "--force" in out["error"]
+    assert pptx.read_bytes() == before + b"hand-edited bytes appended after the build"
+
+
+def test_force_replaces_a_hand_edited_build_output(ws, capsys):
+    deck = write_deck(ws, GOOD)
+    code, out = cli_json(ws, "build", str(deck), capsys=capsys)
+    assert code == 0, out["issues"]
+    pptx = Path(out["output"])
+    pptx.write_bytes(pptx.read_bytes() + b"hand-edited bytes")
+    code, out = cli_json(ws, "build", str(deck), "--force", capsys=capsys)
+    assert code == 0, out["issues"]
+
+
+def test_build_writes_no_leftover_tmp_files(ws, capsys):
+    deck = write_deck(ws, GOOD)
+    code, out = cli_json(ws, "build", str(deck), capsys=capsys)
+    assert code == 0, out["issues"]
+    leftovers = list((ws / "out").glob("*.tmp"))
+    assert leftovers == []
+
+
 def test_output_flag_needs_a_pptx_or_an_existing_folder(ws, capsys):
     code, out = cli_json(ws, "build", str(write_deck(ws, GOOD)), "-o", str(ws / "newname"), capsys=capsys)
     assert code == 2
@@ -181,6 +212,23 @@ def test_a_value_that_would_start_a_heading_or_image_line_is_refused(ws, capsys,
     code, out = bulk(ws, capsys, BULK, f'client,note\nAcme,"{value}"\n')
     assert code == 1
     assert "row 1: column 'note' would start a heading or image line" in out["issues"][0]["message"]
+
+
+@pytest.mark.parametrize("value", ["layout: title", "title: x", "| a | b |"])
+def test_a_value_that_would_start_a_field_line_or_table_row_is_refused(ws, capsys, value):
+    code, out = bulk(ws, capsys, BULK, f'client,note\nAcme,"{value}"\n')
+    assert code == 1
+    assert "row 1: column 'note' would start a heading or image line" in out["issues"][0]["message"]
+
+
+def test_a_field_line_injected_with_no_blank_line_cant_override_the_layout(ws, capsys):
+    # the template puts the data value immediately after `layout:`, with no blank line between them, so a
+    # value that looks like another field line would otherwise be read as one by the head-of-slide scan
+    tmpl = "---\nbrand: stock\n---\n\n## {{client}} review\nlayout: content\n{{note}}\n"
+    code, out = bulk(ws, capsys, tmpl, 'client,note\nAcme,"layout: title"\n')
+    assert code == 1
+    assert "BAD_DATA_VALUE" in codes(out)
+    assert not out.get("outputs")
 
 
 def test_an_empty_value_cant_move_the_next_one_to_the_line_start(ws, capsys):

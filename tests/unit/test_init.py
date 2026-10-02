@@ -20,6 +20,8 @@ def test_init_creates_everything_once(tmp_path, capsys):
     assert (tmp_path / "deck-builder.toml").is_file()
     assert (tmp_path / "workspace" / "brands" / "neutral" / "template.potx").is_file()
     assert (tmp_path / "workspace" / "decks" / "quarterly-review" / "deck.md").is_file()
+    assert (tmp_path / "workspace" / "decks" / "quarterly-review" / "source").is_dir()
+    assert (tmp_path / "workspace" / "decks" / "bulk-outreach" / "source").is_dir()
     before = tree_hashes(tmp_path)
     code, out = run("init", "--dir", str(tmp_path), capsys=capsys)
     assert code == 0 and out["created"] == []

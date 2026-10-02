@@ -6,17 +6,20 @@ fields and asset references typed, which is what the builder consumes.
 from __future__ import annotations
 
 import copy
+import datetime as dt
 import re
 from pathlib import Path
 from typing import Any
 
 from deck_builder import template as tpl
 from deck_builder.brand.registry import Brand
+from deck_builder.build.visuals import CELL_PAD_EMU, CHAR_EM, TABLE_DEFAULTS, column_widths
 from deck_builder.errors import Issue
 from deck_builder.model import Chart, Deck, Icon, Image, Slide, Table, Value, kind_of
 
 CHART_TYPES = ("column", "stacked-column", "bar", "stacked-bar", "line", "pie", "doughnut")
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tif", ".tiff"}
+EMU_PER_PT = 12700
 INLINE = [
     (re.compile(r"\[([^\]]+)\]\([^)]+\)"), r"\1"),
     (re.compile(r"\*\*(.+?)\*\*"), r"\1"),
@@ -89,9 +92,33 @@ def _fits(want: str, got: str, value: Value) -> bool:
     return want == "text" and got == "bullets" and isinstance(value, list) and len(value) == 1
 
 
+def _check_front_matter(deck: Deck) -> list[Issue]:
+    """Front matter values that would otherwise crash build, parse.markdown or render with no issue code,
+    such as `dt.date.fromisoformat` on a non-ISO date. Caught here, check fails loudly before build runs."""
+    out: list[Issue] = []
+    at: dict[str, Any] = {"file": _file(deck), "line": 1}
+    meta = deck.meta
+    raw_date = meta.get("date")
+    if raw_date is not None and not isinstance(raw_date, dt.date):
+        try:
+            dt.date.fromisoformat(str(raw_date))
+        except ValueError:
+            out.append(Issue("PARSE", f"front matter date: {raw_date!r} isn't a date PowerPoint can use; "
+                             "write it as YYYY-MM-DD", **at))
+    sv = meta.get("spec_version")
+    if sv is not None and (isinstance(sv, bool) or not isinstance(sv, int)):
+        out.append(Issue("PARSE", f"front matter spec_version: {sv!r} must be a whole number", **at))
+    sl = meta.get("slide_level")
+    if sl is not None and (isinstance(sl, bool) or not isinstance(sl, int) or not 1 <= sl <= 6):
+        out.append(Issue("PARSE", f"front matter slide_level: {sl!r} must be a whole number from 1 to 6", **at))
+    # output: isn't checked here. default_output() already confines and validates it with a clear EnvError
+    # at build time; duplicating that here would need the workspace config this function doesn't have.
+    return out
+
+
 def resolve(deck: Deck, brand: Brand, deck_dir: Path) -> tuple[Deck, list[Issue]]:
     deck = copy.deepcopy(deck)
-    issues: list[Issue] = []
+    issues: list[Issue] = _check_front_matter(deck)
     spec_layouts: dict[str, Any] = brand.tokens.get("layouts") or {}
     lint = brand.meta.get("lint") or {}
     banned = [re.compile(p) for p in lint.get("banned_patterns") or []]
@@ -129,7 +156,8 @@ def _check_slide(s: Slide, n: int, spec_layouts: dict[str, Any], prs_layouts: di
         out.append(Issue("UNKNOWN_LAYOUT", f"layout {s.layout!r} isn't in the brand (has: {known})", **at))
         return out
     tl = ls.get("template_layout")
-    if prs_layouts and tpl.find_layout(prs_layouts, str(tl), ls.get("master")) is None:
+    layout = tpl.find_layout(prs_layouts, str(tl), ls.get("master")) if prs_layouts else None
+    if prs_layouts and layout is None:
         out.append(Issue("TEMPLATE_MISMATCH",
                          f"tokens map {s.layout!r} to template layout {tl!r}, which the template lacks", **at))
 
@@ -162,7 +190,7 @@ def _check_slide(s: Slide, n: int, spec_layouts: dict[str, Any], prs_layouts: di
             continue
         want = fs.get("kind", "text")
         s.fields[name] = _coerce(s.fields[name], want)
-        out += _check_field(name, s.fields[name], fs, want, brand, deck_dir, at)
+        out += _check_field(name, s.fields[name], fs, want, brand, deck_dir, layout, at)
         txt = plain(text_of(s.fields[name]))
         for pat in banned:
             if pat.search(txt):
@@ -177,7 +205,7 @@ def _check_slide(s: Slide, n: int, spec_layouts: dict[str, Any], prs_layouts: di
 
 
 def _check_field(name: str, val: Value, fs: dict[str, Any], want: str, brand: Brand, deck_dir: Path,
-                 at: dict[str, Any]) -> list[Issue]:
+                 layout: Any, at: dict[str, Any]) -> list[Issue]:
     out: list[Issue] = []
     got = kind_of(val)
     if not _fits(want, got, val):
@@ -204,7 +232,7 @@ def _check_field(name: str, val: Value, fs: dict[str, Any], want: str, brand: Br
             out.append(Issue("BUDGET_LEVEL", f"nests to level {deepest}, max {fs.get('max_level', 1)}",
                              field=name, actual=deepest, limit=fs.get("max_level", 1), **at))
     if isinstance(val, Table):
-        out += _check_table(name, val, fs, at)
+        out += _check_table(name, val, fs, brand, layout, at)
     if isinstance(val, Chart):
         out += _check_chart(name, val, brand, at)
     if isinstance(val, Image | Icon):
@@ -212,7 +240,8 @@ def _check_field(name: str, val: Value, fs: dict[str, Any], want: str, brand: Br
     return out
 
 
-def _check_table(name: str, t: Table, fs: dict[str, Any], at: dict[str, Any]) -> list[Issue]:
+def _check_table(name: str, t: Table, fs: dict[str, Any], brand: Brand, layout: Any,
+                 at: dict[str, Any]) -> list[Issue]:
     out: list[Issue] = []
     if not t.header:
         out.append(Issue("TABLE_SHAPE", "no header row", field=name, **at))
@@ -225,7 +254,51 @@ def _check_table(name: str, t: Table, fs: dict[str, Any], at: dict[str, Any]) ->
     if any(len(r) != len(t.header) for r in t.rows):
         out.append(Issue("TABLE_SHAPE", "a row has a different number of cells than the header",
                          field=name, **at))
+    out += _check_table_height(name, t, fs, brand, layout, at)
     return out
+
+
+def _wrapped_lines(text: str, col_width_pt: float, font_size_pt: float) -> int:
+    """A rough estimate of how many lines a cell's text wraps to at a column width, word by word: no
+    real font metrics at check time, so an average glyph is taken as CHAR_EM of the font size wide."""
+    if not text or col_width_pt <= 0:
+        return 1
+    per_line = max(1, int(col_width_pt / (font_size_pt * CHAR_EM)))
+    lines, used = 1, 0
+    for word in text.split():
+        need = len(word) if used == 0 else used + 1 + len(word)
+        if need <= per_line or used == 0:
+            used = need
+        else:
+            lines, used = lines + 1, len(word)
+    return lines
+
+
+def _check_table_height(name: str, t: Table, fs: dict[str, Any], brand: Brand, layout: Any,
+                        at: dict[str, Any]) -> list[Issue]:
+    idx = fs.get("idx")
+    if idx is None or layout is None:
+        return []
+    ph = next((p for p in layout.placeholders if p.placeholder_format.idx == idx), None)
+    if ph is None or ph.width is None or ph.height is None:
+        return []
+    height_pt = ph.height / EMU_PER_PT
+    tok = {**TABLE_DEFAULTS, **(brand.tokens.get("table") or {})}
+    font_size = max(tok["font_size"], tok["header_font_size"])
+    row_h = font_size * tok["row_height_factor"]
+    if not t.header or any(len(r) != len(t.header) for r in t.rows):
+        return []
+    # the same column widths build gives the table, less each cell's insets
+    widths = [(w - CELL_PAD_EMU) / EMU_PER_PT for w in column_widths(t, int(ph.width), font_size)]
+    est_height = 0.0
+    for row in [t.header, *t.rows]:
+        lines = max(_wrapped_lines(plain(c), w, font_size) for c, w in zip(row, widths, strict=True))
+        est_height += max(row_h, lines * font_size * 1.2 + 7.2)  # a wrapped row grows past its set height
+    if est_height > height_pt:
+        return [Issue("TABLE_TALL",
+                      f"estimated table height {est_height:.0f} pt exceeds its placeholder's {height_pt:.0f} pt",
+                      severity="warning", field=name, actual=round(est_height), limit=round(height_pt), **at)]
+    return []
 
 
 def _check_chart(name: str, c: Chart, brand: Brand, at: dict[str, Any]) -> list[Issue]:

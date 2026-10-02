@@ -14,6 +14,10 @@ EXIT_ENV = 2
 
 # code -> (cause, fix)
 CODES: dict[str, tuple[str, str]] = {
+    "AMBIGUOUS_DECK": (
+        "A folder passed as the deck holds more than one of deck.md, deck.xlsx and deck.csv.",
+        "Pass the deck file itself, or remove the extra copy from the folder.",
+    ),
     "PARSE": (
         "The input can't be parsed: bad YAML, an unclosed block, a malformed table, or no slides.",
         "Fix the syntax at the reported line; `deck-builder docs deck-md` shows the format.",
@@ -78,6 +82,11 @@ CODES: dict[str, tuple[str, str]] = {
         "A table has no header, too many rows or columns, or rows of different lengths.",
         "Fix the table so every row matches the header and fits the field's limits.",
     ),
+    "TABLE_TALL": (
+        "A table's estimated rendered height, from its row count and each row's wrapped line count, "
+        "exceeds its layout placeholder's height.",
+        "Shorten cell text, cut rows or columns, or choose a layout with a taller table placeholder.",
+    ),
     "CHART_SHAPE": (
         "A chart has an unknown type, no categories or series, or a series of the wrong length.",
         "Give every series one value per category and use a supported chart type.",
@@ -128,6 +137,11 @@ CODES: dict[str, tuple[str, str]] = {
         "The target format can't hold everything in the input, such as charts in CSV.",
         "Convert to .xlsx or .md instead.",
     ),
+    "IMPORT_LOSSY": (
+        "The deck.md import wrote doesn't reparse to the same slides it extracted from the .pptx: some "
+        "content, often in speaker notes, collided with deck.md's own syntax.",
+        "Open the named slide in deck.md, reword the colliding line, then run `deck-builder check`.",
+    ),
     "LOW_CONTRAST": (
         "Two brand colors that sit on each other don't meet WCAG 2.2 contrast: 4.5:1 for text (ink on "
         "background or surface, background on primary, links on background), 3:1 for icons and chart series.",
@@ -155,6 +169,10 @@ CODES: dict[str, tuple[str, str]] = {
     "RENDER_UNVERIFIED": (
         "The PowerPoint render backend hasn't been verified on a real Mac yet.",
         "Treat the render as provisional; run scripts/probe_powerpoint.sh to verify the backend.",
+    ),
+    "STALE_BUILD": (
+        "The deck source recorded in the .pptx's manifest was edited after the .pptx was built.",
+        "Rebuild the deck before trusting this render.",
     ),
     "SKILL_CONFLICT": (
         "`skills install` found a file or folder where it would put a link, and left it alone.",

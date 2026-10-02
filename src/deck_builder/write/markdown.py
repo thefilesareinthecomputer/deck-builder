@@ -6,7 +6,7 @@ from typing import Any
 import yaml
 
 from deck_builder.model import Chart, Deck, Image, Table, Value
-from deck_builder.parse.markdown import FIELD_LINE
+from deck_builder.parse.markdown import FIELD_LINE, STRUCTURE
 from deck_builder.write.cells import bullets_text
 
 FRONT_ORDER = ("spec_version", "brand", "title", "author", "date", "default_layout", "slide_level", "template",
@@ -83,6 +83,14 @@ def _is_line_field(name: str, value: Value) -> bool:
     return isinstance(value, str) and "\n" not in value and bool(FIELD_LINE.match(f"{name}: "))
 
 
+def _protect_notes(notes: str) -> str:
+    """Escape any notes line the parser would read as a heading, image, fence or notes marker, and any
+    line that already starts with the escape character, so write then parse gives back the same notes
+    text instead of a line like `## Appendix` becoming a new slide. parse.markdown undoes this."""
+    return "\n".join(("\\" + ln) if ln.startswith("\\") or STRUCTURE.match(ln) else ln
+                     for ln in notes.split("\n"))
+
+
 def write(deck: Deck) -> str:
     level = int(deck.meta.get("slide_level", 2))
     out = [front_matter(deck.meta)]
@@ -96,6 +104,6 @@ def write(deck: Deck) -> str:
                 sections += ["", f"{'#' * (level + 1)} {name}", section_md(value)]
         block += sections
         if s.notes:
-            block += ["", "Notes:", s.notes]
+            block += ["", "Notes:", _protect_notes(s.notes)]
         out.append("\n" + "\n".join(block) + "\n")
     return "".join(out)

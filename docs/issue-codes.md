@@ -4,6 +4,7 @@ Generated from the engine by `deck-builder docs codes`. Fix by code, not by mess
 
 | Code | Cause | Fix |
 |---|---|---|
+| `AMBIGUOUS_DECK` | A folder passed as the deck holds more than one of deck.md, deck.xlsx and deck.csv. | Pass the deck file itself, or remove the extra copy from the folder. |
 | `PARSE` | The input can't be parsed: bad YAML, an unclosed block, a malformed table, or no slides. | Fix the syntax at the reported line; `deck-builder docs deck-md` shows the format. |
 | `SPEC_VERSION` | The input declares a spec_version newer than this engine supports. | Upgrade deck-builder, or lower spec_version if the input doesn't use newer features. |
 | `SCHEMA` | brand.yaml, tokens.yaml or a manifest doesn't match its JSON Schema. | Fix the listed keys; `deck-builder schema brand` or `deck-builder schema tokens` prints the schema. |
@@ -20,6 +21,7 @@ Generated from the engine by `deck-builder docs codes`. Fix by code, not by mess
 | `BUDGET_BULLET_CHARS` | A single bullet is longer than the per-bullet budget. | Shorten the bullet or split it into two. |
 | `BUDGET_LEVEL` | Bullets nest deeper than the field allows. | Flatten the nesting. |
 | `TABLE_SHAPE` | A table has no header, too many rows or columns, or rows of different lengths. | Fix the table so every row matches the header and fits the field's limits. |
+| `TABLE_TALL` | A table's estimated rendered height, from its row count and each row's wrapped line count, exceeds its layout placeholder's height. | Shorten cell text, cut rows or columns, or choose a layout with a taller table placeholder. |
 | `CHART_SHAPE` | A chart has an unknown type, no categories or series, or a series of the wrong length. | Give every series one value per category and use a supported chart type. |
 | `UNKNOWN_ASSET` | A brand:logo, brand:icon or palette name doesn't exist in the brand. | Run `deck-builder assets <slug>` for the available ids. |
 | `ASSET_FORMAT` | An image is in a format PowerPoint placeholders can't take, such as SVG. | Convert it to PNG or JPEG. |
@@ -32,10 +34,12 @@ Generated from the engine by `deck-builder docs codes`. Fix by code, not by mess
 | `BAD_DATA_VALUE` | A bulk data cell holds a line break, or a value that would start a heading or image line where its {{token}} sits, which would change the deck's structure instead of filling in text. | Keep each cell to one line of plain text; put headings and images in the template, not the data. |
 | `CSV_NO_SHEETS` | A CSV input references a chart or table sheet, which CSV can't hold. | Use an .xlsx workbook, or remove the sheet: reference. |
 | `CONVERT_LOSSY` | The target format can't hold everything in the input, such as charts in CSV. | Convert to .xlsx or .md instead. |
+| `IMPORT_LOSSY` | The deck.md import wrote doesn't reparse to the same slides it extracted from the .pptx: some content, often in speaker notes, collided with deck.md's own syntax. | Open the named slide in deck.md, reword the colliding line, then run `deck-builder check`. |
 | `LOW_CONTRAST` | Two brand colors that sit on each other don't meet WCAG 2.2 contrast: 4.5:1 for text (ink on background or surface, background on primary, links on background), 3:1 for icons and chart series. | Darken or lighten one color of the pair in the brand's palette, then `brand init` again. Change brand colors only with the brand owner's say-so. |
 | `OVERFLOW_MEASURED` | Rendered text runs past its placeholder box. | Cut text in that field or split the slide, then rebuild and render again. |
 | `EMPTY_PLACEHOLDER` | A rendered slide has a placeholder with no content. | Fill the field or use a layout without it. |
 | `MISSING_FONT` | The renderer used another font than the brand's, or its fallback: the font isn't installed where the deck rendered. | Install the brand fonts where decks render. Don't change content to fit a substitute font; a PowerPoint render shows the real fonts. |
 | `OFFICE_REPAIR` | PowerPoint couldn't open or export the built file, or stopped on a dialog such as a repair prompt. | A repair prompt on an engine-built file is an engine defect; report it with the input and manifest. |
 | `RENDER_UNVERIFIED` | The PowerPoint render backend hasn't been verified on a real Mac yet. | Treat the render as provisional; run scripts/probe_powerpoint.sh to verify the backend. |
+| `STALE_BUILD` | The deck source recorded in the .pptx's manifest was edited after the .pptx was built. | Rebuild the deck before trusting this render. |
 | `SKILL_CONFLICT` | `skills install` found a file or folder where it would put a link, and left it alone. | Remove or rename the existing skill or agent if this clone's version should replace it, then rerun. |

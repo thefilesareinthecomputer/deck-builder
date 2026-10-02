@@ -3,6 +3,9 @@
   {"name": "xlsx-for-team", "query": "convert my deck.md into a spreadsheet so the team can edit the slide text", "should_trigger": true, "why": "md to workbook convert path"},
   {"name": "bulk-per-client", "query": "make one pitch deck per row in clients.csv using our template", "should_trigger": true, "why": "bulk mode"},
   {"name": "fix-overflow", "query": "slide 4 text is running off the box in the deck we built, fix it", "should_trigger": true, "why": "fixing a built deck goes through the content, not the pptx"},
+  {"name": "align-with-slides", "query": "align deck.md with the slides, some sections got reordered in review", "should_trigger": true, "why": "reconciling an existing deck.md is an edit, not a new deck"},
+  {"name": "restructure-deck", "query": "restructure the 13-slide deck so the pricing section comes before the roadmap", "should_trigger": true, "why": "restructuring an existing deck.md is this skill's job"},
+  {"name": "compare-versions", "query": "compare v1 and v2 of the deck and tell me what changed", "should_trigger": true, "why": "comparing two versions of a deck.md is still deck-builder work"},
   {"name": "read-existing-pptx", "query": "pull all the text out of this vendor's pptx so I can quote it", "should_trigger": false, "why": "reading someone else's pptx is extraction, not building"},
   {"name": "brand-colors", "query": "set up a new brand kit with our hex colors and fonts", "should_trigger": false, "why": "brand setup belongs to deck-brand"},
   {"name": "unrelated-excel", "query": "write a formula that sums column C when column A is blank", "should_trigger": false, "why": "plain spreadsheet help"}

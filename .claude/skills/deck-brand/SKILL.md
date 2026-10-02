@@ -15,10 +15,13 @@ license: MIT
 A brand kit is the design system: `brand.yaml` (what the user decides), `tokens.yaml` (the
 contract the engine checks against) and the template. This skill is a conversation with the
 user; the engine generates and validates. You write `brand.yaml` and, with the user's
-approval, edits to `tokens.yaml`. You never write template XML.
+approval, edits to `tokens.yaml`. You never write template XML. Styling always goes into the
+kit; an engine change under `src/` is a separate task, started only when the user asks, with
+tests (see AGENTS.md).
 
-`deck-builder docs brand-yaml` and `deck-builder docs tokens-yaml` are the formats. Read them
-before writing either file.
+`deck-builder docs brand-yaml` and `deck-builder docs tokens-yaml` are the formats, and
+`deck-builder docs design` is the design standard the generated layouts follow. Read them before
+writing either file.
 
 ## Pick the path with the user
 
@@ -36,7 +39,8 @@ Ask one topic at a time and show what you'll write before writing it.
   deck (`brand adopt` reads its theme), colors the user pastes. Name colors by role (`primary`,
   `accent`, `ink`, `surface`), not by hue.
 - **Theme slots.** Map `dk1`, `lt1`, `dk2`, `lt2`, `accent1` to `accent6`, `hlink`, `folHlink` to
-  palette names. Text needs contrast against its background; flag pairs that look too close.
+  palette names. Don't judge contrast by eye: `brand_check` reports `LOW_CONTRAST` for any pair
+  under the WCAG 2.2 threshold once the kit exists.
 - **Fonts.** A heading and a body family, each with a fallback that ships with Office. Ask whether
   the fonts are licensed for embedding and installed on every machine that renders.
 - **Logos.** PNG files with ids (`primary`, `mono`). Ask which one goes on the master, if any.
@@ -44,6 +48,11 @@ Ask one topic at a time and show what you'll write before writing it.
   license in `icons.source`. Only use icon sets the user has the right to use.
 - **Layout set.** `minimal`, `standard` or `full`; `deck-builder docs brand-yaml` lists what each
   holds. Ask what kinds of slides they make most.
+- **Type and placement.** Ask whether decks are mostly projected or read on screen. The defaults in
+  `generate.type` suit projection; a leave-behind document takes smaller sizes. A brand that
+  prefers dark emphasis slides can set `generate.big_number: dark`. If they have past decks they
+  consider good, render them and match their sizes in `generate.type` rather than editing the
+  template.
 - **Voice and lint.** Writing rules for the agent, and banned patterns the engine enforces.
 
 ## Generate, check, tune
@@ -52,9 +61,9 @@ Once the decisions are made, hand the mechanical work to the `deck-brand-agent` 
 slug, the decisions, and the paths of the brand guide, template, logos and icons. It writes
 `brand.yaml`, generates or adopts the kit, checks it, test-renders it and returns proposed
 budgets and questions. Relay the questions, get the user's answers, and send it back if needed.
-It has no shell and runs the engine through the deck-builder MCP tools, which read only inside the
-workspace and the `brand_paths` folders: copy the user's guide, template, logos and icons into a
-scratch folder in the workspace first, and give it those paths.
+It has no shell and runs the engine through nine MCP tools, which read only inside the workspace and
+the `brand_paths` folders (the full map is `deck-builder docs agents`): copy the user's guide,
+template, logos and icons into a scratch folder in the workspace first, and give it those paths.
 The commands it runs, for doing it here instead:
 
 Run the CLI as `uv run deck-builder` inside the deck-builder clone, or `deck-builder` where it's
@@ -74,7 +83,8 @@ tuned budgets and any PowerPoint polish; copy those files aside first and tell t
 
 Budgets in a generated `tokens.yaml` are estimates. Build a test deck with deliberately long
 text in each layout, run `check --render`, and propose tighter or looser budgets per field from
-the `OVERFLOW_MEASURED` results. Change `tokens.yaml` only after the user agrees.
+the `OVERFLOW_MEASURED` results. Change `tokens.yaml` only after the user agrees. Tune for at
+most two rounds of test-render and adjust, then report any remaining overflow to the user.
 
 Fonts: `MISSING_FONT` means the brand font isn't installed on the machine that rendered. Install it
 before tuning budgets, since budgets measured with a substitute font are wrong.

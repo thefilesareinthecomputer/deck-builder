@@ -35,6 +35,7 @@ FURNITURE = {PP_PLACEHOLDER.DATE, PP_PLACEHOLDER.FOOTER, PP_PLACEHOLDER.SLIDE_NU
 TITLES = {PP_PLACEHOLDER.TITLE, PP_PLACEHOLDER.CENTER_TITLE, PP_PLACEHOLDER.VERTICAL_TITLE}
 FITS = {"text": {"text", "bullets"}, "image": {"image"}, "icon": {"icon"}, "table": {"table"},
         "chart": {"chart"}}
+EXACT_ONLY = ("takeaway",)  # filled only from the matching placeholder idx, never by type or position
 CHART_NAMES = {v: k for k, v in CHART_TYPES.items()}
 DIAGRAM_URI = "http://schemas.openxmlformats.org/drawingml/2006/diagram"
 NOT_FORMATTING = {"lang", "altLang", "dirty", "err", "smtClean", "smtId", "noProof", "bmk", "b", "i"}
@@ -253,6 +254,16 @@ def chart_value(chart: Any, brand: Brand) -> tuple[Chart | None, str]:
     return value, "" if exact else f"chart type {chart.chart_type.name} imported as {kind}"
 
 
+def _extra_plot_series(chart: Any) -> list[str]:
+    """Series from every plot after the first: a combo chart's extra plots (such as a line layered over
+    a bar plot) would otherwise vanish, since only plots[0] becomes the field's chart."""
+    out = []
+    for plot in chart.plots[1:]:
+        for s in plot.series:
+            out.append(f"{s.name}: {', '.join(str(number(v)) for v in s.values)}")
+    return out
+
+
 # ---------------------------------------------------------------- the importer
 
 
@@ -339,6 +350,11 @@ class Importer:
                 if chart is None:
                     rep.unplaced.append(f"Chart {sh.name!r}: {why}")
                     continue
+                extra = _extra_plot_series(sh.chart)
+                if extra:
+                    rep.skipped.append(f"chart {sh.name!r} has {len(sh.chart.plots)} plots; only the first "
+                                       "is placed")
+                    rep.unplaced.append(f"Chart {sh.name!r} extra plot series (not placed): " + " / ".join(extra))
                 found.append(Found("chart", chart, f"chart {sh.name!r}", box, idx))
                 continue
             if getattr(sh, "has_table", False) and sh.has_table:
@@ -409,7 +425,7 @@ class Importer:
                 rest.append(f)
         left: list[Found] = []
         for f in rest:
-            free = sorted((k for k, fs in fspecs.items() if k != hf and k not in placed
+            free = sorted((k for k, fs in fspecs.items() if k not in (hf, *EXACT_ONLY) and k not in placed
                            and fs.get("kind", "text") in FITS[f.kind]),
                           key=lambda k: fspecs[k].get("kind", "text") != _preferred(f))  # stable: field order
             cx, cy = f.box[0] + f.box[2] // 2, f.box[1] + f.box[3] // 2
@@ -427,7 +443,7 @@ class Importer:
                 left.remove(heading)
         fallback = 0
         for f in list(left):
-            free = [k for k, fs in fspecs.items() if k != hf and k not in placed
+            free = [k for k, fs in fspecs.items() if k not in (hf, *EXACT_ONLY) and k not in placed
                     and fs.get("kind", "text") in FITS[f.kind]]
             if len(free) == 1:
                 placed[free[0]] = f
@@ -493,7 +509,9 @@ class Importer:
             notes = slide.notes_slide.notes_text_frame.text.strip()
         if rep.unplaced:
             lines = "\n".join(f"- {u}" for u in rep.unplaced)
-            notes = (notes + "\n\n" if notes else "") + f"Unplaced from the original:\n{lines}"
+            # rstrip: an unplaced table's own dump ends with a newline that a reparse would trim anyway,
+            # so trim it here too; otherwise this slide's notes could never round-trip through deck.md.
+            notes = ((notes + "\n\n" if notes else "") + f"Unplaced from the original:\n{lines}").rstrip()
         rep.title = title
         return Slide(title=title, layout=key, fields=fields, notes=notes), rep
 

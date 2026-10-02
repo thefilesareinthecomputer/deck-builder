@@ -61,10 +61,14 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
     p = add("assets", "inventory a brand's or a deck's assets", commands.assets_cmd)
     p.add_argument("target", help="a brand slug, or a deck file to list the assets its slides use")
     deck_help = "a deck.md, deck.xlsx or deck.csv file, or the folder holding it"
-    p = add("check", "validate a deck without building it", commands.check)
+    p = add("check", "validate a deck; with --render, also build, render and measure it", commands.check)
     p.add_argument("deck", help=deck_help)
     p.add_argument("--brand", help="brand slug (overrides the deck's brand:)")
     p.add_argument("--render", action="store_true", help="also build, render and measure")
+    p.add_argument("--backend", choices=["auto", "powerpoint", "libreoffice"], default=None,
+                   help="with --render: default from config: auto prefers LibreOffice, then PowerPoint")
+    p.add_argument("--force", action="store_true",
+                   help="with --render: replace the output even if it was hand-edited after a previous build")
     p = add("build", "build a deck into a .pptx", commands.build)
     p.add_argument("deck", help=deck_help)
     p.add_argument("--brand", help="brand slug (overrides the deck's brand:)")
@@ -72,6 +76,8 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
                                           "(default: <workspace>/out/)")
     p.add_argument("--data", help="bulk mode: one deck per row of this csv or xlsx")
     p.add_argument("--name", help="bulk mode file name pattern, e.g. '{{client}}.pptx'")
+    p.add_argument("--force", action="store_true",
+                   help="replace the output even if it was hand-edited after a previous build")
     p = add("convert", "convert a deck between .md, .xlsx and .csv, losing nothing", commands.convert_cmd)
     p.add_argument("input", help="the deck to convert: .md, .xlsx or .csv")
     p.add_argument("output", help="the file to write; its extension (.md, .xlsx or .csv) picks the format")
@@ -89,7 +95,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
             commands.render_cmd)
     p.add_argument("pptx", help="a built .pptx (to build and render a deck in one step: check --render)")
     p.add_argument("--backend", choices=["auto", "powerpoint", "libreoffice"], default=None,
-                   help="default from config: auto prefers PowerPoint, then LibreOffice")
+                   help="default from config: auto prefers LibreOffice, then PowerPoint")
     p.add_argument("--slides", help="only these slide numbers, comma-separated")
     p.add_argument("--dpi", type=int, help="PNG resolution (default from config, 96)")
     sub.add_parser("mcp", help="serve the engine as MCP tools over stdio, confined to the workspace (for agents)",
@@ -97,7 +103,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
     p = add("schema", "print a JSON Schema", commands.schema_cmd)
     p.add_argument("name", choices=["brand", "tokens", "manifest"],
                    help="brand.yaml, tokens.yaml, or a build's manifest.json")
-    p = add("skills", "link this clone's skills and agent into another Claude Code setup", commands.skills_cmd)
+    p = add("skills", "link this clone's skills and agents into ~/.claude for other repos", commands.skills_cmd)
     p.add_argument("action", choices=["install"], help="install: link the skills and agents (needs --yes)")
     p.add_argument("--target", help="the Claude Code folder to link into (default: ~/.claude)")
     p.add_argument("--yes", action="store_true", help="create the links; without it, only show the plan")

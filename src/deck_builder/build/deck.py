@@ -165,16 +165,21 @@ class Builder:
 
 
 def build(deck: Deck, brand: Brand, deck_path: Path, out_path: Path, cache_dir: Path, content_sha: str,
-          keep_template_slides: bool = False) -> tuple[dict[str, Any], list[Issue]]:
+          keep_template_slides: bool = False, force: bool = False) -> tuple[dict[str, Any], list[Issue]]:
     """content_sha identifies the deck's content independent of its file format (see pipeline.content_sha)."""
     assert brand.template is not None
-    if out_path.exists() and not manifest_path(out_path).is_file():
-        raise EnvError(f"{out_path} exists and has no {manifest_path(out_path).name} beside it, so deck-builder "
-                       "didn't build it; move it or write somewhere else")
+    mpath = manifest_path(out_path)
     # out_path and its manifest sidecar can each already be an existing symlink; confine both before
     # writing either (a no-op outside an MCP call, where there's no configured area to confine to).
     confine.guard(out_path, "the build output")
-    confine.guard(manifest_path(out_path), "the build manifest")
+    confine.guard(mpath, "the build manifest")
+    if out_path.exists():
+        if not mpath.is_file():
+            raise EnvError(f"{out_path} exists and has no {mpath.name} beside it, so deck-builder "
+                           "didn't build it; move it or write somewhere else")
+        if not force and _recorded_sha256(mpath) != sha256_file(out_path):
+            raise EnvError(f"{out_path} was changed after deck-builder built it; keep the edit by moving the "
+                           "file elsewhere, or pass --force to replace it")
     prs = tpl.open_template(brand.template)
     if not keep_template_slides:
         tpl.remove_all_slides(prs)
@@ -206,18 +211,32 @@ def build(deck: Deck, brand: Brand, deck_path: Path, out_path: Path, cache_dir: 
     prs.save(buf)
     blob = normalize(buf.getvalue(), when.strftime("%Y-%m-%dT%H:%M:%SZ"), props)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_bytes(blob)
 
     manifest = {
         "engine": __version__,
         "brand": {"slug": brand.slug, "version": brand.version, "template_sha256": template_sha},
-        "input": {"file": deck_path.name, "sha256": input_sha, "content_sha256": content_sha},
+        "input": {"file": deck_path.name, "path": str(deck_path.resolve()), "sha256": input_sha,
+                  "content_sha256": content_sha},
         "output": {"file": out_path.name, "sha256": hashlib.sha256(blob).hexdigest(),
                    "content_sha256": content_digest(blob)},
         "slides": slides,
     }
-    manifest_path(out_path).write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    # Write both to temporary names in the same folder, then rename: a failure partway never leaves a
+    # half-written .pptx, or a .pptx and manifest that don't match each other.
+    tmp_out = out_path.with_name(out_path.name + ".tmp")
+    tmp_manifest = mpath.with_name(mpath.name + ".tmp")
+    tmp_out.write_bytes(blob)
+    tmp_manifest.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    tmp_out.replace(out_path)
+    tmp_manifest.replace(mpath)
     return manifest, b.issues
+
+
+def _recorded_sha256(mpath: Path) -> str | None:
+    try:
+        return str(json.loads(mpath.read_text(encoding="utf-8"))["output"]["sha256"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
 
 
 def manifest_path(out_path: Path) -> Path:
