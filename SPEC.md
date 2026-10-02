@@ -49,7 +49,7 @@ The LLM never writes PowerPoint XML or python-pptx code and never positions shap
 | Engine | `src/deck_builder/` | Python package and the `deck-builder` CLI. No brand or client content. |
 | Claude Code layer | `CLAUDE.md`, `.claude/skills/`, `.claude/agents/` | Onboarding instructions, three skills, one subagent. No code. |
 | Workspace | `workspace/` (gitignored) | The user's brands, decks, output and cache |
-| Examples | `examples/` | The neutral example brand source and fictional example decks, used by onboarding and tests |
+| Examples | `src/deck_builder/data/` | The neutral example brand source and fictional example decks, copied into the workspace by `init` and used by tests |
 
 Client material never enters tracked files. Example content uses invented companies only.
 
@@ -227,7 +227,7 @@ A deck calls a brand by slug (`brand: pemberton` in front matter, or the `deck` 
 - Places the logo on the master if `logo_on_master` is set.
 - Clears python-pptx's default document properties (its description and last-modified-by values).
 - Writes `tokens.yaml` with budgets estimated from placeholder size and font size, marked `# estimated` for tuning after a test render.
-- Recolors icons from `icons.dir` into `assets/icons/` at `icons.default_color`. SVG icons are converted only when `rsvg-convert` is installed; otherwise PNG only, and `doctor` says so.
+- Copies the logos and icons `brand.yaml` names into the kit. Icons are PNG alpha masks, recolored at build time to the field's `color` or `icons.default_color` and cached by content hash. SVG icons are out of scope for v0.1.0; `check` rejects them with `ASSET_FORMAT`.
 
 | Layout set | Layouts |
 |---|---|
@@ -470,7 +470,7 @@ Nothing in the engine assumes Claude. Any agent that can run a shell command and
 
 Triggered by `CLAUDE.md` on first use, or by asking for it.
 
-1. `deck-builder doctor`: Python dependencies, poppler, LibreOffice, PowerPoint and its automation permission, `rsvg-convert`. Offers the install command for anything missing and waits for the user.
+1. `deck-builder doctor`: Python dependencies, poppler, LibreOffice, PowerPoint and its automation permission. Offers the install command for anything missing and waits for the user.
 2. `deck-builder init`.
 3. Brand branch, the user's choice:
    - **Skip:** use the neutral example brand.
@@ -489,27 +489,27 @@ deck-builder/
   pyproject.toml  uv.lock  README.md  SPEC.md  LICENSE  CHANGELOG.md  CLAUDE.md
   .gitignore  .github/workflows/ci.yml
   src/deck_builder/
-    __init__.py  __main__.py  cli.py  config.py  errors.py  model.py
-    brand/   registry.py  schema.py  generate.py  adopt.py  inspect.py
-    parse/   markdown.py  workbook.py  csv.py  bulk.py
-    write/   markdown.py  workbook.py           # canonical writers for convert
-    validate.py  assets.py  manifest.py
-    build/   placeholders.py  text.py  chart.py  table.py  image.py  normalize.py
-    qa/      backends/{powerpoint.py,libreoffice.py}  rasterize.py  measure.py  fonts.py  contact.py
+    __init__.py  __main__.py  cli.py  commands.py  config.py  errors.py  model.py  pipeline.py
+    docs.py  template.py  validate.py  assets.py
+    brand/      registry.py  schema.py  kit.py  inspect.py  layouts.py  generate.py
+    parse/      markdown.py  csvfile.py  workbook.py
+    write/      markdown.py  workbook.py           # canonical writers for convert
+    build/      deck.py  text.py  visuals.py  normalize.py
+    qa/         backends/{powerpoint.py,libreoffice.py}  rasterize.py  measure.py  fonts.py  contact.py
     doctor.py
-    schemas/ brand.schema.json  tokens.schema.json  manifest.schema.json
-    data/    layout-sets/*.yaml
+    schemas/    brand.schema.json  tokens.schema.json  manifest.schema.json
+    reference/  *.md                               # topics printed by `deck-builder docs`
+    data/       brands/neutral/  decks/quarterly-review/  decks/bulk-outreach/
   .claude/
     skills/deck-builder/  skills/deck-brand/  skills/deck-onboard/
     agents/deck-builder-agent.md
-  examples/
-    brands/neutral/brand.yaml
-    decks/quarterly-review/{deck.md,assets/}
-    decks/bulk-outreach/{deck.md,clients.csv}
-  scripts/probe_powerpoint.sh
+  workspace/README.md                              # placeholder; everything else here is ignored
+  scripts/probe_powerpoint.sh  scripts/make_example_assets.py
   docs/issue-codes.md  docs/release-checklist.md
-  tests/unit/  tests/golden/  tests/render/
+  tests/unit/  tests/render/
 ```
+
+The neutral brand and the example decks ship inside the package (`data/`), so `init` works from any install, including `uv tool install`. Layout sets are defined in `brand/layouts.py`.
 
 ## 16. Dependencies
 
@@ -523,7 +523,7 @@ deck-builder/
 
 Dev: pytest, ruff, mypy, pip-audit. Python 3.11 or later, managed with uv, built with hatchling. Direct dependencies pinned with upper bounds and locked in `uv.lock`.
 
-System tools: poppler (GPL, invoked as a CLI) for rendering and measurement; LibreOffice (MPL-2.0) when PowerPoint isn't present; `rsvg-convert` (LGPL, CLI) optional for SVG icons. `build`, `check`, `convert`, `inspect`, `brand` and `assets` need none of them.
+System tools: poppler (GPL, invoked as a CLI) for rendering and measurement; LibreOffice (MPL-2.0) when PowerPoint isn't present. `build`, `check`, `convert`, `inspect`, `brand` and `assets` need none of them.
 
 ## 17. Testing
 
@@ -561,7 +561,8 @@ The Office tier never runs in CI.
 
 | Decision | Default | Decider |
 |---|---|---|
-| Bundle a starter icon subset (Lucide, ISC) in the package | No; the user supplies icons | Repo owner |
+| Bundle a starter icon subset (Lucide, ISC) in the package | No; the user supplies icons, and the neutral brand ships six drawn for the repo | Repo owner |
+| SVG icons, converted with `rsvg-convert` | Not in v0.1.0; PNG alpha masks only | Repo owner |
 | Diagrams from text (Graphviz or Mermaid) rendered into image placeholders | Not in v0.1.0 | Repo owner |
 | Support for a local model driving the CLI | Future work; the CLI already allows it | Repo owner |
 | Publish to PyPI | No; install from a pinned git tag | Repo owner |

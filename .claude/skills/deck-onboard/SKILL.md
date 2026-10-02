@@ -32,7 +32,6 @@ for:
 | poppler | Rendering and overflow measurement |
 | Microsoft PowerPoint | Exact renders on a Mac; preferred when present |
 | LibreOffice | Renders when PowerPoint isn't installed |
-| rsvg-convert | Optional: SVG icons in brand kits |
 
 Building and checking decks needs none of these. Without poppler and a renderer, the user can
 build but not see renders.
@@ -47,8 +46,8 @@ Microsoft PowerPoint.
 uv run deck-builder init
 ```
 
-This creates `workspace/` (brands, decks, output; all gitignored), `deck-builder.toml`, and the
-neutral example brand. Running it again changes nothing.
+This creates `workspace/` (brands, decks, output; all gitignored), `deck-builder.toml`, the neutral
+example brand and two example decks in `workspace/decks/`. Running it again changes nothing.
 
 ## 3. Choose a brand path
 
@@ -65,13 +64,15 @@ Options 2 to 4 hand off to the `deck-brand` skill, which comes back here when th
 
 ## 4. First deck
 
-Copy an example into the workspace, point it at their brand, build and render it:
+Build and render the example deck. If they set up their own brand, change `brand: neutral` in
+the deck's front matter to their slug first.
 
 ```
-cp -R examples/decks/quarterly-review workspace/decks/
 uv run deck-builder build workspace/decks/quarterly-review/deck.md
 uv run deck-builder render workspace/out/quarterly-review.pptx
 ```
+
+`workspace/decks/bulk-outreach/` is the one-deck-per-row example; its `deck.md` names the command.
 
 Open the first contact sheet with them and say what they're looking at. Then show the workflow
 for their own decks: `uv run deck-builder docs workflow`.

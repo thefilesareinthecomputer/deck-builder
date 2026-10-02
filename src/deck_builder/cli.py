@@ -46,7 +46,8 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
     p = add("explain", "print the cause and fix for an issue code", commands.explain)
     p.add_argument("code")
 
-    add("init", "create the workspace, config and neutral example brand")
+    p = add("init", "create the workspace, config, neutral example brand and example decks", commands.init_cmd)
+    p.add_argument("--dir", help="where to write deck-builder.toml (default: the current directory)")
     add("doctor", "check dependencies, render backends and permissions")
     p = add("brand", "list, show, check, init or adopt brand kits", commands.brand_cmd)
     p.add_argument("action", choices=["list", "show", "check", "init", "adopt"])

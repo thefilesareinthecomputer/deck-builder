@@ -6,6 +6,7 @@ import json
 import re
 import shutil
 import tempfile
+from importlib import resources
 from pathlib import Path
 from typing import Any
 
@@ -141,6 +142,51 @@ def brand_cmd(args: argparse.Namespace) -> Result:
     if args.action == "adopt":
         return _adopt(args, cfg, r)
     return _init_brand(args, cfg, r)
+
+
+DEFAULT_CONFIG = """\
+# deck-builder config, written by `deck-builder init`. Paths are relative to this file.
+workspace = "workspace"
+brand_paths = ["workspace/brands"]
+default_brand = "neutral"
+
+[render]
+backend = "auto"     # auto prefers PowerPoint, then LibreOffice
+dpi = 96
+contact_batch = 20   # slides per contact sheet
+"""
+
+
+def init_cmd(args: argparse.Namespace) -> Result:
+    """Create what's missing; never change what exists. A second run reports nothing to do."""
+    root = Path(args.dir).resolve() if args.dir else Path.cwd()
+    cfg_path = root / cfgmod.FILENAME
+    created: list[str] = []
+    if not cfg_path.exists():
+        cfg_path.write_text(DEFAULT_CONFIG, encoding="utf-8")
+        created.append(str(cfg_path))
+    cfg = cfgmod.load(str(cfg_path))
+    for d in (cfg.brand_paths[0], cfg.workspace / "decks", cfg.workspace / "out", cfg.workspace / ".cache"):
+        if not d.is_dir():
+            d.mkdir(parents=True)
+            created.append(str(d))
+    data = resources.files("deck_builder") / "data"
+    neutral = cfg.brand_paths[0] / "neutral"
+    if not (neutral / "brand.yaml").exists():
+        with resources.as_file(data / "brands" / "neutral") as src_dir:
+            src = Path(src_dir) / "brand.yaml"
+            init_kit(yaml.safe_load(src.read_text(encoding="utf-8")), src, neutral)
+        created.append(str(neutral))
+    with resources.as_file(data / "decks") as decks_dir:
+        for example in sorted(Path(decks_dir).iterdir()):
+            target = cfg.workspace / "decks" / example.name
+            if example.is_dir() and not target.exists():
+                shutil.copytree(example, target)
+                created.append(str(target))
+    r = Result(command="init", data={"config": str(cfg_path), "workspace": str(cfg.workspace), "created": created})
+    r.summary = (f"initialized {root}: created {len(created)} item(s); next: deck-builder brand list"
+                 if created else f"{root} is already initialized; nothing changed")
+    return r
 
 
 def _init_brand(args: argparse.Namespace, cfg: cfgmod.Config, r: Result) -> Result:

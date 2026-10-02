@@ -1,0 +1,58 @@
+# The neutral example brand that `deck-builder init` generates. Copy it as a starting point for your own:
+# change name, slug, palette, fonts and logos, then `deck-builder brand init <slug> --from brand.yaml`.
+spec_version: 1
+name: Neutral
+slug: neutral
+version: 1.0.0
+description: Plain example brand for trying deck-builder before setting up your own
+
+palette:
+  primary: "2F3E4D"
+  accent: "2A7DE1"
+  ink: "1F2328"
+  muted: "6B7280"
+  surface: "F3F4F6"
+  background: "FFFFFF"
+
+theme_colors:
+  dk1: ink
+  lt1: background
+  dk2: primary
+  lt2: surface
+  accent1: primary
+  accent2: accent
+  accent3: muted
+  accent4: "8FB3D9"
+  accent5: "D97706"
+  accent6: "15803D"
+  hlink: accent
+  folHlink: muted
+
+fonts:
+  heading: {family: Arial, fallback: Liberation Sans}
+  body: {family: Arial, fallback: Liberation Sans}
+
+logos:
+  primary: assets/logo.png
+
+icons:
+  dir: assets/icons
+  default_color: accent
+  source: Drawn for deck-builder, MIT
+
+voice:
+  - One idea per slide. The title states the takeaway, not the topic.
+  - Numbers over adjectives. Put the source of every number in the speaker notes.
+  - Plain words. Cut anything the audience won't miss.
+
+lint:
+  max_slides: 40
+  banned_patterns:
+    - "—"
+    - "(?i)\\bsynerg"
+    - "(?i)\\bleverag(e|ing)\\b"
+
+generate:
+  slide_size: "16:9"
+  layout_set: full
+  logo_on_master: primary
