@@ -62,3 +62,38 @@ def test_adopt_rejects_a_bad_slug(ws, capsys, tmp_path):
     t = stock_template(tmp_path / "client.pptx")
     code, out = cli_json(ws, "brand", "adopt", "Bad Slug", "--template", str(t), capsys=capsys)
     assert code == 2
+
+
+def test_adopt_with_force_removes_a_stale_potx(ws, capsys, tmp_path):
+    t = stock_template(tmp_path / "client.pptx")
+    cli_json(ws, "brand", "adopt", "halvorsen", "--template", str(t), capsys=capsys)
+    kit = ws / "brands" / "halvorsen"
+    stale = kit / "template.potx"
+    stale.write_bytes(b"stale potx, as if `brand init` had made this kit before")
+    code, out = cli_json(ws, "brand", "adopt", "halvorsen", "--template", str(t), "--force", capsys=capsys)
+    assert code == 0, out["issues"]
+    assert (kit / "template.pptx").is_file()
+    assert not stale.exists()
+
+
+def test_brand_check_refuses_a_kit_with_both_template_files(ws, capsys, tmp_path):
+    t = stock_template(tmp_path / "client.pptx")
+    cli_json(ws, "brand", "adopt", "halvorsen", "--template", str(t), capsys=capsys)
+    kit = ws / "brands" / "halvorsen"
+    (kit / "template.potx").write_bytes(b"stale potx left behind by hand")
+    code, out = cli_json(ws, "brand", "check", "halvorsen", capsys=capsys)
+    assert code == 1
+    msg = " ".join(i["message"] for i in out["issues"])
+    assert "template.potx" in msg and "template.pptx" in msg
+
+
+def test_build_refuses_a_kit_with_both_template_files(ws, capsys, tmp_path):
+    t = stock_template(tmp_path / "client.pptx")
+    cli_json(ws, "brand", "adopt", "halvorsen", "--template", str(t), capsys=capsys)
+    kit = ws / "brands" / "halvorsen"
+    (kit / "template.potx").write_bytes(b"stale potx left behind by hand")
+    deck = write_deck(ws, "---\nbrand: halvorsen\n---\n\n## Hello\nlayout: title-and-content\n\n- one\n- two\n")
+    code, out = cli_json(ws, "build", str(deck), capsys=capsys)
+    assert code == 1
+    msg = " ".join(i["message"] for i in out["issues"])
+    assert "template.potx" in msg and "template.pptx" in msg
