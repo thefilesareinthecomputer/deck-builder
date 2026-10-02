@@ -56,6 +56,26 @@ def test_adopt_wraps_a_template_into_a_valid_kit(ws, capsys, tmp_path):
     assert code == 0, out["issues"]
 
 
+def master_with_external_image(path):
+    from pptx.opc.constants import RELATIONSHIP_TYPE as RT
+
+    prs = Presentation()
+    prs.slide_masters[0].part.relate_to("http://evil.example/track.png", RT.IMAGE, is_external=True)
+    prs.save(str(path))
+    return path
+
+
+def test_adopt_removes_an_external_relationship_from_the_master(ws, capsys, tmp_path):
+    t = master_with_external_image(tmp_path / "client.pptx")
+    code, out = cli_json(ws, "brand", "adopt", "halvorsen", "--template", str(t), capsys=capsys)
+    assert code == 0, out["issues"]
+    assert out["sanitized"] and "external relationship" in out["sanitized"][0]
+    kit_pptx = ws / "brands" / "halvorsen" / "template.pptx"
+    with zipfile.ZipFile(kit_pptx) as z:
+        rels = z.read("ppt/slideMasters/_rels/slideMaster1.xml.rels")
+    assert b"evil.example" not in rels
+
+
 def test_adopted_kit_builds_a_deck(ws, capsys, tmp_path):
     t = stock_template(tmp_path / "client.pptx")
     cli_json(ws, "brand", "adopt", "halvorsen", "--template", str(t), capsys=capsys)

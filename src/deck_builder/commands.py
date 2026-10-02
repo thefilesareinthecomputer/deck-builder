@@ -356,10 +356,12 @@ def _adopt(args: argparse.Namespace, cfg: cfgmod.Config, r: Result) -> Result:
     target.mkdir(parents=True, exist_ok=True)
     written = f"template{src.suffix.lower()}"
     slides_removed = 0
+    sanitized: list[str] = []
     if src.suffix.lower() == ".pptx":
         prs = tpl.open_template(src)
         slides_removed = len(prs.slides)
         tpl.remove_all_slides(prs)  # slides, their notes and their media stop being saved
+        sanitized = tpl.sanitize(prs)
         prs.save(str(target / written))
     else:
         shutil.copyfile(src, target / written)
@@ -376,10 +378,11 @@ def _adopt(args: argparse.Namespace, cfg: cfgmod.Config, r: Result) -> Result:
     for i in kit.check_kit(b):
         r.add(i)
     r.data.update({"slug": args.slug, "path": str(target), "layouts": b.layout_names(),
-                   "slides_removed": slides_removed})
+                   "slides_removed": slides_removed, "sanitized": sanitized})
     removed = f", {slides_removed} slide(s) removed" if slides_removed else ""
+    cleaned = f", {len(sanitized)} external/embedded item(s) removed" if sanitized else ""
     r.summary = (f"{'ok' if r.ok else 'failed'} brand adopt {args.slug}: {len(b.layout_names())} layouts "
-                 f"at {target}{removed}, {_tally(r)}")
+                 f"at {target}{removed}{cleaned}, {_tally(r)}")
     return r
 
 
