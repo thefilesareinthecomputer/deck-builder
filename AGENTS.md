@@ -27,6 +27,7 @@ If `uv run deck-builder brand list` reports no config, the user hasn't onboarded
 | Brand kits: the conversation with the user | `deck-brand` skill |
 | Brand kits: generating, checking and test-rendering a kit from those decisions | `deck-brand-agent` subagent |
 | A deck from a large body of documents, notes or a knowledge base or vault | `deck-decomposer-agent` subagent writes `outline.md` and a draft `deck.md`; the user co-authors and proofreads before anything is built |
+| A deck that has to persuade or land harder, or points with no clear arc (optional; also when a subagent's report asks for it) | `deck-storyteller-agent` subagent writes `storyboard.md`: the arc, the title spine and each slide's visual form; the user approves it as the storyline |
 | Writing, converting, building, rendering decks | `deck-builder` skill |
 | The build loop at or past the delegation threshold above | `deck-builder-agent` subagent, then the review gate in the `deck-builder` skill |
 | Final proofread and sign-off of a built deck, before it's called finished | `deck-validator-agent` subagent, run by the main agent at the review gate; its send-backs count toward the two rounds above |
@@ -36,8 +37,8 @@ decisions it needs, relays the questions they return, and reviews their work bef
 
 The subagents have no shell; put their input files inside the workspace before handing off, since
 `deck-builder-agent`, `deck-brand-agent` and `deck-validator-agent` reach the engine only through the
-deck-builder MCP server (`deck-builder mcp`, which needs the CLI on PATH), and the decomposer runs no
-commands at all.
+deck-builder MCP server (`deck-builder mcp`, which needs the CLI on PATH), and the decomposer and the
+storyteller run no commands at all.
 `deck-builder docs agents` maps every CLI command and MCP tool to the one party that owns it, and
 says what each subagent may read and write.
 

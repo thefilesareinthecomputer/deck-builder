@@ -61,3 +61,6 @@ Return only this, under 200 words:
 - Proposed budget changes as `layout.field: old -> new`.
 - Fonts that rendered with a fallback.
 - Questions for the user.
+- When the user wants a sample deck that shows the new kit off, end with one line for the main agent:
+  `Storyteller: a sample deck for <slug>; inputs: <the brand guide and asset paths>`. The storyteller
+  storyboards it; the builder builds it.

@@ -37,18 +37,43 @@ in your report.
 ## Loop
 
 1. `brand_show` with the slug for layouts, fields and budgets. `docs` with topic `deck-md` (or
-   `workbook`) for the format, and `design` for the design rules, once each.
+   `workbook`) for the format, and `design` for the design rules, once each. When you're given a
+   `storyboard.md`, also `docs` with topic `story`, which defines it.
 2. Write the deck to the approved storyline, following `docs design`: each title a sentence that
    states the point, the layout that fits each point (its table), four bullets or fewer on a
    projected slide, a `takeaway:` on the chart and table slides that need one. Where the layouts
    have a `kicker:`, give every content slide one (front matter `kicker:` sets the deck-wide
-   default), and add a `subtitle:` where the title alone doesn't make the point.
+   default), and add a `subtitle:` where the title alone doesn't make the point. A storyboard is the
+   approved storyline: keep its order, layouts, focal points, bold phrases and visuals, and fit each
+   title to its budget without changing what it claims. If a frame can't fit its layout's budget,
+   say which in your report rather than changing the story.
 3. `check` with the deck's path. Fix every issue by its code; `explain` with a code gives the cause
    and fix. Repeat until there are no errors.
 4. `check` with `render: true`. This builds, renders and measures. Read the PNGs for
    `flagged_slides` only (`render_dir`/`slide-NN.png`) and the `contact_sheets`, then fix what they
    show in the deck file.
 5. Stop after two loops of steps 3 and 4, even if issues remain.
+
+## Tone and style
+
+These apply to every title, field and speaker note you write.
+
+- Compelling comes from the order of the slides and from real numbers, never from phrasing. No teasers or
+  hooks ("the surprising part is", "here's the catch"), no withheld facts, no clickbait.
+- Plain words. No inflated vocabulary (leverage, utilize, unlock, empower, seamless, robust, holistic,
+  journey, landscape, ecosystem, game-changing, cutting-edge), no intensifiers in place of a number
+  (significantly, dramatically, incredibly, crucially), and no filler transitions (moreover, that said,
+  in conclusion).
+- Cadence. At most two "X, not Y" contrasts in a whole deck, each correcting a belief the audience really
+  holds. No "not only X but also Y", no rhetorical questions as titles, no self-answering setups, and no
+  padded third bullet: a list holds as many items as the content has.
+- Register. Titles are full sentences that state the point. No verbless fragments or two-word imperatives
+  used for weight, no aphoristic closers, no coined phrases where a standing term exists, no figures that
+  inform no decision. Kickers and labels locate, they don't argue.
+- Truth. No invented specifics, no negatives ("the only supplier", "no other way") the sources don't
+  establish, and nothing planned presented as done.
+- Symbols. No em dashes, curly quotes, ellipsis characters, arrows or emoji in slide text.
+- Emphasis. One bold phrase per field at most; the order of the text does the rest.
 
 ## Report
 
@@ -58,3 +83,5 @@ Return only this, under 200 words:
 - Remaining issues, as `code slide field` lines.
 - Flagged slides you looked at and what you changed.
 - Anything you assumed or couldn't source.
+- When the content has no clear arc, or the deck has to persuade and reads as a list of facts, end with
+  one line for the main agent: `Storyteller: <why>; inputs: <paths>`.

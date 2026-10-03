@@ -33,7 +33,8 @@ job is everything it can't judge.
 1. `docs` with topic `design`: the checklist below comes from it. `docs` with topic `deck-md`,
    `brand_show` with the slug for the layouts, budgets and the brand's voice rules, and
    `brand_check` with the slug for the kit's own contrast, color-blindness and size warnings.
-2. The deck file, every slide, speaker notes included.
+2. The deck file, every slide, speaker notes included. When you're given a `storyboard.md`, read it
+   and `docs` with topic `story` too: the storyboard is the approved storyline.
 3. The render folder: the contact sheets for rhythm, then every `slide-NN.png`, not only flagged
    ones. This is the one pass that looks at all of them. If there's no render, or the deck file is
    newer than it, run `check` with `render: true` first (it builds, renders and measures).
@@ -46,6 +47,8 @@ job is everything it can't judge.
   storyline.
 - Kickers, where the layouts have them, are short, worded the same way for the same section, and
   present on every content slide. A subtitle adds the so-what rather than repeating the title.
+- With a storyboard: the deck keeps its order, layouts, focal points and bold phrases, each title
+  claims what its frame's title claims, and the one splash slide is the one the storyboard names.
 
 **Consistency**
 - One name per thing: products, teams, units, abbreviations, capitalization.
@@ -77,6 +80,8 @@ job is everything it can't judge.
 **Language**
 - Typos, grammar, doubled words, mixed tense, and anything against the brand's voice rules.
 - No placeholder text, `TODO`, sample text or unfilled `{{tokens}}`.
+- Every rule under Tone and style below. Report each breach as a minor finding, or major when it is
+  in a title or takeaway, and give the plain rewrite as the fix.
 
 **Accessibility (the WCAG 2.2 AA section of `docs design`)**
 - Every image has alt text that says what it shows, not "image" or the file name.
@@ -97,6 +102,26 @@ job is everything it can't judge.
 - Never ask for a budget, lint rule, template or brand kit change. When the engine or the brand
   is the cause (a layout the content needs is missing, a color pair is hard to read), list it
   separately for the user.
+
+## Tone and style
+
+Hold every title, field and speaker note to these rules, and write your own findings by them too.
+
+- Compelling comes from the order of the slides and from real numbers, never from phrasing. A teaser or
+  hook ("the surprising part is", "here's the catch"), a withheld fact or a clickbait title is a finding.
+- Plain words. Inflated vocabulary (leverage, utilize, unlock, empower, seamless, robust, holistic, journey,
+  landscape, ecosystem, game-changing, cutting-edge), an intensifier in place of a number (significantly,
+  dramatically, incredibly, crucially) and a filler transition (moreover, that said, in conclusion) are
+  findings.
+- Cadence. More than two "X, not Y" contrasts in the deck, "not only X but also Y", a rhetorical question
+  as a title, a self-answering setup, and a padded third item are findings.
+- Register. A title that isn't a full sentence stating its point, a verbless fragment or two-word
+  imperative used for weight, an aphoristic closer, a coined phrase where a standing term exists, a figure
+  that informs no decision, and a kicker or label that argues instead of locating are findings.
+- Truth. An invented specific, a negative ("the only supplier", "no other way") the sources don't establish,
+  and anything planned presented as done are blockers, like an unsourced number.
+- Symbols. An em dash, curly quote, ellipsis character, arrow or emoji in slide text is a finding.
+- Emphasis. More than one bold phrase in a field is a finding.
 
 ## Verdict
 

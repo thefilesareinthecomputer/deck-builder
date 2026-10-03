@@ -59,7 +59,7 @@ deck-builder skills install --yes     # optional: the skills and agents in every
 | Use it | Set up with | You get |
 |---|---|---|
 | **As a tool for agents and the CLI** (most common) | `uv tool install .` | `deck-builder` in any folder, and the MCP server (`deck-builder mcp`) the subagents run on |
-| **As a skill in your other Claude Code projects** | `deck-builder skills install --yes`, after the tool | The three skills and four agents, linked into `~/.claude` |
+| **As a skill in your other Claude Code projects** | `deck-builder skills install --yes`, after the tool | The three skills and five agents, linked into `~/.claude` |
 | **From the clone**, to try it or work on it | `uv run deck-builder ...` | No install; a Claude Code session opened in the clone has the skills |
 
 **Without uv:** `pipx install .`, or `pip install .` inside a virtual environment, puts the same `deck-builder` command on your PATH, and `deck-builder skills install --yes` follows as above.
@@ -263,11 +263,12 @@ deck-builder includes skills and agents for Claude Code. Describe the deck you n
 | `deck-brand` skill | Brand kits: colors, fonts, logos, icons, layouts, templates |
 | `deck-builder` skill | Writing, checking, converting, building and reviewing decks |
 | `deck-decomposer-agent` | Turns a folder of notes into an outline with sources and a draft `deck.md` to co-author |
+| `deck-storyteller-agent` | Optional. Turns an outline, data, a scenario or image cues into a storyboard: the arc, the title spine, and each slide's layout, focal point, emphasis and visual, for the builder to write the deck from |
 | `deck-brand-agent` | Builds or adopts a brand kit and tunes its budgets with a test render |
 | `deck-builder-agent` | Runs the check, build and render loop on a larger deck in its own context |
 | `deck-validator-agent` | Proofreads a built deck against the design and accessibility rules, every slide, and signs it off or sends it back with fixes; read-only |
 
-The agents have no shell access. They reach the engine only through its MCP server (`deck-builder mcp`), confined to the workspace (and the configured `brand_paths` folders for brand tools) and refusing this clone's own `src/`, `.claude/` and `.git/` regardless of those settings; the CLI must be on your PATH (`uv tool install .` from the repository). `deck-builder skills install --yes` makes the skills and agents available in other projects.
+The agents have no shell access. The decomposer and the storyteller run no commands at all; the others reach the engine only through its MCP server (`deck-builder mcp`), confined to the workspace (and the configured `brand_paths` folders for brand tools) and refusing this clone's own `src/`, `.claude/` and `.git/` regardless of those settings; the CLI must be on your PATH (`uv tool install .` from the repository). `deck-builder skills install --yes` makes the skills and agents available in other projects.
 ## Principles
 
 - **Content in, design out.** Decks contain text, data and image references. Layout, typography and color come only from the brand kit, and budgets are never relaxed to make content fit.

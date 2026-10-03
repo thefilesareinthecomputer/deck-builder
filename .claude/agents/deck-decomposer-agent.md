@@ -60,3 +60,6 @@ Return only this, under 250 words:
 - The storyline in one line per section.
 - Open questions and gaps, most consequential first.
 - What you read, what you skimmed, and what you skipped.
+- When the deck has to persuade, runs past about 15 slides, or mixes data, scenarios and images that
+  need a story to hold them together, end with one line for the main agent:
+  `Storyteller: <why>; inputs: outline.md, <other paths>`.

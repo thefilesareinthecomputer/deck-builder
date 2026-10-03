@@ -78,6 +78,23 @@ def test_every_agent_is_installed_mapped_and_reads_the_design_rules():
         assert "docs design" in (AGENTS_DIR / name).read_text() or "`design`" in (AGENTS_DIR / name).read_text(), name
 
 
+TONE_RULES = ("Compelling comes from the order of the slides", "Plain words.", '"X, not Y"', "Register.",
+              "Truth.", "Symbols.", "Emphasis.")
+
+
+def test_the_agents_that_write_or_judge_slide_text_share_the_tone_and_style_rules():
+    """The storyteller, builder and validator hold the same writing rules in their own prompts, and the
+    builder and validator read `docs story` when there's a storyboard; the agents that can ask for the
+    storyteller say how."""
+    for name in ("deck-storyteller-agent.md", "deck-builder-agent.md", "deck-validator-agent.md"):
+        text = (AGENTS_DIR / name).read_text()
+        section = text.split("## Tone and style", 1)[1].split("\n## ", 1)[0]
+        assert all(rule in section for rule in TONE_RULES), name
+        assert "storyboard" in text and ("`story`" in text or "docs story" in text), name
+    for name in ("deck-builder-agent.md", "deck-decomposer-agent.md", "deck-brand-agent.md"):
+        assert "`Storyteller: " in (AGENTS_DIR / name).read_text(), name
+
+
 def test_yaml_is_only_safe_loaded():
     offenders = [str(p.relative_to(SRC)) for p in modules()
                  if "yaml.load(" in p.read_text() or "yaml.unsafe_load" in p.read_text()]

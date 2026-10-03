@@ -37,6 +37,15 @@ and a draft `deck.md`; run `check` on the draft and send any issues back to it, 
 then report what's left to the user. Walk the user through the outline, co-author and proofread
 with them (or convert to `.xlsx` for their team), and only then build.
 
+Run the `deck-storyteller-agent` when a subagent's report ends with a `Storyteller:` line, when a
+deck has to persuade or the user wants it to land harder, or when an outline mixes data, scenarios
+and image cues with no clear arc. It runs no commands, so put the inputs' paths, the audience and goal,
+the slide count, the tone (`plain` unless the user asks for `warm` or `bold`), the deck folder and the
+output of `brand show <slug> --json`, `docs story` and `docs design` in its prompt. It writes
+`storyboard.md`: the title spine and each slide's layout, focal point, emphasis and visual. Walk the
+user through it as the storyline, with the image cues they need to supply; once they approve it, it
+is the approved storyline you give the builder and, at the review gate, the validator.
+
 At AGENTS.md's delegation threshold, hand the build loop to the `deck-builder-agent` subagent and
 keep this context for the storyline and the review. Give it the source material paths, the brand
 slug, the approved storyline, the deck's path and any constraints. It has no shell and runs the
@@ -82,7 +91,7 @@ Before any built deck reaches the user:
 2. Read the builder's report (when a subagent built it) and the manifest (`<deck>.manifest.json`
    beside the `.pptx`).
 3. Hand the deck to the `deck-validator-agent`: the deck's path, the brand slug, the `render_dir`
-   from step 1 and the approved storyline. It reads every rendered slide against `docs design`,
+   from step 1 and the approved storyline (the `storyboard.md` path when there is one). It reads every rendered slide against `docs design`,
    writes nothing, and returns `VERDICT: PASS` or `SEND BACK` with `severity | slide | field |
    finding | fix` lines.
 4. On SEND BACK, give its blocker and major findings to the builder (the `deck-builder-agent`, or
