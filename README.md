@@ -23,9 +23,9 @@
 <br>
 
 <p align="center">
-  <img src="docs/images/showcase.png" width="100%" alt="The same deck built in three brands: a dark green paper supplier set in Georgia, a navy office-systems company set in Avenir Next, and a charcoal soap maker set in Helvetica Neue. Each column shows the title slide, three cards with colored labels and a bold target line, and a native column chart under a section label and subtitle, with its takeaway.">
+  <img src="docs/images/decks.png" width="100%" alt="Nine slides from nine decks in three brands, one column per brand: a dark green paper supplier set in Georgia, a navy office-systems company set in Avenir Next, and a charcoal soap maker set in Helvetica Neue. The slides are process steps in chevrons, three cards, a big number, labeled risk bands, a doughnut chart, a stacked column chart, a price table, icons on square tiles and six process steps with white icons.">
 </p>
-<p align="center"><sub>One <code>deck.md</code>, built three times with a different brand: each brand's kit sets its own type, card colors and takeaway style. Every chart is native and every word remains editable.</sub></p>
+<p align="center"><sub>Nine decks, three per brand: a pitch, a review and a deck of edge cases. Every chart and table is native and every word remains editable.</sub></p>
 
 <br>
 
@@ -95,7 +95,11 @@ A deck is a text file. Each `##` heading is one slide, and its `layout:` line pi
 
 ## Write a deck
 
-A deck and a brand are separate. The deck holds only content (text, data and image references) and names its brand with one line, `brand: <slug>`. The brand kit holds the whole design: template, fonts, colors, logos and budgets. Change that one line, or pass `--brand <slug>`, and the same content builds in a different design; the image at the top is one deck built that way three times.
+A deck and a brand are separate. The deck holds only content (text, data and image references) and names its brand with one line, `brand: <slug>`. The brand kit holds the whole design: template, fonts, colors, logos and budgets. Change that one line, or pass `--brand <slug>`, and the same content builds in a different design. Below is one deck built that way three times; each brand's kit sets its own type, card colors and takeaway style.
+
+<p align="center">
+  <img src="docs/images/showcase.png" width="100%" alt="The same deck built in three brands, one column per brand. Each column shows the title slide, three cards with colored labels and a bold target line, and a native column chart under a section label and subtitle, with its takeaway.">
+</p>
 
 `key: value` lines under a heading fill the layout's fields, and the rest of the slide fills its body; `### name` starts the content for a named field, such as each card's bullets. The three slides below form the first column of that image. They use the `dumbder-nifftlin` demo brand; to try them in the quick-start workspace, change the brand to `neutral`.
 
@@ -263,7 +267,7 @@ uv run python scripts/readme_images.py # regenerate the images in this README
 
 | Script | Does |
 |---|---|
-| `scripts/readme_images.py` | Builds the showcase deck in the three demo brands and redraws `docs/images/` |
+| `scripts/readme_images.py` | Builds the showcase deck and the nine brand decks in the three demo brands and redraws `docs/images/` |
 | `scripts/demo_brand_logos.py` | Redraws the demo brands' logo wordmarks from their SVG sources (macOS fonts) |
 | `scripts/make_example_assets.py` | Draws the neutral brand's logo and icons and the example deck's image |
 | `scripts/make_starter_icons.py` | Draws the engine's starter icons, which any brand can place |

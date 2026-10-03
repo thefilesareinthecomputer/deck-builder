@@ -1,8 +1,9 @@
 """Regenerate the README images from the demo-brand fixtures: `uv run python scripts/readme_images.py`.
 
-Builds tests/fixtures/demo-brands/showcase/deck.md into each demo brand, renders it with LibreOffice,
-and writes docs/images/showcase.png (three slides per brand, one column per brand) and
-docs/images/contact-sheet.png (one brand's contact sheet, the review surface). Run it after any
+Builds tests/fixtures/demo-brands/showcase/deck.md and the nine decks in decks/ into the demo brands,
+renders them with LibreOffice, and writes docs/images/decks.png (one slide from each of the nine decks),
+docs/images/showcase.png (one deck in three brands, a column per brand) and docs/images/contact-sheet.png
+(one brand's contact sheet, the review surface). Run it after any
 change to the generator, the layouts or the renderer, and commit the images with that change.
 """
 from __future__ import annotations
@@ -22,6 +23,14 @@ FIXTURES = REPO / "tests" / "fixtures" / "demo-brands"
 BRANDS = ("dumbder-nifftlin", "cubicle-nine", "soap-club")
 ROWS = (1, 3, 4)  # the title, cards and chart slides of the showcase deck
 CONTACT_BRAND = "dumbder-nifftlin"  # the brand the README's deck.md example uses
+# decks.png, the README's first image: one slide from each of the nine brand decks, a column per brand and
+# a row per deck, picked so no two cells share a layout.
+DECKS = ("pitch", "review", "edge")
+PICKS = {
+    ("dumbder-nifftlin", "pitch"): 5, ("cubicle-nine", "pitch"): 4, ("soap-club", "pitch"): 2,
+    ("dumbder-nifftlin", "review"): 12, ("cubicle-nine", "review"): 10, ("soap-club", "review"): 4,
+    ("dumbder-nifftlin", "edge"): 4, ("cubicle-nine", "edge"): 12, ("soap-club", "edge"): 10,
+}
 SLIDE = (560, 315)
 GAP = 24
 RADIUS = 10
@@ -43,12 +52,13 @@ def rounded(im: Image.Image) -> Image.Image:
     return im
 
 
-def showcase(render_dirs: dict[str, Path], out: Path) -> None:
-    cols, rows = len(BRANDS), len(ROWS)
+def grid(cells: list[list[Path]], out: Path) -> None:
+    """Slide images in rows and columns, rounded, on a transparent ground."""
+    rows, cols = len(cells), len(cells[0])
     canvas = Image.new("RGBA", (cols * SLIDE[0] + (cols - 1) * GAP, rows * SLIDE[1] + (rows - 1) * GAP))
-    for c, brand in enumerate(BRANDS):
-        for r, n in enumerate(ROWS):
-            with Image.open(render_dirs[brand] / f"slide-{n:02d}.png") as im:
+    for r, row in enumerate(cells):
+        for c, png in enumerate(row):
+            with Image.open(png) as im:
                 canvas.alpha_composite(rounded(im), (c * (SLIDE[0] + GAP), r * (SLIDE[1] + GAP)))
     canvas.save(out, optimize=True)
 
@@ -69,9 +79,17 @@ def main() -> None:
         for brand in BRANDS:
             run("--config", config, "render", str(built / f"{brand}.pptx"), "--backend", "libreoffice")
         render_dirs = {b: built / f"{b}.render" for b in BRANDS}
-        showcase(render_dirs, out / "showcase.png")
+        grid([[render_dirs[b] / f"slide-{n:02d}.png" for b in BRANDS] for n in ROWS], out / "showcase.png")
         shutil.copyfile(render_dirs[CONTACT_BRAND] / "contact-01.png", out / "contact-sheet.png")
-    print(f"wrote {out / 'showcase.png'} and {out / 'contact-sheet.png'}")
+        for brand in BRANDS:
+            for deck in DECKS:
+                pptx = built / "decks" / f"{brand}-{deck}.pptx"
+                run("--config", config, "build", str(FIXTURES / "decks" / brand / deck / "deck.md"), "-o", str(pptx))
+                run("--config", config, "render", str(pptx), "--slides", str(PICKS[brand, deck]),
+                    "--backend", "libreoffice")
+        grid([[built / "decks" / f"{b}-{d}.render" / f"slide-{PICKS[b, d]:02d}.png" for b in BRANDS] for d in DECKS],
+             out / "decks.png")
+    print(f"wrote {out / 'decks.png'}, {out / 'showcase.png'} and {out / 'contact-sheet.png'}")
 
 
 if __name__ == "__main__":
