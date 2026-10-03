@@ -284,7 +284,7 @@ The agents can't run shell commands. The decomposer and the storyteller run no c
 
 ## Status
 
-The current release is v0.1.0, and the [changelog](CHANGELOG.md) lists what's changed since. Known limits:
+The current release is v0.2.0, and the [changelog](CHANGELOG.md) lists what's in it. Cloning and installing as above always gets you the latest code, so you don't need to pick a version. Known limits:
 
 - We haven't verified the PowerPoint render backend on a Mac with PowerPoint yet, so its renders come with a `RENDER_UNVERIFIED` warning. LibreOffice renders are a close match.
 - The in-slide fade (`build:`) is written for PowerPoint, and playing it there is part of that same check. LibreOffice reads it as its own fade.
