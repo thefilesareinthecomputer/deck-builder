@@ -84,6 +84,12 @@ on those layouts. The `deck-builder` and `deck-brand` skills read this topic bef
 - **Pasted content gets the same treatment.** Text pasted in from documents, chats or other decks still
   goes through the fields of a layout: rewrite it to fit the budget instead of shrinking it to fit.
 
+## Motion
+
+- Slides never transition with an effect. Inside a slide, `build:` fades parts in one click at a time,
+  half a second each, so the presenter sets the pace: process steps in order, a list item by item, a
+  chart after its question. Use it on a few slides where order is the point; most slides build nothing.
+
 ## Writing on slides
 
 - Plain words and real numbers. An inflated word (leverage, seamless, robust), an intensifier standing in for

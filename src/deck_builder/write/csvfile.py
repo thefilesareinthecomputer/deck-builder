@@ -4,7 +4,7 @@ from __future__ import annotations
 import csv
 import io
 
-from deck_builder.model import Chart, Code, Deck, Table, kind_of
+from deck_builder.model import SLIDE_KEYS, Chart, Code, Deck, Table, kind_of
 from deck_builder.write.cells import cell_text
 
 
@@ -26,9 +26,9 @@ def write(deck: Deck) -> str:
         fields += [k for k in s.fields if k not in fields]
     buf = io.StringIO()
     w = csv.writer(buf, lineterminator="\n")
-    current = any(s.current is not None for s in deck.slides)
-    w.writerow(["slide", "layout", "title", *(["current"] if current else []), *fields, "notes"])
+    keys = [k for k in SLIDE_KEYS if any(getattr(s, k) is not None for s in deck.slides)]
+    w.writerow(["slide", "layout", "title", *keys, *fields, "notes"])
     for n, s in enumerate(deck.slides, start=1):
-        w.writerow([n, s.layout, s.title, *([s.current if s.current is not None else ""] if current else []),
+        w.writerow([n, s.layout, s.title, *("" if getattr(s, k) is None else getattr(s, k) for k in keys),
                     *(cell_text(s.fields[f]) if f in s.fields else "" for f in fields), s.notes])
     return buf.getvalue()

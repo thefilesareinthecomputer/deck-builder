@@ -44,6 +44,10 @@ Source: the Q3 shipment ledger.
 - A section holds text or one visual, not both. Give a caption its own field.
 - `current: n` under the heading marks item n of the slide's list (an agenda) or card n of a `cards-N`
   slide: everything else is muted, for a map slide that a deck in parts returns to.
+- `build: <field>` makes that field fade in when presenting: a list one item per click, anything else
+  (a chart, an image, a text field) as a whole. `build: slots` brings in a cards, process or bands slide
+  one card, step or band per click. The effect is a half-second fade and nothing else; there are no
+  transitions between slides. The PDF and renders show the finished slide.
 
 ## Value kinds
 

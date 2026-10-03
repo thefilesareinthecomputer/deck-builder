@@ -99,7 +99,7 @@ def _square_corners(chart: Any) -> None:
     cs.insert(cs.index(lead[-1]) + 1 if lead else 0, rc)
 
 
-def fill_chart(slide: Any, ph: Any, spec: Chart, brand: Brand) -> None:
+def fill_chart(slide: Any, ph: Any, spec: Chart, brand: Brand) -> Any:
     """A native, editable chart in the placeholder, styled from tokens.yaml chart, with alt text.
 
     The styling is quiet: hairline gridlines, no tick marks, axis labels in the muted axis color, a thin
@@ -243,6 +243,7 @@ def fill_chart(slide: Any, ph: Any, spec: Chart, brand: Brand) -> None:
             crosses = axis._element.find(qn("c:crosses"))
             if crosses is not None:
                 crosses.set("val", "max")
+    return frame
 
 
 NUMERIC = re.compile(r"^[+\-−]?[$€£]?\d[\d,.]*\s*(%|pts?|x)?$")
@@ -292,7 +293,7 @@ def column_widths(spec: Table, total: int, font_size: float = 14) -> list[int]:
     return widths
 
 
-def fill_table(slide: Any, ph: Any, spec: Table, brand: Brand) -> None:
+def fill_table(slide: Any, ph: Any, spec: Table, brand: Brand) -> Any:
     """A native table in the placeholder: fills, fonts and status dots from tokens.yaml table, with alt text."""
     nrows, ncols = len(spec.rows) + 1, len(spec.header)
     if hasattr(ph, "insert_table"):
@@ -348,6 +349,7 @@ def fill_table(slide: Any, ph: Any, spec: Table, brand: Brand) -> None:
                 cell.fill.background()  # no fill, so the default style's accent tint doesn't show through
             if rule is not None:
                 _rules(cell, rule, r)
+    return frame
 
 
 CODE_TITLE_LINES = 2  # code lines a `title=` filename line takes from the panel in check's count

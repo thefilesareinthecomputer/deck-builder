@@ -59,6 +59,7 @@ class Found:
     box: tuple[int, int, int, int]  # left, top, width, height in EMU
     idx: int | None = None  # placeholder idx; None for a free shape
     title: bool = False
+    spid: str = ""  # the shape's id, which a build's animation targets
 
 
 @dataclass
@@ -372,7 +373,7 @@ class Importer:
             idx = ph.idx if ph is not None else None
             code = code_value(sh, parts.get(idx) if idx is not None else None)
             if code is not None:
-                found.append(Found("code", code, f"code {sh.name!r}", box, idx))
+                found.append(Found("code", code, f"code {sh.name!r}", box, idx, spid=str(sh.shape_id)))
                 continue
             if ph is not None and ph.type in FURNITURE:  # becomes front matter, not slide content
                 text = sh.text_frame.text.strip() if sh.has_text_frame else ""
@@ -406,12 +407,12 @@ class Importer:
                     rep.skipped.append(f"chart {sh.name!r} has {len(sh.chart.plots)} plots; only the first "
                                        "is placed")
                     rep.unplaced.append(f"Chart {sh.name!r} extra plot series (not placed): " + " / ".join(extra))
-                found.append(Found("chart", chart, f"chart {sh.name!r}", box, idx))
+                found.append(Found("chart", chart, f"chart {sh.name!r}", box, idx, spid=str(sh.shape_id)))
                 continue
             if getattr(sh, "has_table", False) and sh.has_table:
                 status_keys = (self.brand.tokens.get("table") or {}).get("status") or {}
                 found.append(Found("table", table_value(sh.table, self.code_font, status_keys),
-                                   f"table {sh.name!r}", box, idx))
+                                   f"table {sh.name!r}", box, idx, spid=str(sh.shape_id)))
                 continue
             if sh._element.tag == qn("p:graphicFrame"):
                 gd = sh._element.find(f".//{qn('a:graphicData')}")
@@ -423,7 +424,7 @@ class Importer:
             if st == MSO_SHAPE_TYPE.PICTURE or sh._element.tag == qn("p:pic"):
                 got = self.picture(sh, n, rep)
                 if got is not None:
-                    found.append(Found(got[0], got[1], f"picture {sh.name!r}", box, idx))
+                    found.append(Found(got[0], got[1], f"picture {sh.name!r}", box, idx, spid=str(sh.shape_id)))
                 continue
             rep.dropped += overrides(sh, self.code_font)
             if ph is not None and sh._element.find(f"{qn('p:spPr')}/{qn('a:xfrm')}") is not None:
@@ -433,7 +434,7 @@ class Importer:
                 if value is not None:
                     is_title = ph is not None and ph.type in TITLES
                     what = f"placeholder {sh.name!r}" if ph is not None else f"text box {sh.name!r}"
-                    found.append(Found("text", value, what, box, idx, title=is_title))
+                    found.append(Found("text", value, what, box, idx, title=is_title, spid=str(sh.shape_id)))
                     continue
             if ph is None:
                 rep.dropped["shape"] += 1  # lines, rectangles and other decoration without text
@@ -575,8 +576,34 @@ class Importer:
             notes = ((notes + "\n\n" if notes else "") + f"Unplaced from the original:\n{lines}").rstrip()
         rep.title = title
         marked = CURRENT.match(str(slide._element.cSld.get("name") or ""))  # written by the build for `current:`
+        build = build_of(slide, {f.spid: name for name, f in placed.items() if f.spid}, rep)
         return Slide(title=title, layout=key, fields=fields, notes=notes,
-                     current=int(marked.group(1)) if marked else None), rep
+                     current=int(marked.group(1)) if marked else None, build=build), rep
+
+
+def build_of(slide: Any, fields_by_spid: dict[str, str], rep: SlideReport) -> str | None:
+    """A slide's animation as `build:`, when it's the engine's own: Fade entrances only, all on placed fields,
+    one field (a list item by item, or a whole field) or the numbered slots. Any other animation is dropped
+    formatting, like a moved box."""
+    timing = slide._element.find(qn("p:timing"))
+    if timing is None:
+        return None
+    effects = [c for c in timing.iter(qn("p:cTn")) if c.get("presetClass")]
+    names: list[str] = []
+    for t in timing.iter(qn("p:spTgt")):
+        name = fields_by_spid.get(str(t.get("spid")))
+        if name is None:
+            names = []
+            break
+        if name not in names:
+            names.append(name)
+    ours = bool(effects) and all(c.get("presetClass") == "entr" and c.get("presetID") == "10" for c in effects)
+    if ours and len(names) == 1:
+        return names[0]
+    if ours and len(names) > 1 and all(re.match(r"\D+\d+$", n) for n in names):
+        return "slots"
+    rep.dropped["animation"] += 1
+    return None
 
 
 def _words(name: str) -> set[str]:

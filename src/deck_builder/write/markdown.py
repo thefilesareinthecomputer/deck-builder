@@ -5,7 +5,7 @@ from typing import Any
 
 import yaml
 
-from deck_builder.model import Chart, Code, Deck, Image, Table, Value
+from deck_builder.model import SLIDE_KEYS, Chart, Code, Deck, Image, Table, Value
 from deck_builder.parse.markdown import FIELD_LINE, STRUCTURE
 from deck_builder.write.cells import bullets_text, code_md
 
@@ -98,8 +98,7 @@ def write(deck: Deck) -> str:
     out = [front_matter(deck.meta)]
     for s in deck.slides:
         block = [f"{'#' * level} {s.title}", _line("layout", s.layout)]
-        if s.current is not None:
-            block.append(_line("current", s.current))
+        block += [_line(k, getattr(s, k)) for k in SLIDE_KEYS if getattr(s, k) is not None]
         sections = []
         for name, value in s.fields.items():
             if _is_line_field(name, value):

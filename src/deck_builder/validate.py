@@ -349,6 +349,8 @@ def _check_slide(s: Slide, n: int, spec_layouts: dict[str, Any], prs_layouts: di
         cands = [k for k, f in fspecs.items() if f.get("kind", "text") in accepts and k not in s.fields]
         if len(cands) == 1:
             s.fields[cands[0]] = s.fields.pop("body")
+            if s.build == "body":
+                s.build = cands[0]
         else:
             s.fields.pop("body")
             takes = ", ".join(f"{k} ({f.get('kind', 'text')})" for k, f in fspecs.items())
@@ -381,7 +383,30 @@ def _check_slide(s: Slide, n: int, spec_layouts: dict[str, Any], prs_layouts: di
             out.append(Issue("MISSING_FIELD", f"required field {name!r} is empty", field=name, **at))
     if s.current is not None:
         out += _check_current(s, fspecs, at)
+    if s.build is not None:
+        out += _check_build(s, fspecs, at)
     return out
+
+
+SLOT_FIELD = re.compile(r"\D+(\d+)$")  # label2, body2 and footer2 are slot 2 of a cards layout
+
+
+def _check_build(s: Slide, fspecs: dict[str, Any], at: dict[str, Any]) -> list[Issue]:
+    """`build:` names `slots` on a layout with numbered slots, or a field this slide fills that isn't code."""
+    b = s.build
+    if b == "slots":
+        slots = {m.group(1) for k in s.fields if k in fspecs and (m := SLOT_FIELD.match(k))}
+        if len(slots) > 1:
+            return []
+        return [Issue("PARSE", f"build: slots needs two or more filled slots (cards, steps, bands); layout "
+                      f"{s.layout!r} has {len(slots)}", field="build", **at)]
+    if not isinstance(b, str) or b not in s.fields or b not in fspecs:
+        return [Issue("PARSE", f"build: {b!r} must be `slots` or a field this slide fills "
+                      f"({', '.join(k for k in s.fields if k in fspecs)})", field="build", **at)]
+    if isinstance(s.fields[b], Code):
+        return [Issue("PARSE", "build: a code block doesn't build; mark the lines with {3,5-7} instead",
+                      field="build", **at)]
+    return []
 
 
 CARD_LABEL = re.compile(r"^label(\d+)$")

@@ -20,6 +20,7 @@ from deck_builder import __version__, confine
 from deck_builder import template as tpl
 from deck_builder.assets import recolor_icon, sha256_file
 from deck_builder.brand.registry import Brand
+from deck_builder.build.motion import Step, add_fade
 from deck_builder.build.normalize import content_digest, normalize
 from deck_builder.build.text import CODE_FONT_DEFAULT, fill_text
 from deck_builder.build.visuals import color_bold, fill_chart, fill_code, fill_picture, fill_table, mark_current
@@ -146,6 +147,22 @@ def lay_out_row(fields: dict[str, Any], filled: set[str], phs: dict[int, Any]) -
             ph.top, ph.width, ph.height = top, int(width * grow), height
 
 
+def build_steps(build: str, shapes: dict[str, Any], fields: dict[str, Any]) -> list[Step]:
+    """What appears on each click: `slots` brings in one numbered group (a card, step or band with all its
+    fields) at a time; a list field one item at a time; any other field as a whole."""
+    if build == "slots":
+        groups: dict[int, Step] = {}
+        for name in fields:  # the layout's field order, so a slot's parts keep their reading order
+            m = SLOT.match(name)
+            if m and name in shapes:
+                groups.setdefault(int(m.group(1)), []).append((shapes[name]._element, None))
+        return [groups[k] for k in sorted(groups)]
+    el = shapes[build]._element
+    if el.tag == qn("p:sp") and len(paras := el.findall(f".//{qn('a:p')}")) > 1:
+        return [[(el, i)] for i in range(len(paras))]
+    return [[(el, None)]]
+
+
 class Builder:
     def __init__(self, brand: Brand, deck_dir: Path, cache_dir: Path, numbers: bool = True,
                  footer: str | None = None, first: int = 1) -> None:
@@ -157,7 +174,7 @@ class Builder:
         self.issues: list[Issue] = []
 
     def _picture(self, slide: Any, ph: Any, ref: str, alt: str, at: dict[str, Any],
-                 fentry: dict[str, Any], color: str | None, fs: dict[str, Any]) -> None:
+                 fentry: dict[str, Any], color: str | None, fs: dict[str, Any]) -> Any:
         path, _ = resolve_asset(ref, self.brand, self.deck_dir)
         assert path is not None  # validation guarantees it resolves
         brand_asset = ref.startswith("brand:")
@@ -166,12 +183,13 @@ class Builder:
             path = recolor_icon(path, color, self.cache_dir)
         # Logos, icons and logo slots fit inside their box; photos fill it.
         crop = not brand_asset and not fs.get("fit") and not _transparent(path)
-        geo, _ = fill_picture(slide, ph, path, alt, crop=crop, share=1.0 if crop else fs.get("fit_max", 1.0),
-                              trim=not color and fs.get("kind") != "icon")  # icons keep their set's canvas
+        geo, pic = fill_picture(slide, ph, path, alt, crop=crop, share=1.0 if crop else fs.get("fit_max", 1.0),
+                                trim=not color and fs.get("kind") != "icon")  # icons keep their set's canvas
         fentry["asset"] = {"ref": ref, "source": source, "sha256": sha256_file(path)}
         if _dpi(path, geo, crop=crop) < MIN_DPI:
             self.issues.append(Issue("ASSET_LOW_RES", f"{ref!r} shows below {MIN_DPI} DPI at this size",
                                      severity="warning", **at))
+        return pic
 
     def slide(self, prs: Any, layouts: dict[Any, Any], s: Slide, n: int) -> dict[str, Any]:
         ls = self.brand.tokens["layouts"][s.layout]
@@ -182,6 +200,7 @@ class Builder:
         entry: dict[str, Any] = {"slide": n, "layout": s.layout, "template_layout": tl, "title": s.title,
                                  "fields": {}}
         used: set[int] = set()
+        shapes: dict[str, Any] = {}  # field -> the shape it ended up in, for `build:`
         if ls.get("row"):
             lay_out_row(ls["fields"], set(s.fields), phs)
         # Fill in the layout's declared field order, so the output doesn't depend on input order
@@ -199,19 +218,20 @@ class Builder:
                 continue  # `kicker: ""` leaves the field out, and its placeholder goes with the unused ones
             used.add(idx)
             fentry: dict[str, Any] = {"idx": idx, "kind": kind}
+            shapes[name] = ph
             if isinstance(val, Chart):
-                fill_chart(slide, ph, val, self.brand)
+                shapes[name] = fill_chart(slide, ph, val, self.brand)
             elif isinstance(val, Table):
-                fill_table(slide, ph, val, self.brand)
+                shapes[name] = fill_table(slide, ph, val, self.brand)
             elif isinstance(val, Code):
                 fill_code(slide, ph, val, self.brand, self.code_font)
                 fentry.update({"language": val.language, "lines": len(val.lines), "shape": ph.name})
             elif isinstance(val, Image):
-                self._picture(slide, ph, val.ref, val.alt, at, fentry, None, fs)
+                shapes[name] = self._picture(slide, ph, val.ref, val.alt, at, fentry, None, fs)
             elif isinstance(val, Icon):
                 icons = self.brand.meta.get("icons") or {}
                 color = self.brand.color(fs.get("color") or icons.get("default_color"))
-                self._picture(slide, ph, val.ref, "", at, fentry, color, fs)
+                shapes[name] = self._picture(slide, ph, val.ref, "", at, fentry, color, fs)
             else:
                 fill_text(ph, val, self.code_font)
                 emphasis = self.brand.color(fs.get("emphasis"))
@@ -223,6 +243,9 @@ class Builder:
         if s.current is not None:
             mark_current(slide, phs, ls["fields"], s.current, self.brand, cards=s.layout.startswith("cards-"))
             entry["current"] = s.current
+        if s.build is not None:
+            add_fade(slide, build_steps(s.build, shapes, ls["fields"]))
+            entry["build"] = s.build
         for idx, ph in phs.items():
             if idx not in used:  # no empty "Click to add text" boxes left behind
                 ph._element.getparent().remove(ph._element)

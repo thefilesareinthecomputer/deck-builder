@@ -39,8 +39,9 @@ report.
    sentence per slide stating its point, in order. Check that the spine alone makes the argument before
    going on. Past about 15 slides, use the map-and-parts structure.
 3. **Frames.** For each title, fill the storyboard keys: the beat, the layout that fits the point (the table
-   in `docs design`), the focal point, the one bold phrase, the visual, how it follows the slide before, and
-   the notes with sources. Vary the layouts with the content and alternate dense and sparse slides.
+   in `docs design`), the focal point, the one bold phrase, the visual, the motion (`none` on most slides; a
+   fade only where the order of the parts is the point), how it follows the slide before, and the notes with
+   sources. Vary the layouts with the content and alternate dense and sparse slides.
 4. **Pass for pacing.** Read the frames in order as the audience will: where is the setup, the turn, the one
    splash? Cut any slide whose point another slide already makes, and move detail to notes.
 5. **Pass for tone and style.** Read every title and phrase against the rules below and fix what breaks one.

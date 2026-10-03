@@ -31,6 +31,7 @@ notes: Lines 4 and 5 are the fix; the chart on slide 3 shows the spike. Source: 
 | `focus` | The one thing the eye lands on first: a number, a phrase, an image, a chart's key bar, highlighted lines |
 | `emphasis` | The phrase to bold, at most one per field, or `none` |
 | `visual` | `none`, `icon brand:icon/<id>`, `chart <type>: <the comparison>`, or `image: <what it must show, and why>` |
+| `motion` | `none`, or `fade <field>` or `fade slots`: the parts appear one click at a time (`build:` in deck.md) |
 | `after` | How the slide follows the previous one (the transitions below) |
 | `notes` | What the presenter says, and the source of every number on the slide |
 
@@ -76,7 +77,9 @@ and write it in `after`:
 - **Establishing shot, then close-up.** The whole (a chart of the year, the process, the map) before a
   detail of it. The audience needs the frame before the detail means anything.
 - **Moment to moment.** The same view, one thing changed: the same chart with the next quarter added, the
-  same code with the next lines highlighted. Use it for a change you want noticed.
+  same code with the next lines highlighted. Use it for a change you want noticed. Inside one slide,
+  `motion: fade` does the same: steps, cards or items appear one click at a time, so the presenter sets
+  the pace. Use it on a few slides where the order is the point, never as decoration.
 - **Subject to subject.** A different view of the same idea: the number, then the customer it happened to.
 - **Scene to scene.** A jump to the next part; mark it with a section slide or the returning map.
 - **Closure.** When the step between two slides is obvious, leave it out and let the audience make it.

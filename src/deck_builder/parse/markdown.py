@@ -9,7 +9,7 @@ from typing import Any
 import yaml
 
 from deck_builder.errors import Issue
-from deck_builder.model import Bullets, Chart, Code, Deck, Image, Series, Slide, Table, Value, Where
+from deck_builder.model import SLIDE_KEYS, Bullets, Chart, Code, Deck, Image, Series, Slide, Table, Value, Where
 
 SPEC_VERSION = 1
 FIELD_LINE = re.compile(r"^([a-z_][\w-]*):(\s|$)")
@@ -350,7 +350,8 @@ def parse(path: Path, row: dict[str, str] | None = None) -> tuple[Deck, list[Iss
                 break
 
         layout = str(kv.pop("layout", meta.get("default_layout", "")) or "")
-        slide = Slide(title=title, layout=layout, notes=notes, where=where, current=kv.pop("current", None))
+        slide = Slide(title=title, layout=layout, notes=notes, where=where,
+                      **{k: kv.pop(k, None) for k in SLIDE_KEYS})
         for key, v in kv.items():
             slide.fields[str(key)] = _scalar_field(v)
 

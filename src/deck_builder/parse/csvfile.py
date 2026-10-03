@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from deck_builder.errors import Issue
-from deck_builder.model import Deck, Image, Slide, Value, Where
+from deck_builder.model import SLIDE_KEYS, Deck, Image, Slide, Value, Where
 from deck_builder.parse.markdown import BULLET, IMAGE, code_from_fence, fence_closes, fence_open, parse_text_block
 
 SheetResolver = Callable[[str], Value | None]
@@ -48,10 +48,10 @@ def slides_from_rows(rows: list[tuple[int, dict[str, str]]], file: str, issues: 
         title = cells.pop("title", "").strip()
         notes = cells.pop("notes", "").replace("\r\n", "\n").strip()
         cells.pop("slide", None)
-        current: Any = cells.pop("current", "").strip() or None
-        if isinstance(current, str) and current.isdecimal():
-            current = int(current)
-        s = Slide(title=title, layout=layout, notes=notes, where=where, current=current)
+        settings: dict[str, Any] = {k: cells.pop(k, "").strip() or None for k in SLIDE_KEYS}
+        if settings["current"] and settings["current"].isdecimal():
+            settings["current"] = int(settings["current"])
+        s = Slide(title=title, layout=layout, notes=notes, where=where, **settings)
         for k, raw in cells.items():
             ref = raw.strip()
             if ref.startswith("sheet:"):

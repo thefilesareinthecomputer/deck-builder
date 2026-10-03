@@ -27,6 +27,7 @@ README sheet.
 | Code | The whole fenced block, fences and language included, as in deck.md (`.csv` can't hold it) |
 | Chart or table | `sheet:<sheet name>` |
 | `current` column | The item or card a map slide marks, as in deck.md's `current:` |
+| `build` column | The field (or `slots`) that fades in one click at a time, as in deck.md's `build:` |
 
 Columns whose header starts with `#` are helpers and ignored. The engine reads cell values only, so
 re-saving in Excel, SharePoint or LibreOffice changes nothing.

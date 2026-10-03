@@ -18,7 +18,7 @@ from openpyxl.worksheet.datavalidation import DataValidation
 
 from deck_builder.brand.registry import Brand
 from deck_builder.build.normalize import normalize_workbook
-from deck_builder.model import Chart, Deck, Table
+from deck_builder.model import SLIDE_KEYS, Chart, Deck, Table
 from deck_builder.write.cells import cell_text
 
 FIXED_DATE = "2000-01-01T00:00:00Z"
@@ -118,8 +118,7 @@ def write(deck: Deck, brand: Brand | None) -> bytes:
     headers = ["slide", "layout", "title"]
     if "title" in budgets:
         headers.append("#chars:title")
-    if any(s.current is not None for s in deck.slides):
-        headers.append("current")
+    headers += [k for k in SLIDE_KEYS if any(getattr(s, k) is not None for s in deck.slides)]
     for f in fields:
         headers.append(f)
         if f in budgets:
@@ -130,7 +129,7 @@ def write(deck: Deck, brand: Brand | None) -> bytes:
         cell = _text(ws, 1, i, h)
         cell.font = Font(bold=True, color="6B7280" if h.startswith("#") else None)
         letter = get_column_letter(i)
-        ws.column_dimensions[letter].width = (8 if h in ("slide", "current") else 16 if h == "layout"
+        ws.column_dimensions[letter].width = (8 if h in ("slide", *SLIDE_KEYS) else 16 if h == "layout"
                                               else 12 if h.startswith("#") else 40)
     ws.freeze_panes = "D2"
 
@@ -141,8 +140,9 @@ def write(deck: Deck, brand: Brand | None) -> bytes:
         ws.cell(row=r, column=col["slide"], value=n)
         _text(ws, r, col["layout"], s.layout)
         _text(ws, r, col["title"], s.title).alignment = wrap
-        if s.current is not None:
-            ws.cell(row=r, column=col["current"], value=s.current)
+        for k in SLIDE_KEYS:
+            if getattr(s, k) is not None:
+                ws.cell(row=r, column=col[k], value=getattr(s, k))
         for f in fields:
             if f not in s.fields:
                 continue
