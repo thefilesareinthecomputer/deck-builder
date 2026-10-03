@@ -1,7 +1,7 @@
 spec_version: 1
 name: Soap Club
 slug: soap-club
-version: 1.1.0
+version: 1.2.0
 description: Fictional deck-builder test brand
 palette:
   primary: "302F35"
@@ -41,6 +41,9 @@ lint:
   banned_patterns: ["—"]
 generate:
   slide_size: "16:9"
-  layout_set: full
+  layout_set: designed
   logo_on_master: primary
   big_number: dark               # the numeral on the charcoal primary, like a section slide
+  takeaway: quote
+  icons: {tile: circle}
+  process: {icons: true}

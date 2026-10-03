@@ -20,7 +20,8 @@ from deck_builder.cli import main as cli
 REPO = Path(__file__).resolve().parent.parent
 FIXTURES = REPO / "tests" / "fixtures" / "demo-brands"
 BRANDS = ("dumbder-nifftlin", "cubicle-nine", "soap-club")
-ROWS = (1, 5, 7)  # title, chart and image slides of the showcase deck
+ROWS = (1, 3, 4)  # the title, cards and chart slides of the showcase deck
+CONTACT_BRAND = "dumbder-nifftlin"  # the brand the README's deck.md example uses
 SLIDE = (560, 315)
 GAP = 24
 RADIUS = 10
@@ -69,7 +70,7 @@ def main() -> None:
             run("--config", config, "render", str(built / f"{brand}.pptx"), "--backend", "libreoffice")
         render_dirs = {b: built / f"{b}.render" for b in BRANDS}
         showcase(render_dirs, out / "showcase.png")
-        shutil.copyfile(render_dirs["cubicle-nine"] / "contact-01.png", out / "contact-sheet.png")
+        shutil.copyfile(render_dirs[CONTACT_BRAND] / "contact-01.png", out / "contact-sheet.png")
     print(f"wrote {out / 'showcase.png'} and {out / 'contact-sheet.png'}")
 
 

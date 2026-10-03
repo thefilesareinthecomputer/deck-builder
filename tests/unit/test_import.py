@@ -48,6 +48,7 @@ def comparable_sha(deck, brand, deck_dir: Path) -> str:
     for k in PPTX_CANT_HOLD:
         deck.meta.pop(k, None)
     resolved, _ = validate.resolve(deck, brand, deck_dir)
+    resolved.meta.pop("kicker", None)  # resolved onto its slides: the per-slide labels are what a .pptx holds
     for s in resolved.slides:
         for name, v in s.fields.items():
             if isinstance(v, Image) and not v.ref.startswith("brand:"):

@@ -1,85 +1,87 @@
-"""The demo-brands fixtures: one showcase deck bulk-builds into three generated brands."""
+"""The demo-brands fixtures: decks bulk-built and built one by one into the three generated brands."""
+import re
 from pathlib import Path
 
 import pytest
 
-from conftest import ALL_OPTIONS, BRAND_KITS, cli_json, init_designed_demo_brands
+from conftest import ALL_OPTIONS, DESIGNED_DEFAULTS, FULL_SET, cli_json, init_demo_brands
 
 DEMO = Path(__file__).resolve().parents[1] / "fixtures" / "demo-brands"
 SLUGS = ("dumbder-nifftlin", "cubicle-nine", "soap-club")
+DECKS = sorted((p.parent.parent.name, p.parent.name) for p in (DEMO / "decks").glob("*/*/deck.md"))
+
+
+def workspace(tmp_path_factory, name: str, generate: dict | None = None) -> Path:
+    from deck_builder.cli import main
+
+    root = tmp_path_factory.mktemp(name)
+    assert main(["init", "--dir", str(root)]) == 0
+    init_demo_brands(root, DEMO / "brands", SLUGS, generate)
+    return root
 
 
 @pytest.fixture(scope="module")
 def demo_ws(tmp_path_factory):
-    from deck_builder.cli import main
+    """Each demo brand from its own brand.yaml: the kits the showcase and the brand decks are written for."""
+    return workspace(tmp_path_factory, "demo")
 
-    root = tmp_path_factory.mktemp("demo")
-    assert main(["init", "--dir", str(root)]) == 0
-    for slug in SLUGS:
-        args = ["--config", str(root / "deck-builder.toml"), "brand", "init", slug,
-                "--from", str(DEMO / "brands" / slug / "brand.yaml")]
-        assert main(args) == 0, slug
-    return root
+
+def bulk(ws: Path, name: str, capsys: pytest.CaptureFixture[str]) -> dict:
+    capsys.readouterr()
+    code, out = cli_json(ws, "build", str(DEMO / name / "deck.md"), "--data", str(DEMO / name / "brands.csv"),
+                         "--name", "{{brand}}.pptx", "-o", str(ws / name), capsys=capsys)
+    assert code == 0, out["issues"]
+    assert [i for i in out["issues"] if i["severity"] == "error"] == []
+    return out
 
 
 def test_showcase_builds_clean_in_all_three_brands(demo_ws, capsys):
-    capsys.readouterr()
-    code, out = cli_json(demo_ws, "build", str(DEMO / "showcase" / "deck.md"),
-                         "--data", str(DEMO / "showcase" / "brands.csv"), "--name", "{{brand}}.pptx",
-                         "-o", str(demo_ws / "showcase"), capsys=capsys)
-    assert code == 0, out["issues"]
-    assert [i for i in out["issues"] if i["severity"] == "error"] == []
+    """The README's deck: the designed set's cards, chart header, bands and logo row in each brand's kit."""
+    out = bulk(demo_ws, "showcase", capsys)
+    assert out["issues"] == []
     assert sorted(Path(o["output"]).name for o in out["outputs"]) == sorted(f"{s}.pptx" for s in SLUGS)
 
 
-def test_layouts_deck_uses_every_layout_and_builds_clean_in_all_three_brands(demo_ws, capsys):
-    """The layouts fixture puts every generated layout but team on a slide, including the cases that
-    used to look unfinished: a short bullet list, a short table, a comparison and a two-column slide."""
-    import re
+@pytest.mark.parametrize("brand", ["dumbder-nifftlin", "neutral"])
+def test_the_readme_example_checks_clean_on_its_brand_and_on_neutral(demo_ws, brand, capsys):
+    """The README's deck.md example: the first column of its showcase image, and what it tells a reader
+    to try on the neutral brand that `init` creates."""
+    readme = (Path(__file__).resolve().parents[2] / "README.md").read_text()
+    example = re.search(r"````markdown\n(.*?)````", readme, re.S)
+    assert example
+    deck = demo_ws / "readme" / "deck.md"
+    deck.parent.mkdir(exist_ok=True)
+    deck.write_text(example.group(1).replace("brand: dumbder-nifftlin", f"brand: {brand}"))
+    capsys.readouterr()
+    code, out = cli_json(demo_ws, "check", str(deck), capsys=capsys)
+    assert code == 0 and out["issues"] == [], out["issues"]
 
+
+def test_layouts_deck_uses_every_full_set_layout_and_builds_clean_in_all_three_brands(tmp_path_factory, capsys):
+    """The layouts fixture puts every full-set layout but team on a slide, including the cases that
+    used to look unfinished: a short bullet list, a short table, a comparison and a two-column slide."""
     from pptx import Presentation
 
-    text = (DEMO / "layouts" / "deck.md").read_text()
-    used = set(re.findall(r"(?m)^layout: (\S+)$", text))
+    used = set(re.findall(r"(?m)^layout: (\S+)$", (DEMO / "layouts" / "deck.md").read_text()))
     assert used == {"title", "section", "agenda", "content", "two-col", "comparison", "big-number", "chart",
                     "table", "image", "image-right", "icon-row", "quote", "closing"}
-    capsys.readouterr()
-    code, out = cli_json(demo_ws, "build", str(DEMO / "layouts" / "deck.md"),
-                         "--data", str(DEMO / "layouts" / "brands.csv"), "--name", "{{brand}}.pptx",
-                         "-o", str(demo_ws / "layouts"), capsys=capsys)
-    assert code == 0, out["issues"]
-    assert [i for i in out["issues"] if i["severity"] == "error"] == []
-    dark = Presentation(str(demo_ws / "layouts" / "soap-club.pptx")).slides[5].slide_layout
+    ws = workspace(tmp_path_factory, "full", FULL_SET)
+    bulk(ws, "layouts", capsys)
+    dark = Presentation(str(ws / "layouts" / "soap-club.pptx")).slides[5].slide_layout
     assert dark.name == "Big Number" and dark._element.get("showMasterSp") == "0"  # big_number: dark
 
 
-@pytest.fixture(scope="module")
-def designed_ws(tmp_path_factory):
-    from deck_builder.cli import main
-
-    root = tmp_path_factory.mktemp("designed")
-    assert main(["init", "--dir", str(root)]) == 0
-    init_designed_demo_brands(root, DEMO / "brands", SLUGS)
-    return root
-
-
-def test_designed_deck_uses_the_new_layouts_and_builds_clean_in_all_three_brands(designed_ws, capsys):
+def test_designed_deck_uses_the_new_layouts_and_builds_clean_in_all_three_brands(tmp_path_factory, capsys):
     """The designed fixture puts cards, process steps, bands, section labels, subtitles and logos on
     slides with realistic content; the vendor logos are transparent PNGs, fitted rather than cropped."""
-    import re
-
     from pptx import Presentation
     from pptx.enum.shapes import MSO_SHAPE_TYPE
 
     text = (DEMO / "designed" / "deck.md").read_text()
     assert {"cards-3", "cards-4", "process-4", "process-5", "bands-3"} <= set(re.findall(r"(?m)^layout: (\S+)$", text))
-    capsys.readouterr()
-    code, out = cli_json(designed_ws, "build", str(DEMO / "designed" / "deck.md"),
-                         "--data", str(DEMO / "designed" / "brands.csv"), "--name", "{{brand}}.pptx",
-                         "-o", str(designed_ws / "designed"), capsys=capsys)
-    assert code == 0, out["issues"]
-    assert [i for i in out["issues"] if i["severity"] == "error"] == []
-    prs = Presentation(str(designed_ws / "designed" / "cubicle-nine.pptx"))
+    ws = workspace(tmp_path_factory, "designed", DESIGNED_DEFAULTS)
+    bulk(ws, "designed", capsys)
+    prs = Presentation(str(ws / "designed" / "cubicle-nine.pptx"))
     logos = [sh for slide in prs.slides for sh in slide.shapes if sh.shape_type == MSO_SHAPE_TYPE.PICTURE
              and sh._element.nvPicPr.cNvPr.get("descr", "").endswith(" logo")]
     assert len(logos) == 3  # two on the comparison panels, one in image-right
@@ -90,32 +92,17 @@ def test_designed_deck_uses_the_new_layouts_and_builds_clean_in_all_three_brands
         assert abs(pic.width / pic.height - shown) < 0.02
 
 
-DECKS = sorted((p.parent.parent.name, p.parent.name) for p in (DEMO / "decks").glob("*/*/deck.md"))
-
-
-@pytest.fixture(scope="module")
-def brand_kits(tmp_path_factory):
-    """Each demo brand generated with its own designed-set options (BRAND_KITS), in one workspace."""
-    from deck_builder.cli import main
-
-    root = tmp_path_factory.mktemp("brand-kits")
-    assert main(["init", "--dir", str(root)]) == 0
-    for slug, options in BRAND_KITS.items():
-        init_designed_demo_brands(root, DEMO / "brands", (slug,), options)
-    return root
-
-
 def test_every_brand_has_a_pitch_a_review_and_an_edge_deck():
-    assert [(slug, name) for slug in sorted(BRAND_KITS) for name in ("edge", "pitch", "review")] == DECKS
+    assert [(slug, name) for slug in sorted(SLUGS) for name in ("edge", "pitch", "review")] == DECKS
 
 
 @pytest.mark.parametrize("slug,name", DECKS)
-def test_each_brand_deck_checks_and_builds_clean(brand_kits, slug, name, capsys):
+def test_each_brand_deck_checks_and_builds_clean(demo_ws, slug, name, capsys):
     """Nine decks, three per brand, each written for its brand's kit: errors fail, and only the edge
     decks may carry convention warnings, on the slides written to trigger them."""
     deck = DEMO / "decks" / slug / name / "deck.md"
     capsys.readouterr()
-    code, out = cli_json(brand_kits, "build", str(deck), "-o", str(brand_kits / "out" / f"{slug}-{name}.pptx"),
+    code, out = cli_json(demo_ws, "build", str(deck), "-o", str(demo_ws / "out" / f"{slug}-{name}.pptx"),
                          capsys=capsys)
     assert code == 0, out
     assert [i for i in out["issues"] if i["severity"] == "error"] == []
@@ -123,18 +110,7 @@ def test_each_brand_deck_checks_and_builds_clean(brand_kits, slug, name, capsys)
         assert out["issues"] == [], out["issues"]
 
 
-def test_options_deck_builds_clean_with_every_designed_option_in_all_three_brands(tmp_path, capsys):
+def test_options_deck_builds_clean_with_every_designed_option_in_all_three_brands(tmp_path_factory, capsys):
     """The options fixture: quote takeaways, circle icon tiles, process icons (some from the starter
     set), rectangle band labels, bold keywords, the logo row, a deck-wide kicker and first_slide_number."""
-    from deck_builder.cli import main
-
-    assert main(["init", "--dir", str(tmp_path)]) == 0
-    init_designed_demo_brands(tmp_path, DEMO / "brands", SLUGS, ALL_OPTIONS)
-    if not (Path(__file__).resolve().parents[2] / "src" / "deck_builder" / "data" / "icons" / "database.png").is_file():
-        pytest.skip("run scripts/make_starter_icons.py to draw the full starter set")
-    capsys.readouterr()
-    code, out = cli_json(tmp_path, "build", str(DEMO / "options" / "deck.md"),
-                         "--data", str(DEMO / "options" / "brands.csv"), "--name", "{{brand}}.pptx",
-                         "-o", str(tmp_path / "options"), capsys=capsys)
-    assert code == 0, out["issues"]
-    assert [i for i in out["issues"] if i["severity"] == "error"] == []
+    bulk(workspace(tmp_path_factory, "options", ALL_OPTIONS), "options", capsys)

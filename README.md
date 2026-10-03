@@ -23,9 +23,9 @@
 <br>
 
 <p align="center">
-  <img src="docs/images/showcase.png" width="100%" alt="The same deck built in three brands: a dark green paper supplier set in Georgia, a navy office-systems company set in Avenir Next, and a charcoal soap maker set in Helvetica Neue. Each column shows the title slide, a native column chart and an image slide.">
+  <img src="docs/images/showcase.png" width="100%" alt="The same deck built in three brands: a dark green paper supplier set in Georgia, a navy office-systems company set in Avenir Next, and a charcoal soap maker set in Helvetica Neue. Each column shows the title slide, three cards with colored labels and a bold target line, and a native column chart under a section label and subtitle, with its takeaway.">
 </p>
-<p align="center"><sub>One <code>deck.md</code>, built three times with a different brand. Every chart is native and every word remains editable.</sub></p>
+<p align="center"><sub>One <code>deck.md</code>, built three times with a different brand: each brand's kit sets its own type, card colors and takeaway style. Every chart is native and every word remains editable.</sub></p>
 
 <br>
 
@@ -57,7 +57,7 @@ deck-builder skills install --yes     # optional: the skills and agents in every
 | Use it | Set up with | You get |
 |---|---|---|
 | **As a tool for agents and the CLI** (most common) | `uv tool install .` | `deck-builder` in any folder, and the MCP server (`deck-builder mcp`) the subagents run on |
-| **As a skill in your other Claude Code projects** | `deck-builder skills install --yes`, after the tool | The three skills and three agents, linked into `~/.claude` |
+| **As a skill in your other Claude Code projects** | `deck-builder skills install --yes`, after the tool | The three skills and four agents, linked into `~/.claude` |
 | **From the clone**, to try it or work on it | `uv run deck-builder ...` | No install; a Claude Code session opened in the clone has the skills |
 
 **Without uv:** `pipx install .`, or `pip install .` inside a virtual environment, puts the same `deck-builder` command on your PATH, and `deck-builder skills install --yes` follows as above.
@@ -89,7 +89,7 @@ A deck is a text file. Each `##` heading is one slide, and its `layout:` line pi
 `check --render` runs steps 2 through 4 in one command, which is what the quick start ran. Fix the flagged slides in the deck file and run it again.
 
 <p align="center">
-  <img src="docs/images/contact-sheet.png" width="100%" alt="A contact sheet of nine rendered slides labeled slide 1 to slide 9, the image an agent reviews after a render.">
+  <img src="docs/images/contact-sheet.png" width="100%" alt="A contact sheet of eleven rendered slides labeled slide 1 to slide 11: title, agenda, three cards, a chart, a big number, three risk bands, a table, an image beside bullets, a row of partner logos, three icons and a closing slide. It is the image an agent reviews after a render.">
 </p>
 <p align="center"><sub>A contact sheet from a clean render, with nothing flagged. A flagged slide receives a red border and label, so a reviewer finds it without opening every slide.</sub></p>
 
@@ -97,20 +97,48 @@ A deck is a text file. Each `##` heading is one slide, and its `layout:` line pi
 
 A deck and a brand are separate. The deck holds only content (text, data and image references) and names its brand with one line, `brand: <slug>`. The brand kit holds the whole design: template, fonts, colors, logos and budgets. Change that one line, or pass `--brand <slug>`, and the same content builds in a different design; the image at the top is one deck built that way three times.
 
-`key: value` lines under a heading fill the layout's fields, and the rest of the slide fills its body. The three slides below form the first column of that image. They use the `dumbder-nifftlin` demo brand; to try them in the quick-start workspace, change the brand to `neutral` and point the image at a picture in the deck's folder.
+`key: value` lines under a heading fill the layout's fields, and the rest of the slide fills its body; `### name` starts the content for a named field, such as each card's bullets. The three slides below form the first column of that image. They use the `dumbder-nifftlin` demo brand; to try them in the quick-start workspace, change the brand to `neutral`.
 
 ````markdown
 ---
 brand: dumbder-nifftlin
 title: Dumbder Nifftlin Paper Co. Q3 review
+kicker: Q3 review
 ---
 
 ## Dumbder Nifftlin Paper Co. Q3 review
 layout: title
 subtitle: Volume, delivery and the plan for Q4
 
+## Three bets for Q4
+layout: cards-3
+kicker: The plan
+label1: Monthly invoicing
+footer1: "Target: 40 accounts"
+label2: Same-day delivery
+footer2: "Target: 95% same-day"
+label3: Recycled reporting
+footer3: "Target: 12 accounts"
+takeaway: The three bets add about 9% to Q4 revenue
+
+### body1
+- One invoice a month
+- Pilot with ten accounts
+- All accounts by December
+
+### body2
+- North region in October
+- Two new evening routes
+- Every order tracked
+
+### body3
+- **Recycled** share on invoices
+- A quarterly summary
+
 ## Cases shipped by month
 layout: chart
+kicker: Volume
+subtitle: The core line set a record in September
 takeaway: The core line grew every month while specialty held flat
 
 ```chart
@@ -127,12 +155,6 @@ series:
 
 Notes:
 Source: the Q3 shipment ledger.
-
-## The new north warehouse
-layout: image
-caption: "Opened in August: same-day delivery for the northern accounts."
-
-![The new north warehouse](assets/hero.png)
 ````
 
 Field values are YAML, so quote any value that contains `: `. `deck-builder brand show <slug>` lists a brand's layouts, fields and character budgets. The [full showcase deck](tests/fixtures/demo-brands/showcase/deck.md) builds into all three brands with a single `build --data` command.

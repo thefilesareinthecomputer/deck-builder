@@ -1,4 +1,4 @@
-"""Render tier: the showcase deck in the three demo brands renders with their real fonts and no flags.
+"""Render tier: every demo-brand fixture deck renders in its brands with their real fonts and no flags.
 
 The demo brands use Georgia, Arial, Avenir Next and Helvetica Neue, which ship with macOS, so the font
 assertions only hold there.
@@ -9,12 +9,13 @@ from pathlib import Path
 
 import pytest
 
-from conftest import ALL_OPTIONS, BRAND_KITS, init_designed_demo_brands
+from conftest import ALL_OPTIONS, DESIGNED_DEFAULTS, FULL_SET, init_demo_brands
 from deck_builder.cli import main
 from deck_builder.qa import tools
 
 DEMO = Path(__file__).resolve().parents[1] / "fixtures" / "demo-brands"
 SLUGS = ("dumbder-nifftlin", "cubicle-nine", "soap-club")
+DECKS = sorted((p.parent.parent.name, p.parent.name) for p in (DEMO / "decks").glob("*/*/deck.md"))
 
 pytestmark = [
     pytest.mark.render,
@@ -29,102 +30,63 @@ def run(*argv, capsys):
     return code, json.loads(capsys.readouterr().out)
 
 
-@pytest.fixture(scope="module")
-def built(tmp_path_factory):
-    root = tmp_path_factory.mktemp("demo-render")
-    cfg = str(root / "deck-builder.toml")
+def kits(tmp_path_factory, name: str, generate: dict | None = None) -> tuple[str, Path]:
+    """A workspace with the three demo brands, from their own brand.yaml or with these generate settings."""
+    root = tmp_path_factory.mktemp(name)
     assert main(["init", "--dir", str(root)]) == 0
-    for slug in SLUGS:
-        assert main(["--config", cfg, "brand", "init", slug, "--from", str(DEMO / "brands" / slug / "brand.yaml")]) == 0
-    for deck in ("showcase", "layouts"):
-        assert main(["--config", cfg, "build", str(DEMO / deck / "deck.md"), "--data",
-                     str(DEMO / deck / "brands.csv"), "--name", "{{brand}}.pptx", "-o", str(root / deck)]) == 0
-    return cfg, root / "showcase"
+    init_demo_brands(root, DEMO / "brands", SLUGS, generate)
+    return str(root / "deck-builder.toml"), root / "out"
 
 
-@pytest.mark.parametrize("slug", SLUGS)
-def test_showcase_renders_in_the_brand_fonts_with_no_flags(built, slug, capsys):
-    cfg, out = built
+def bulk(cfg: str, out: Path, name: str) -> None:
+    assert main(["--config", cfg, "build", str(DEMO / name / "deck.md"), "--data", str(DEMO / name / "brands.csv"),
+                 "--name", "{{brand}}.pptx", "-o", str(out / name)]) == 0, name
+
+
+def rendered_clean(cfg: str, pptx: Path, capsys) -> dict:
     capsys.readouterr()
-    code, res = run("--config", cfg, "render", str(out / f"{slug}.pptx"), capsys=capsys)
-    assert code == 0, res["issues"]
-    assert [i for i in res["issues"] if i["code"] == "MISSING_FONT"] == []
-    assert res["flagged_slides"] == []
-
-
-@pytest.fixture(scope="module")
-def designed(tmp_path_factory):
-    root = tmp_path_factory.mktemp("designed-render")
-    cfg = str(root / "deck-builder.toml")
-    assert main(["init", "--dir", str(root)]) == 0
-    init_designed_demo_brands(root, DEMO / "brands", SLUGS)
-    assert main(["--config", cfg, "build", str(DEMO / "designed" / "deck.md"), "--data",
-                 str(DEMO / "designed" / "brands.csv"), "--name", "{{brand}}.pptx", "-o", str(root / "out")]) == 0
-    return cfg, root / "out"
-
-
-@pytest.mark.parametrize("slug", SLUGS)
-def test_designed_layouts_render_with_no_flags(designed, slug, capsys):
-    """The designed fixture: cards, process steps, bands, section labels, subtitles and logo slots."""
-    cfg, out = designed
-    capsys.readouterr()
-    code, res = run("--config", cfg, "render", str(out / f"{slug}.pptx"), capsys=capsys)
+    code, res = run("--config", cfg, "render", str(pptx), capsys=capsys)
     assert code == 0, res["issues"]
     assert res["flagged_slides"] == []
+    return res
 
 
 @pytest.fixture(scope="module")
-def options(tmp_path_factory):
-    root = tmp_path_factory.mktemp("options-render")
-    cfg = str(root / "deck-builder.toml")
-    assert main(["init", "--dir", str(root)]) == 0
-    init_designed_demo_brands(root, DEMO / "brands", SLUGS, ALL_OPTIONS)
-    assert main(["--config", cfg, "build", str(DEMO / "options" / "deck.md"), "--data",
-                 str(DEMO / "options" / "brands.csv"), "--name", "{{brand}}.pptx", "-o", str(root / "out")]) == 0
-    return cfg, root / "out"
-
-
-@pytest.mark.parametrize("slug", SLUGS)
-def test_every_designed_option_renders_with_no_flags(options, slug, capsys):
-    """Quote takeaways, icon tiles, process icons, rectangle band labels and the logo row."""
-    cfg, out = options
-    capsys.readouterr()
-    code, res = run("--config", cfg, "render", str(out / f"{slug}.pptx"), capsys=capsys)
-    assert code == 0, res["issues"]
-    assert res["flagged_slides"] == []
-
-
-DECKS = sorted((p.parent.parent.name, p.parent.name) for p in (DEMO / "decks").glob("*/*/deck.md"))
-
-
-@pytest.fixture(scope="module")
-def brand_decks(tmp_path_factory):
-    """The nine brand decks (pitch, review and edge per brand), each built on its brand's own kit."""
-    root = tmp_path_factory.mktemp("brand-decks")
-    cfg = str(root / "deck-builder.toml")
-    assert main(["init", "--dir", str(root)]) == 0
-    for slug, options in BRAND_KITS.items():
-        init_designed_demo_brands(root, DEMO / "brands", (slug,), options)
+def own_kits(tmp_path_factory):
+    """Each brand's own kit: the showcase (the README's deck) and the nine brand decks."""
+    cfg, out = kits(tmp_path_factory, "own-kits")
+    bulk(cfg, out, "showcase")
     for slug, name in DECKS:
         assert main(["--config", cfg, "build", str(DEMO / "decks" / slug / name / "deck.md"), "-o",
-                     str(root / "out" / f"{slug}-{name}.pptx")]) == 0, (slug, name)
-    return cfg, root / "out"
+                     str(out / "decks" / f"{slug}-{name}.pptx")]) == 0, (slug, name)
+    return cfg, out
+
+
+@pytest.fixture(scope="module", params=[("layouts", FULL_SET), ("designed", DESIGNED_DEFAULTS),
+                                        ("options", ALL_OPTIONS)], ids=["layouts", "designed", "options"])
+def overridden(request, tmp_path_factory):
+    """Fixtures written for one kit configuration across all three brands: every full-set layout, every
+    designed-set layout on its defaults, and every designed-set option switched on."""
+    name, generate = request.param
+    cfg, out = kits(tmp_path_factory, f"{name}-kits", generate)
+    bulk(cfg, out, name)
+    return cfg, out / name
+
+
+@pytest.mark.parametrize("slug", SLUGS)
+def test_showcase_renders_in_the_brand_fonts_with_no_flags(own_kits, slug, capsys):
+    cfg, out = own_kits
+    res = rendered_clean(cfg, out / "showcase" / f"{slug}.pptx", capsys)
+    assert [i for i in res["issues"] if i["code"] == "MISSING_FONT"] == []
 
 
 @pytest.mark.parametrize("slug,name", DECKS)
-def test_each_brand_deck_renders_with_no_flags(brand_decks, slug, name, capsys):
-    cfg, out = brand_decks
-    capsys.readouterr()
-    code, res = run("--config", cfg, "render", str(out / f"{slug}-{name}.pptx"), capsys=capsys)
-    assert code == 0, res["issues"]
-    assert res["flagged_slides"] == []
+def test_each_brand_deck_renders_with_no_flags(own_kits, slug, name, capsys):
+    cfg, out = own_kits
+    rendered_clean(cfg, out / "decks" / f"{slug}-{name}.pptx", capsys)
 
 
 @pytest.mark.parametrize("slug", SLUGS)
-def test_every_layout_renders_with_no_flags(built, slug, capsys):
-    """The layouts fixture, every generated layout with realistic content, renders clean in each brand."""
-    cfg, showcase = built
-    capsys.readouterr()
-    code, res = run("--config", cfg, "render", str(showcase.parent / "layouts" / f"{slug}.pptx"), capsys=capsys)
-    assert code == 0, res["issues"]
-    assert res["flagged_slides"] == []
+def test_every_layout_and_option_renders_with_no_flags(overridden, slug, capsys):
+    cfg, out = overridden
+    rendered_clean(cfg, out / f"{slug}.pptx", capsys)

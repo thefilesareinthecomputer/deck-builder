@@ -54,5 +54,5 @@ lint:
 
 generate:
   slide_size: "16:9"
-  layout_set: full
+  layout_set: designed
   logo_on_master: primary

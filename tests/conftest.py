@@ -100,28 +100,26 @@ def codes(payload: dict) -> list[str]:
     return [i["code"] for i in payload["issues"]]
 
 
-# Every designed-set option away from its default: the fixture in demo-brands/options/ is written for these.
-ALL_OPTIONS = {"takeaway": "quote", "icons": {"tile": "circle"}, "process": {"icons": True},
-               "bands": {"label_shape": "rectangle"}}
-# Each brand's own kit for its three decks in demo-brands/decks/<slug>/ (pitch, review, edge): one on the
-# designed defaults, one read-mode with square tiles, rectangle bands and ink emphasis, one with quote
-# takeaways, circle tiles and process icons.
-BRAND_KITS: dict[str, dict] = {
-    "dumbder-nifftlin": {},
-    "cubicle-nine": {"icons": {"tile": "square"}, "bands": {"label_shape": "rectangle"}, "emphasis": "ink"},
-    "soap-club": {"takeaway": "quote", "icons": {"tile": "circle"}, "process": {"icons": True}},
-}
+# The demo brands' own brand.yaml files hold their kits: the designed set on its defaults (Dumbder
+# Nifftlin), read mode with square tiles, rectangle bands and ink emphasis (Cubicle 9), and quote
+# takeaways, circle tiles and process icons (Soap Club). The showcase and the three decks per brand in
+# demo-brands/decks/ are written for those. Other fixtures override the generate settings:
+DESIGNED_DEFAULTS = {"layout_set": "designed", "takeaway": "band", "icons": {"tile": "none"},
+                     "bands": {"label_shape": "parallelogram"}, "process": {"icons": False}, "emphasis": "primary"}
+FULL_SET = {**DESIGNED_DEFAULTS, "layout_set": "full"}  # demo-brands/layouts/: every full-set layout
+ALL_OPTIONS = {**DESIGNED_DEFAULTS, "takeaway": "quote", "icons": {"tile": "circle"},  # demo-brands/options/
+               "process": {"icons": True}, "bands": {"label_shape": "rectangle"}}
 
 
-def init_designed_demo_brands(root: Path, brands: Path, slugs: tuple[str, ...], options: dict | None = None) -> None:
-    """Generate each demo brand with `layout_set: designed`, plus any generate options, in the workspace
-    `init` made at root."""
+def init_demo_brands(root: Path, brands: Path, slugs: tuple[str, ...], generate: dict | None = None) -> None:
+    """Generate each demo brand in the workspace `init` made at root: from its own brand.yaml, or with
+    these generate settings over its own (DESIGNED_DEFAULTS, FULL_SET, ALL_OPTIONS)."""
     for slug in slugs:
-        src = root / "designed-src" / slug
+        src = root / "demo-src" / slug
         shutil.copytree(brands / slug, src)
-        meta = yaml.safe_load((src / "brand.yaml").read_text(encoding="utf-8"))
-        assert meta["generate"]["layout_set"] == "full", slug
-        meta["generate"].update({"layout_set": "designed", **(options or {})})
-        (src / "brand.yaml").write_text(yaml.safe_dump(meta, sort_keys=False), encoding="utf-8")
+        if generate:
+            meta = yaml.safe_load((src / "brand.yaml").read_text(encoding="utf-8"))
+            meta["generate"].update(generate)
+            (src / "brand.yaml").write_text(yaml.safe_dump(meta, sort_keys=False), encoding="utf-8")
         assert main(["--config", str(root / "deck-builder.toml"), "brand", "init", slug,
                      "--from", str(src / "brand.yaml")]) == 0, slug

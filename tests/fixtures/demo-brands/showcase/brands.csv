@@ -1,4 +1,4 @@
-brand,company,product,unit
-dumbder-nifftlin,Dumbder Nifftlin Paper Co.,copy paper,Cases
-cubicle-nine,Cubicle 9 Enterprises,desk system,Installs
-soap-club,Soap Club,bar soap,Batches
+brand,company,product,unit,partner_a,partner_a_name,partner_b,partner_b_name
+dumbder-nifftlin,Dumbder Nifftlin Paper Co.,copy paper,Cases,cubicle-nine,Cubicle 9 Enterprises,soap-club,Soap Club
+cubicle-nine,Cubicle 9 Enterprises,desk system,Installs,soap-club,Soap Club,dumbder-nifftlin,Dumbder Nifftlin Paper Co.
+soap-club,Soap Club,bar soap,Batches,dumbder-nifftlin,Dumbder Nifftlin Paper Co.,cubicle-nine,Cubicle 9 Enterprises

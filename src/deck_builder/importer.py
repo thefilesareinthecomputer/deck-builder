@@ -432,6 +432,16 @@ class Importer:
                 placed[target] = f
             else:
                 rest.append(f)
+        if ls.get("row"):  # the build spread the row's pictures out, so place them left to right instead
+            slot = re.compile(r"\D+(\d+)$")
+            groups = {k: m.group(1) for k in fspecs if (m := slot.match(k))}
+            captioned = sorted({groups[k] for k in placed if k in groups}, key=int)
+            images = [k for k, fs in fspecs.items() if fs.get("kind") == "image" and k not in placed and k in groups]
+            order = sorted(images, key=lambda k: (groups[k] not in captioned, int(groups[k])))
+            for f, k in zip(sorted((f for f in rest if f.kind == "image"), key=lambda f: f.box[0]), order,
+                            strict=False):
+                placed[k] = f
+                rest.remove(f)
         left: list[Found] = []
         for f in rest:
             free = sorted((k for k, fs in fspecs.items() if k not in (hf, *EXACT_ONLY) and k not in placed
