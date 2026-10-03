@@ -1,7 +1,5 @@
 # Contributing to deck-builder
 
-These standards apply to every change, whoever or whatever writes it. Whoever opens a pull request is responsible for it: they've read the whole diff, run the checks below, and can answer questions about it.
-
 ## Before you start
 
 For anything bigger than a small fix, open an issue first and agree on the change before you build it. [AGENTS.md](AGENTS.md) explains how the engine and the Claude Code layer split the work, and `deck-builder docs agents` maps every CLI command and MCP tool to the party that owns it.
