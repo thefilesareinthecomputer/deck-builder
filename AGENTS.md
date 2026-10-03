@@ -44,7 +44,7 @@ says what each subagent may read and write.
 
 ## Working on the engine itself
 
-Changes to this repo follow [CONTRIBUTING.md](CONTRIBUTING.md). Two more rules apply in a session here:
+Changes to this repo follow [CONTRIBUTING.md](CONTRIBUTING.md).
 
 - `tasks/` holds local working notes (the handoff, plans, the archived design spec) and isn't tracked.
 - Skills hold no engine logic. When a skill needs something the CLI can't do, tell the user;

@@ -314,7 +314,7 @@ The current release is v0.2.0, and the [changelog](CHANGELOG.md) lists what's in
 
 ## Development
 
-Changes follow [CONTRIBUTING.md](CONTRIBUTING.md), which covers what every change needs and how to open a pull request. Report vulnerabilities as [SECURITY.md](SECURITY.md) describes.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before you open a pull request, and [SECURITY.md](SECURITY.md) to report a vulnerability.
 
 ```bash
 uv run pytest                          # everything: unit and CLI integration tests, the scenario suite, and the render tier when LibreOffice is installed

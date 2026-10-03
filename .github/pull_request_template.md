@@ -14,4 +14,3 @@ Closes #
 - [ ] The README, the reference topics and `docs/issue-codes.md` are updated where behavior changed.
 - [ ] For a visual change, renders were compared before and after and judged on restraint.
 - [ ] No agent's `tools:` list changed, or the change is named above.
-- [ ] I've read the whole diff, and it follows [CONTRIBUTING.md](https://github.com/thefilesareinthecomputer/deck-builder/blob/main/CONTRIBUTING.md).

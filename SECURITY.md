@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Fixes go into the latest release. Older releases don't get patches.
+Only the latest release gets security fixes.
 
 ## What counts
 
@@ -10,7 +10,7 @@ Anything that breaks the confinement described in the README's Principles: a dec
 
 ## Reporting a vulnerability
 
-Don't open a public issue. Report it privately on GitHub instead: on the repo's **Security** tab, choose **Report a vulnerability**, or go straight to https://github.com/thefilesareinthecomputer/deck-builder/security/advisories/new. Include what you found, how to reproduce it, the output of `deck-builder --version`, and what an attacker could do with it.
+Report it privately on GitHub: on the repo's **Security** tab, choose **Report a vulnerability**, or go to https://github.com/thefilesareinthecomputer/deck-builder/security/advisories/new. Include what you found, how to reproduce it, the output of `deck-builder --version`, and what an attacker could do with it.
 
 ## What to expect
 
