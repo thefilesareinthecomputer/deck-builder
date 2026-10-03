@@ -26,17 +26,21 @@ from deck_builder.assets import recolor_icon, sha256_file
 from deck_builder.brand.registry import Brand
 from deck_builder.build.deck import DEFAULT_DATE
 from deck_builder.build.text import CODE_FONT_DEFAULT
-from deck_builder.build.visuals import CHART_TYPES
-from deck_builder.model import Bullets, Chart, Deck, Image, Series, Slide, Table, Value
+from deck_builder.build.visuals import CHART_TYPES, CODE_DESCR
+from deck_builder.model import Bullets, Chart, Code, Deck, Image, Series, Slide, Table, Value
 from deck_builder.parse.markdown import number
 from deck_builder.validate import IMAGE_EXT, confined
+from deck_builder.write.cells import code_md
 from deck_builder.write.markdown import table_md
 
 LINK_SCHEMES = ("http://", "https://", "mailto:")
 FURNITURE = {PP_PLACEHOLDER.DATE, PP_PLACEHOLDER.FOOTER, PP_PLACEHOLDER.SLIDE_NUMBER}
 TITLES = {PP_PLACEHOLDER.TITLE, PP_PLACEHOLDER.CENTER_TITLE, PP_PLACEHOLDER.VERTICAL_TITLE}
 FITS = {"text": {"text", "bullets"}, "image": {"image"}, "icon": {"icon"}, "table": {"table"},
-        "chart": {"chart"}}
+        "chart": {"chart"}, "code": {"code"}}
+# The shapes the build draws around a code block, named for its placeholder idx: they become the block's
+# options on import, never content of their own.
+CODE_PART = re.compile(r"^Code (panel|title|line numbers|highlight) (\d{1,6})(?: lines (\d{1,6})-(\d{1,6}))?$")
 EXACT_ONLY = ("takeaway",)  # filled only from the matching placeholder idx, never by type or position
 CHART_NAMES = {v: k for k, v in CHART_TYPES.items()} | {XL_CHART_TYPE.LINE_MARKERS: "line"}  # older builds
 DIAGRAM_URI = "http://schemas.openxmlformats.org/drawingml/2006/diagram"
@@ -167,6 +171,26 @@ def overrides(shape: Any, code_font: str) -> Counter[str]:
             if set(el.attrib) - NOT_FORMATTING - {"sz"}:
                 out["other"] += 1
     return out
+
+
+def code_value(sh: Any, parts: dict[str, Any] | None) -> Code | None:
+    """A code block the build made, recognized by the alt text it writes (`python code`): its lines as
+    plain text, with the filename, line numbers and highlighted lines from the shapes drawn around it."""
+    if not getattr(sh, "has_text_frame", False):
+        return None
+    cnvpr = sh._element.find(f"{qn('p:nvSpPr')}/{qn('p:cNvPr')}")
+    m = CODE_DESCR.match(str(cnvpr.get("descr") or "")) if cnvpr is not None else None
+    if not m:
+        return None
+    text = "\n".join(p.text.rstrip() for p in sh.text_frame.paragraphs).strip("\n")
+    if not text.strip():
+        return None
+    got = parts or {}
+    lines = text.count("\n") + 1
+    # the .pptx is untrusted: a span is clamped to the block's own lines before it's expanded
+    marked = {k for a, b in got.get("highlight", []) for k in range(max(a, 1), min(b, lines) + 1)}
+    return Code(language=m.group(1) or "", text=text, numbers=bool(got.get("numbers")), title=got.get("title"),
+                highlight=sorted(marked))
 
 
 # ---------------------------------------------------------------- tables and charts
@@ -329,10 +353,26 @@ class Importer:
 
     def shapes(self, shapes: Any, n: int, rep: SlideReport) -> list[Found]:
         found: list[Found] = []
+        parts: dict[int, dict[str, Any]] = {}  # placeholder idx -> what the build drew around its code
         for sh in shapes:
+            if m := CODE_PART.match(sh.name):
+                part = parts.setdefault(int(m.group(2)), {"highlight": []})
+                if m.group(1) == "title" and sh.has_text_frame:
+                    part["title"] = sh.text_frame.text.strip() or None
+                elif m.group(1) == "line numbers":
+                    part["numbers"] = True
+                elif m.group(1) == "highlight" and m.group(3):  # kept as a span; code_value clamps it
+                    part["highlight"].append((int(m.group(3)), int(m.group(4))))
+        for sh in shapes:
+            if CODE_PART.match(sh.name):
+                continue
             box = (int(sh.left or 0), int(sh.top or 0), int(sh.width or 0), int(sh.height or 0))
             ph = sh.placeholder_format if sh.is_placeholder else None
             idx = ph.idx if ph is not None else None
+            code = code_value(sh, parts.get(idx) if idx is not None else None)
+            if code is not None:
+                found.append(Found("code", code, f"code {sh.name!r}", box, idx))
+                continue
             if ph is not None and ph.type in FURNITURE:  # becomes front matter, not slide content
                 text = sh.text_frame.text.strip() if sh.has_text_frame else ""
                 if ph.type == PP_PLACEHOLDER.FOOTER and text:
@@ -570,6 +610,8 @@ def _unplaced(f: Found) -> str:
         return f"{f.what[0].upper() + f.what[1:]}: ![{v.alt}]({v.ref})"
     if isinstance(v, Table):
         return f"{f.what[0].upper() + f.what[1:]}:\n\n{table_md(v)}\n"
+    if isinstance(v, Code):
+        return f"{f.what[0].upper() + f.what[1:]}:\n\n{code_md(v)}\n"
     if isinstance(v, Chart):
         series = "; ".join(f"{s.name}: {', '.join(map(str, s.values))}" for s in v.series)
         return f"{f.what[0].upper() + f.what[1:]} ({v.type}) by {', '.join(v.categories)}: {series}"

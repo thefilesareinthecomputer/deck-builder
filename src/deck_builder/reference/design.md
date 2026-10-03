@@ -63,6 +63,7 @@ on those layouts. The `deck-builder` and `deck-brand` skills read this topic bef
   | Three to six steps in order (designed set) | `process-3` to `process-6` |
   | Two to four themes, each with its points (designed set) | `bands-2` to `bands-4` |
   | The tools or companies a slide is about (designed set) | `logos` |
+  | A query, config, command or function (full and designed sets) | `code`, or `code-right` beside bullets |
 
 - **Digestible amounts.** Four bullets or fewer, each two lines at most, and about 40 words on a
   projected slide. Working memory holds about four chunks; the exact limits are convention. Move
@@ -101,6 +102,20 @@ on those layouts. The `deck-builder` and `deck-brand` skills read this topic bef
 - Label the data directly where you can, rather than sending the eye to a legend.
 - Eight colors at most in one chart. Color is never the only way to tell series apart: label them.
 - Make the chart's title state what the data shows, and make sure the data shows it.
+
+## Code
+
+- Show only the lines that make the point: twelve or fewer on a projected slide (`check` warns past that
+  with `CODE_LINES_MANY`), and put the full listing in the notes or an appendix.
+- Mark the lines the slide is about with `{3,5-7}` and say what they do in the subtitle or takeaway; the
+  highlight does the pointing, so the audience reads those lines first.
+- Code never wraps, so break long lines where the language allows and keep names short; `check` reports a
+  line wider than the panel as `CODE_LONG`. Use `code-right` when the code is short and the slide needs a
+  few bullets of explanation; it holds about 40 characters a line on a projected slide.
+- Add `lines` when you'll refer to lines by number, and `title=` when the file the code comes from matters.
+- Code sits on a quiet panel that fits it, in the brand's code font at the code size (18 pt projected,
+  12 pt read). Keywords are bold and comments italic, and every token color keeps 4.5:1 against the
+  panel and the highlight band, so the code reads from the back of the room and in grayscale.
 
 ## Accessibility: contrast, color blindness and legibility
 

@@ -4,11 +4,23 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from pptx.oxml.ns import qn
+
 from deck_builder.model import Value
 
 INLINE = re.compile(r"\*\*\*(?P<bi>.+?)\*\*\*|\*\*(?P<b>.+?)\*\*|\*(?P<i>.+?)\*|`(?P<c>[^`]+)`"
                     r"|\[(?P<lt>[^\]]+)\]\((?P<lu>[^)]+)\)")
-CODE_FONT_DEFAULT = "Courier New"  # documented default; tokens.yaml text.code_font overrides
+CODE_FONT_DEFAULT = "Menlo"  # documented default; tokens.yaml text.code_font overrides
+
+
+def mono(run: Any, code_font: str) -> None:
+    """Set a run in the code font, marked fixed-pitch so a machine without that font substitutes another
+    monospace font rather than a proportional one, and kept out of the spelling check."""
+    run.font.name = code_font
+    latin = run.font._rPr.find(qn("a:latin"))
+    latin.set("pitchFamily", "49")
+    latin.set("charset", "0")
+    run.font._rPr.set("noProof", "1")
 
 
 def _styled_run(paragraph: Any, text: str, bold: bool, italic: bool, code_font: str | None = None) -> None:
@@ -19,7 +31,7 @@ def _styled_run(paragraph: Any, text: str, bold: bool, italic: bool, code_font: 
     if italic:
         run.font.italic = True
     if code_font:
-        run.font.name = code_font
+        mono(run, code_font)
 
 
 def add_runs(paragraph: Any, text: str, code_font: str = CODE_FONT_DEFAULT, bold: bool = False,

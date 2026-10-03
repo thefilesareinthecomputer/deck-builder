@@ -53,6 +53,7 @@ Source: the Q3 shipment ledger.
 | icon | `brand:icon/<id>` as the field value; an id the kit lacks comes from the engine's starter icons (`brand show` lists both) |
 | table | A pipe table, or a ```` ```table ```` block with `header:` and `rows:` |
 | chart | A ```` ```chart ```` block, below |
+| code | A fenced block with its language, such as ```` ```python ````, below |
 
 A body cell whose trimmed value matches a `table.status` key in tokens.yaml, case-insensitively, gets
 a colored dot before its text; the word itself still prints, so the color is never the only signal.
@@ -73,6 +74,30 @@ series:
 ````
 
 Charts are native PowerPoint charts with their data embedded, so they stay editable.
+
+## Code blocks
+
+A fenced block with a language tag is code: ```` ```python ````, ```` ```sql ````, ```` ```yaml ````,
+```` ```bash ```` or any language Pygments knows (`text`, or no tag, is plain). It goes in the `code` field of
+the `code` and `code-right` layouts, as the free body or in a `### code` section. It builds as editable text in
+the brand's code font, one color per kind of token, keywords bold and comments italic, on a panel that fits it.
+
+`````markdown
+```python {4-5} lines title="forecast.py"
+def weekly_forecast(orders, weeks=12):
+    ...
+```
+`````
+
+- `{4-5}` highlights lines (`{3,5-7}` for several); `lines` adds line numbers; `title="forecast.py"` adds a
+  filename line, which takes two lines of the panel.
+- Code never wraps. `check` reports `CODE_LONG` for a line wider than the panel (line numbers take their
+  width from it) or more lines than it holds, and `CODE_LANGUAGE` for a tag the highlighter doesn't know.
+  `brand show` lists each code field's characters and lines.
+- Fences follow CommonMark: ```` ``` ```` or `~~~`, closed by the same character at least as many times. A
+  four-backtick block holds a markdown example with its own three-backtick fence.
+- Tabs become four spaces; trailing spaces and blank first and last lines are dropped.
+- `chart` and `table` blocks keep their meaning above.
 
 ## Bulk mode
 

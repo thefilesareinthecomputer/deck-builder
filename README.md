@@ -161,16 +161,36 @@ Source: the Q3 shipment ledger.
 
 Field values are YAML, so quote any value that contains `: `. `deck-builder brand show <slug>` lists a brand's layouts, fields and character budgets. The [full showcase deck](tests/fixtures/demo-brands/showcase/deck.md) builds into all three brands with a single `build --data` command.
 
+Code goes in a fenced block with its language. It builds as editable text, highlighted in the brand's colors on a panel that fits it, and never wraps; `check` reports a line too long for the panel. `{6-8}` marks lines, `lines` numbers them and `title=` names the file. The first slide in the grid below is this one:
+
+````markdown
+## The web form now saves each line
+layout: code
+subtitle: A timeout used to drop the basket; now it loses a line at most
+
+```python {6-8} lines title="orders/basket.py"
+def add_line(basket, item, quantity):
+    line = OrderLine(basket.id, item.sku, quantity)
+    if not item.in_stock(quantity):
+        raise OutOfStock(item.sku)
+    basket.lines.append(line)
+    # save now, so a later timeout can't drop it
+    db.session.add(line)
+    db.session.commit()
+    return line
+```
+````
+
 ## Example decks
 
 <p align="center">
-  <img src="docs/images/decks.png" width="100%" alt="Nine slides from the three demo brands' decks, one column per brand. Dark green and tan paper supplier: a warehouse illustration beside its caption, a column chart of on-time delivery against the regional average, and three labeled risk bands. Navy and orange office-systems company: a navy title slide, five process chevrons in a ramp of navy, and a line chart of planned against actual installs. Charcoal and terracotta soap maker: a stacked column chart of revenue by channel, a photo of soap bars beside four bullets, and three cards with charcoal labels.">
+  <img src="docs/images/decks.png" width="100%" alt="Nine slides from the three demo brands' decks, one column per brand. Dark green and tan paper supplier: a Python function on a dark code panel with three highlighted lines, a column chart of on-time delivery against the regional average, and three labeled risk bands. Navy and orange office-systems company: a navy title slide, five process chevrons in a ramp of navy, and a line chart of planned against actual installs. Charcoal and terracotta soap maker: a stacked column chart of revenue by channel, a photo of soap bars beside four bullets, and three cards with charcoal labels.">
 </p>
-<p align="center"><sub>Nine slides from the demo brands' pitch and review decks, a column per brand. Each brand's kit sets its own type, colors, chart palette and takeaway style.</sub></p>
+<p align="center"><sub>Nine slides from the demo brands' pitch and review decks, a column per brand. Each brand's kit sets its own type, colors, chart palette, code panel and takeaway style.</sub></p>
 
 ## Design
 
-Every generated kit follows one design standard, built from presentation research and documented in `deck-builder docs design`. Titles are bold sentences in the same place on every slide. Short content sits at the optical center instead of hugging the top. Comparisons sit on tinted panels, tables are quiet (a dark header, thin rules, right-aligned figures, no word ever broken), and charts are too: bars start at zero, gridlines are hairlines, axis labels are muted, and a labeled bar chart drops its scale. Shares of a whole are sorted bars, never pies or doughnuts. An optional `takeaway:` band states each slide's conclusion, and one short accent rule is the only decoration.
+Every generated kit follows one design standard, built from presentation research and documented in `deck-builder docs design`. Titles are bold sentences in the same place on every slide. Short content sits at the optical center instead of hugging the top. Comparisons sit on tinted panels, tables are quiet (a dark header, thin rules, right-aligned figures, no word ever broken), and charts are too: bars start at zero, gridlines are hairlines, axis labels are muted, and a labeled bar chart drops its scale. Shares of a whole are sorted bars, never pies or doughnuts. Code sits on a quiet panel in a monospace font: keywords bold, comments italic, every token color at 4.5:1 on the panel, and a light or dark panel per brand. An optional `takeaway:` band states each slide's conclusion, and one short accent rule is the only decoration.
 
 Set `generate.mode` in `brand.yaml` by how the deck is used: `projected` (the default) for a room, with nothing under 18 pt, or `read` for decks sent ahead and read on screen, with a 14 pt body on a readable measure. `generate.type` adjusts any size.
 

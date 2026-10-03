@@ -121,6 +121,17 @@ def test_round_trip_showcase_in_each_demo_brand(project, capsys, slug):
     assert a == b
 
 
+@pytest.mark.parametrize("slug", SLUGS)
+def test_round_trip_code_blocks_in_each_demo_brand(project, capsys, slug):
+    """Each code block comes back fenced with its language, highlighted lines, line numbers and filename, and
+    the shapes drawn around it (panel, bands, number column, filename) never come back as content."""
+    row = next(r for r in rows(DEMO / "code" / "brands.csv") if r["brand"] == slug)
+    a, b = round_trip(project, capsys, DEMO / "code" / "deck.md", row, slug, f"code-{slug}")
+    assert a == b
+    report = (project / "imported" / f"code-{slug}" / "import-report.md").read_text()
+    assert "Unplaced items: 0." in report
+
+
 STRICT = """
 ---
 brand: stock

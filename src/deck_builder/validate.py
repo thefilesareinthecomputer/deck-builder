@@ -8,14 +8,23 @@ from __future__ import annotations
 import copy
 import datetime as dt
 import re
+import unicodedata
 from pathlib import Path
 from typing import Any
 
+from deck_builder import highlight
 from deck_builder import template as tpl
 from deck_builder.brand.registry import Brand
-from deck_builder.build.visuals import CELL_PAD_EMU, CHAR_EM, TABLE_DEFAULTS, column_widths
+from deck_builder.build.visuals import (
+    CELL_PAD_EMU,
+    CHAR_EM,
+    CODE_TITLE_LINES,
+    TABLE_DEFAULTS,
+    column_widths,
+    number_columns,
+)
 from deck_builder.errors import Issue
-from deck_builder.model import Chart, Deck, Icon, Image, Slide, Table, Value, kind_of
+from deck_builder.model import Chart, Code, Deck, Icon, Image, Slide, Table, Value, kind_of
 
 STARTER_ICONS = Path(__file__).resolve().parent / "data" / "icons"  # alpha masks every brand can use
 CHART_TYPES = ("column", "stacked-column", "bar", "stacked-bar", "line", "pie", "doughnut")
@@ -46,6 +55,8 @@ def text_of(value: Value) -> str:
         return "\n".join([value.title or "", *value.categories, *(s.name for s in value.series)])
     if isinstance(value, Image | Icon):
         return ""
+    if isinstance(value, Code):
+        return value.text
     return str(value)
 
 
@@ -193,7 +204,7 @@ def resolve(deck: Deck, brand: Brand, deck_dir: Path) -> tuple[Deck, list[Issue]
 
 
 # Limits from the design research (`docs design`): convention, not standard, so they warn and never fail.
-MAX_BULLETS, MAX_WORDS, MAX_RUN, MAX_SERIES = 4, 60, 3, 8
+MAX_BULLETS, MAX_WORDS, MAX_RUN, MAX_SERIES, MAX_CODE_LINES = 4, 60, 3, 8, 12
 
 
 def _conventions(deck: Deck, brand: Brand, spec_layouts: dict[str, Any]) -> list[Issue]:
@@ -237,7 +248,11 @@ def _conventions(deck: Deck, brand: Brand, spec_layouts: dict[str, Any]) -> list
                 out.append(Issue("SERIES_MANY", f"{len(val.series)} series; eight is the most a chart's colors keep "
                                  "apart", field=name, severity="warning", actual=len(val.series), limit=MAX_SERIES,
                                  **at))
-            if isinstance(val, Table | Chart | Image | Icon):
+            if projected and isinstance(val, Code) and len(val.lines) > MAX_CODE_LINES:
+                out.append(Issue("CODE_LINES_MANY", f"{len(val.lines)} lines of code on a projected slide; "
+                                 f"{MAX_CODE_LINES} or fewer read in the time a slide is up", field=name,
+                                 severity="warning", actual=len(val.lines), limit=MAX_CODE_LINES, **at))
+            if isinstance(val, Table | Chart | Image | Icon | Code):
                 continue
             words += len(plain(text_of(val)).split())
             if projected and isinstance(val, list) and len(val) > MAX_BULLETS and \
@@ -304,7 +319,8 @@ def _check_slide(s: Slide, n: int, spec_layouts: dict[str, Any], prs_layouts: di
         want = fs.get("kind", "text")
         s.fields[name] = _coerce(s.fields[name], want)
         out += _check_field(name, s.fields[name], fs, want, brand, deck_dir, layout, at)
-        txt = plain(text_of(s.fields[name]))
+        fv = s.fields[name]
+        txt = text_of(fv) if isinstance(fv, Code) else plain(text_of(fv))  # code has no inline markup
         for pat in banned:
             if pat.search(txt):
                 out.append(Issue("BANNED_PATTERN", f"matches {pat.pattern!r}", field=name, **at))
@@ -332,6 +348,10 @@ def _check_field(name: str, val: Value, fs: dict[str, Any], want: str, brand: Br
                              actual=n, limit=fs["max_chars"], **at))
     if want in ("text", "bullets") and fs.get("line_chars") and fs.get("max_lines"):
         out += _check_lines(name, val, fs, want, at)
+    if want in ("text", "bullets") and fs.get("line_chars"):
+        out += _check_spans(name, val, int(fs["line_chars"]), at)
+    if isinstance(val, Code):
+        out += _check_code(name, val, fs, at)
     if want == "bullets" and isinstance(val, list) and val:
         if fs.get("max_bullets") and len(val) > fs["max_bullets"]:
             out.append(Issue("BUDGET_BULLETS", f"{len(val)} bullets, budget {fs['max_bullets']}", field=name,
@@ -388,6 +408,46 @@ def _check_lines(name: str, val: Value, fs: dict[str, Any], want: str, at: dict[
                       f"the box holds {fs['max_lines']:g}", field=name, actual=round(need, 1),
                       limit=fs["max_lines"], **at)]
     return []
+
+
+INLINE_CODE = re.compile(r"`([^`]+)`")
+
+
+def _check_spans(name: str, val: Value, per_line: int, at: dict[str, Any]) -> list[Issue]:
+    """CODE_LONG as a warning for an inline `code` span longer than a line of its field: a token such as
+    `warehouse.orders.shipped_at` has no space to wrap at, so the renderer breaks it mid-token."""
+    items = [t for _, t in val] if isinstance(val, list) else [str(val)]
+    return [Issue("CODE_LONG", f"inline code {span[:40]!r} is {len(span)} characters, and a line of this field "
+                  f"holds about {per_line}; it will break mid-token", field=name, severity="warning",
+                  actual=len(span), limit=per_line, **at)
+            for t in items for span in INLINE_CODE.findall(t) if len(span) > per_line]
+
+
+def code_width(line: str) -> int:
+    """Columns a line of code takes in a monospace font: East Asian wide characters take two."""
+    return sum(2 if unicodedata.east_asian_width(ch) in "WF" else 1 for ch in line)
+
+
+def _check_code(name: str, c: Code, fs: dict[str, Any], at: dict[str, Any]) -> list[Issue]:
+    """Code never wraps: CODE_LONG for each line past the panel's width and for more lines than it holds,
+    and CODE_LANGUAGE (a warning) when the language has no highlighter, so it builds as plain text."""
+    out: list[Issue] = []
+    if not highlight.known(c.language):
+        out.append(Issue("CODE_LANGUAGE", f"{c.language!r} isn't a language the highlighter knows; the block "
+                         "builds as plain text", field=name, severity="warning", **at))
+    cols = int(fs["max_cols"]) - number_columns(c) if fs.get("max_cols") else None
+    numbers = " beside its line numbers" if c.numbers else ""
+    for k, ln in enumerate(c.lines, start=1):
+        if cols and (w := code_width(ln)) > cols:
+            out.append(Issue("CODE_LONG", f"line {k} is {w} characters, and the panel holds {cols}{numbers}: "
+                             f"{ln.strip()[:40]!r}", field=name, actual=w, limit=cols, **at))
+    if fs.get("max_lines"):
+        room = int(fs["max_lines"]) - (CODE_TITLE_LINES if c.title else 0)
+        if len(c.lines) > room:
+            with_title = f" (the filename line takes {CODE_TITLE_LINES})" if c.title else ""
+            out.append(Issue("CODE_LONG", f"{len(c.lines)} lines, and the panel holds {room}{with_title}",
+                             field=name, actual=len(c.lines), limit=room, **at))
+    return out
 
 
 def _check_table(name: str, t: Table, fs: dict[str, Any], brand: Brand, layout: Any,

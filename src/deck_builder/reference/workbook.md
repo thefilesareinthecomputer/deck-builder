@@ -24,6 +24,7 @@ README sheet.
 | Bullets | One per line, starting `- `; two spaces of indent per level |
 | Image | `![alt text](assets/photo.png)` or `![alt](brand:logo/primary)` |
 | Icon | `brand:icon/<id>` |
+| Code | The whole fenced block, fences and language included, as in deck.md (`.csv` can't hold it) |
 | Chart or table | `sheet:<sheet name>` |
 
 Columns whose header starts with `#` are helpers and ignored. The engine reads cell values only, so

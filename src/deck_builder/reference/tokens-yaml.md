@@ -7,7 +7,20 @@ budgets after a test render. `deck-builder schema tokens` prints the full schema
 ```yaml
 spec_version: 1
 text:
-  code_font: Courier New         # for `code` in slide text
+  code_font: Menlo               # code blocks and `code` in slide text; brand.yaml fonts.code sets it
+code:                            # code blocks; brand init writes it from the palette
+  theme: light                   # light: the surface color | dark: the ink color
+  panel: surface                 # the panel behind the code
+  highlight: "E1E5EA"            # the band behind highlighted lines
+  colors:                        # one per token role, each at 4.5:1 on the panel and the band
+    keyword: primary             # bold
+    type: primary
+    function: primary
+    string: "B05A1C"             # brand init darkens (or, dark, lightens) a color under 4.5:1
+    number: "B05A1C"
+    comment: muted               # italic; also the line numbers and the filename
+    operator: ink
+    plain: ink
 chart:                           # styling for charts the engine draws; colors are palette names or hex
   font_size: 12
   text_color: ink                # data labels
@@ -49,7 +62,7 @@ layouts:
 | Key | Meaning |
 |---|---|
 | `idx` | The placeholder's index on the template layout; `deck-builder inspect <template>` lists them |
-| `kind` | `text`, `bullets`, `table`, `chart`, `image` or `icon` |
+| `kind` | `text`, `bullets`, `table`, `chart`, `image`, `icon` or `code` |
 | `required` | `check` fails when the field is empty |
 | `max_chars` | Characters after inline markup is removed |
 | `max_bullets`, `max_bullet_chars`, `max_level` | Bullet count, per-bullet length, deepest nesting (0 = flat) |
@@ -57,6 +70,7 @@ layouts:
 | `emphasis` | A color for `**bold**` runs in the field |
 | `fit`, `fit_max` | Image fields: always fit inside the box, never crop; a fitted image takes at most this share of the box |
 | `max_rows`, `max_cols` | Table limits, header row not counted in rows; `brand init` sets rows to what fits the placeholder at one line per row |
+| `max_cols`, `max_lines` on a `code` field | Characters a line of code holds and lines the panel holds, exact for a monospace font; `check` reports `CODE_LONG` past either |
 | `color` | Icon fields: the palette name or hex the icon is recolored to |
 
 ## Tuning budgets

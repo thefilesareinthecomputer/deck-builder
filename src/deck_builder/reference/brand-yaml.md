@@ -37,6 +37,8 @@ theme_colors:                    # PowerPoint theme slots -> palette names or he
 fonts:                           # set in the theme, so every placeholder inherits them
   heading: {family: Inter, fallback: Arial}
   body: {family: Inter, fallback: Arial}
+  code: {family: Menlo, fallback: Consolas}   # code blocks and `code`; default Menlo. Code runs are marked
+                                              # fixed-pitch, so a machine without it substitutes a monospace font
 
 logos:                           # id -> PNG under this folder; decks use brand:logo/<id>
   primary: assets/logo.png
@@ -67,6 +69,8 @@ generate:                        # read only by `brand init`
   bands: {label_shape: parallelogram}  # parallelogram | rectangle (designed set)
   process: {icons: false}        # true: each process step holds a white icon, its title under the arrow (designed set)
   emphasis: primary              # primary | ink: the color of **bold** on cards and bands (designed set)
+  code: {theme: light}           # light | dark: code on the surface color, or light code on the ink color
+                                 # (full and designed sets)
   type:                          # type sizes in points; leave any key out to keep the mode's size
     title: 32                    # content-slide titles (read: 28)
     title_bold: true
@@ -78,6 +82,7 @@ generate:                        # read only by `brand init`
     big_number: 120              # (read: 96)
     kicker: 18                   # designed set: the section label above a content title (read: 12)
     lede: 20                     # designed set: the subtitle line under a content title (read: 15)
+    code: 18                     # full and designed sets: code blocks (read: 12)
 ```
 
 Pick the mode by how the deck is used. A projected deck keeps every size at 18 pt or more. A read deck

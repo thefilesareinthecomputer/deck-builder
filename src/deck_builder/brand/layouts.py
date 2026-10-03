@@ -26,6 +26,10 @@ PANEL_PAD = 0.3
 LOGO_SLOT_W, LOGO_SLOT_H = 1.8, 0.65  # the optional logo at a comparison panel's bottom right (designed set)
 DEFAULT_INSET = 0.1  # inches: PowerPoint's left and right text inset when a box sets none
 BULLET_HANG = 0.375  # inches: the master's first-level bullet indent, which every generated list keeps
+CODE_PAD_X, CODE_PAD_Y = 0.25, 0.18  # inches: the code panel's text insets
+CODE_PITCH = 1.2  # a code line's height as a multiple of its size, set exactly so lines and bands line up
+CODE_EM = 0.602  # a monospace character's width in ems: Menlo's, the widest of the default code fonts
+CODE_RADIUS = 0.12  # inches: the code panel's corner radius
 
 
 @dataclass(frozen=True)
@@ -42,6 +46,7 @@ class Scale:
     big_number: float = 120
     kicker: float = 18  # the section label above a content-slide title (designed set)
     lede: float = 20  # the one-line subtitle under a content-slide title (designed set)
+    code: float = 18  # code blocks (full and designed sets)
 
     @classmethod
     def from_meta(cls, gen: dict[str, Any]) -> Scale:
@@ -56,7 +61,7 @@ class Scale:
 MODES: dict[str, dict[str, Any]] = {
     "projected": {},
     "read": {"title": 28, "subtitle": 18, "body": 14, "two_col": 13, "icon_text": 13, "table": 12,
-             "big_number": 96, "kicker": 12, "lede": 15},
+             "big_number": 96, "kicker": 12, "lede": 15, "code": 12},
 }
 READ_MEASURE = 9.0  # inches: a read deck's single-column body, about 90 characters a line at 14 pt
 
@@ -71,6 +76,7 @@ class Style:
     process_icons: bool = False  # process steps hold a white icon, with the step's title under the arrow
     emphasis: str = "primary"  # primary | ink: the color of **bold** on cards and bands (designed set)
     ramp_floor: int = 60  # the lightest tint in the primary ramp; brand init computes it from the brand's colors
+    code_theme: str = "light"  # light: code on the surface color | dark: light code on the ink color
 
     @classmethod
     def from_meta(cls, gen: dict[str, Any]) -> Style:
@@ -78,7 +84,8 @@ class Style:
                    icon_tile=str((gen.get("icons") or {}).get("tile", "none")),
                    band_label=str((gen.get("bands") or {}).get("label_shape", "parallelogram")),
                    process_icons=bool((gen.get("process") or {}).get("icons", False)),
-                   emphasis=str(gen.get("emphasis", "primary")))
+                   emphasis=str(gen.get("emphasis", "primary")),
+                   code_theme=str((gen.get("code") or {}).get("theme", "light")))
 
 
 @dataclass
@@ -86,7 +93,7 @@ class PH:
     """One placeholder of a generated layout: the field it fills, its kind, idx, box in inches and type style."""
 
     field: str
-    kind: str  # title | body | pic | chart | tbl
+    kind: str  # title | body | pic | chart | tbl | code
     idx: int
     x: float
     y: float
@@ -299,6 +306,23 @@ def _defs(g: Grid, s: Scale, body_anchor: str, big_number: str, mode: str = "pro
                            g.body_h - icon - 1.15, size=s.icon_text, align="ctr"))
     add(LayoutDef("icon-row", "Icon Row", "Three icons, each with a short line of text", icon_row,
                   decor=icon_decor))
+    # Code on a quiet rounded panel in tokens.yaml code.panel, which the build draws trimmed to each slide's
+    # code: the box is the most the code can take. The layout leaves it unfilled, since LibreOffice draws a
+    # filled layout placeholder's box under the slide's own.
+    ink = "bg1" if st.code_theme == "dark" else "tx1"
+
+    def code_panel(idx: int, x: float, w: float, h: float) -> PH:
+        return PH("code", "code", idx, x, BODY_Y, w, h, size=s.code, color=ink, required=True, inset=CODE_PAD_X)
+
+    add(LayoutDef("code", "Code", "A title and one code block on a panel, such as a query or a config",
+                  [_title(g, s), code_panel(1, g.m, g.cw, single_h), _takeaway(g, st.takeaway)]))
+    split = g.cw * 0.4  # bullets take 40%, so the code gets the width it needs
+    top = CODE_PAD_Y - 0.05  # the first bullet lines up with the first line of code, less the default inset
+    add(LayoutDef("code-right", "Code Right", "Bullets on the left, a code block on the right", [
+        _title(g, s),
+        PH("body", "body", 1, g.m, BODY_Y + top, split - 0.2, single_h - top, size=s.two_col, bullets=True),
+        code_panel(2, g.m + split + 0.2, g.cw - split - 0.2, g.body_h),
+    ]))
     panel_h = g.body_h - 0.6
     panels = [Decor(x, BODY_Y, w, panel_h, "bg2") for x, w in two]
     logo_h = LOGO_SLOT_H if designed else 0.0  # the designed set gives each panel an optional logo slot
@@ -510,7 +534,7 @@ SETS = {
     "standard": ["title", "section", "content", "two-col", "big-number", "chart", "table", "image", "quote",
                  "closing"],
     "full": ["title", "section", "agenda", "content", "two-col", "comparison", "big-number", "chart", "table",
-             "image", "image-right", "icon-row", "team", "quote", "closing"],
+             "image", "image-right", "code", "code-right", "icon-row", "team", "quote", "closing"],
 }
 # The designed set: the full set, every content slide with a section label and a subtitle line, plus
 # cards, process, band and logo-row layouts built from shapes rather than loose text.

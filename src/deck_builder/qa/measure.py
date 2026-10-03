@@ -28,7 +28,9 @@ from typing import Any
 
 from pptx import Presentation
 from pptx.enum.shapes import PP_PLACEHOLDER
+from pptx.oxml.ns import qn
 
+from deck_builder.build.visuals import CODE_DESCR
 from deck_builder.errors import Issue
 
 EMU_PER_PT = 12700
@@ -138,6 +140,12 @@ def _chart_tokens(sh: Any) -> set[str]:
     return {norm(t) for t in TOKEN.findall(text)} - {""}
 
 
+def _is_code(sh: Any) -> bool:
+    """A code block the build made: its alt text names the language (`python code`)."""
+    cnvpr = sh._element.find(f"{qn('p:nvSpPr')}/{qn('p:cNvPr')}")
+    return cnvpr is not None and bool(CODE_DESCR.match(str(cnvpr.get("descr") or "")))
+
+
 def _is_protected(sh: Any) -> bool:
     return bool(getattr(sh, "is_placeholder", False)) and sh.placeholder_format.type in PROTECTED_TYPES
 
@@ -164,6 +172,8 @@ def text_shapes(pptx: Path) -> tuple[float, list[list[TextShape]]]:
             if not getattr(sh, "has_text_frame", False) or not sh.text_frame.text.strip():
                 continue
             tokens = {norm(t) for t in TOKEN.findall(sh.text_frame.text)} - {""}
+            if _is_code(sh):  # code splits only at spaces, as pdftotext does: `df.groupby("week")` is one word
+                tokens |= {norm(t) for t in sh.text_frame.text.split()} - {""}
             shapes.append(TextShape(sh.name, _box(sh), tokens, protected=_is_protected(sh)))
         out.append(shapes)
     return prs.slide_width / EMU_PER_PT, out

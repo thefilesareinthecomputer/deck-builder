@@ -47,7 +47,8 @@
     "fonts": {
       "type": "object",
       "additionalProperties": false,
-      "properties": {"heading": {"$ref": "#/$defs/font"}, "body": {"$ref": "#/$defs/font"}}
+      "properties": {"heading": {"$ref": "#/$defs/font"}, "body": {"$ref": "#/$defs/font"},
+                     "code": {"$ref": "#/$defs/font", "description": "code blocks and inline code (default Menlo)"}}
     },
     "logos": {"type": "object", "additionalProperties": {"$ref": "#/$defs/relpath"}},
     "icons": {
@@ -91,8 +92,14 @@
             "table": {"type": "number", "minimum": 8, "maximum": 32, "description": "table text, header included (default 16)"},
             "big_number": {"type": "number", "minimum": 48, "maximum": 200, "description": "the big-number numeral (default 120)"},
             "kicker": {"type": "number", "minimum": 9, "maximum": 24, "description": "designed set: the section label above a content title (default 18)"},
-            "lede": {"type": "number", "minimum": 12, "maximum": 32, "description": "designed set: the subtitle line under a content title (default 20)"}
+            "lede": {"type": "number", "minimum": 12, "maximum": 32, "description": "designed set: the subtitle line under a content title (default 20)"},
+            "code": {"type": "number", "minimum": 8, "maximum": 32, "description": "full and designed sets: code blocks (default 18; 12 in a read deck)"}
           }
+        },
+        "code": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {"theme": {"enum": ["light", "dark"], "description": "full and designed sets: code on the surface color, or light code on the ink color (default light)"}}
         },
         "mode": {"enum": ["projected", "read"], "description": "projected decks are presented to a room; read decks are sent and read on a screen: smaller type, a 9 in text measure, text from the top (default projected)"},
         "body_anchor": {"enum": ["middle", "top"], "description": "where single-column body text sits in its area (default middle)"},

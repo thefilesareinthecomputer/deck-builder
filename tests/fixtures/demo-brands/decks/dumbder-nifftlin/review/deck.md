@@ -235,6 +235,27 @@ takeaway: Both report recycled content to their own customers from Q4
 ### logo3
 ![Soap Club logo](assets/soap-club-logo.png)
 
+## The web form now saves each line
+layout: code
+kicker: Next quarter
+subtitle: A timeout used to drop the basket; now it loses a line at most
+takeaway: The fix ships in the October release
+
+```python {6-8} lines title="orders/basket.py"
+def add_line(basket, item, quantity):
+    line = OrderLine(basket.id, item.sku, quantity)
+    if not item.in_stock(quantity):
+        raise OutOfStock(item.sku)
+    basket.lines.append(line)
+    # save now, so a later timeout can't drop it
+    db.session.add(line)
+    db.session.commit()
+    return line
+```
+
+Notes:
+The engineering ticket holds the full change and its tests.
+
 ## Q4 work starts with the web form fix
 layout: content
 kicker: Next quarter

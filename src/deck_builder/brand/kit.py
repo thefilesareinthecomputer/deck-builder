@@ -32,6 +32,9 @@ def color_refs(brand: Brand) -> list[tuple[str, str]]:
                 refs += [(f"tokens.yaml {section}.status.{sk}", str(sv)) for sk, sv in v.items()]
             elif k.endswith(("_color", "_fill", "_text")) or k in ("text", "rule"):
                 refs.append((f"tokens.yaml {section}.{k}", str(v)))
+    code = brand.tokens.get("code") or {}
+    refs += [(f"tokens.yaml code.{k}", str(code[k])) for k in ("panel", "highlight") if code.get(k)]
+    refs += [(f"tokens.yaml code.colors.{role}", str(ref)) for role, ref in (code.get("colors") or {}).items()]
     for lname, ls in (brand.tokens.get("layouts") or {}).items():
         for fname, fs in (ls.get("fields") or {}).items():
             if fs.get("color"):
@@ -180,6 +183,11 @@ def contrast_issues(brand: Brand) -> list[Issue]:
             bg_hex = (slots.get(str(bg_ref)) or brand.color(str(bg_ref))) if bg_ref else None
             if bg_hex:
                 pairs.append((f"table status {key} on {bg_name}", hexv, bg_hex, GRAPHIC_MIN))
+    code = brand.tokens.get("code") or {}  # every token color on the panel and on a highlighted line
+    grounds = [(k, slots.get(str(code[k])) or brand.color(str(code[k]))) for k in ("panel", "highlight") if code.get(k)]
+    for role, ref in (code.get("colors") or {}).items():
+        hexv = slots.get(str(ref)) or brand.color(str(ref))
+        pairs += [(f"code {role} on the {where}", hexv, ground, 4.5) for where, ground in grounds if ground]
     out = []
     for label, fg, bg, lo in pairs:
         if fg and bg and (ratio := contrast(fg, bg)) < lo:
@@ -265,6 +273,8 @@ def _field_summary(fs: dict[str, Any]) -> str:
             s += f"<={fs['max_bullet_chars']}"
     if fs.get("max_rows"):
         s += f" {fs['max_rows']}r x {fs.get('max_cols', '?')}c"
+    if s.startswith("code") and fs.get("max_cols"):
+        s += f" {fs['max_cols']} chars x {fs.get('max_lines', '?')} lines"
     if fs.get("required"):
         s += " *"
     return s

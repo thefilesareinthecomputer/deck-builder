@@ -70,6 +70,8 @@ job is everything it can't judge.
 - Images and logos are undistorted and uncropped, with clear space, and logos appear only where the
   slide is about that product or company.
 - Charts read at a glance: bars start at zero, series are labeled, colors are told apart.
+- Code reads from the back of the room: no line runs past its panel, the block is the few lines that
+  make the point, and the highlighted lines are the ones the title or takeaway explains.
 - Nothing is hard to read: light text on a light fill, or small text on a busy image.
 
 **Language**

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -9,15 +10,18 @@ from PIL import Image as PILImage
 from pptx.chart.data import CategoryChartData
 from pptx.dml.color import RGBColor
 from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION, XL_MARKER_STYLE, XL_TICK_LABEL_POSITION, XL_TICK_MARK
-from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
+from pptx.enum.shapes import MSO_SHAPE
+from pptx.enum.text import MSO_ANCHOR, MSO_AUTO_SIZE, PP_ALIGN
 from pptx.oxml.ns import qn
 from pptx.oxml.xmlchemy import OxmlElement
-from pptx.util import Pt
+from pptx.util import Emu, Pt
 
+from deck_builder import highlight
 from deck_builder.brand.kit import contrast
+from deck_builder.brand.layouts import CODE_EM, CODE_PITCH, CODE_RADIUS
 from deck_builder.brand.registry import Brand
-from deck_builder.build.text import CODE_FONT_DEFAULT, add_runs
-from deck_builder.model import Chart, Table
+from deck_builder.build.text import CODE_FONT_DEFAULT, add_runs, mono
+from deck_builder.model import Chart, Code, Table
 
 CHART_TYPES = {
     "column": XL_CHART_TYPE.COLUMN_CLUSTERED,
@@ -343,6 +347,144 @@ def fill_table(slide: Any, ph: Any, spec: Table, brand: Brand) -> None:
                 cell.fill.background()  # no fill, so the default style's accent tint doesn't show through
             if rule is not None:
                 _rules(cell, rule, r)
+
+
+CODE_TITLE_LINES = 2  # code lines a `title=` filename line takes from the panel in check's count
+TITLE_DROP = 1.5  # the code starts this many lines below the panel's top inset when there's a filename line
+CODE_DESCR = re.compile(r"^(?:(\S+) )?code$")  # the alt text fill_code writes, which import reads back
+
+
+def number_columns(code: Code) -> int:
+    """Characters the line-number column takes from a line of code: the widest number and a two-space gap."""
+    return len(str(len(code.lines))) + 2 if code.numbers else 0
+
+
+@dataclass
+class CodeBox:
+    """A code placeholder's type and insets, as its layout placeholder sets them (PowerPoint's defaults
+    otherwise). Lengths in EMU."""
+
+    size: float  # points
+    pitch: int  # one line's height
+    left: int
+    top: int
+    bottom: int
+    exact: bool  # the layout sets the line pitch exactly, so paragraphs needn't
+
+
+def _code_box(ph: Any) -> CodeBox:
+    base = getattr(ph, "_base_placeholder", None)
+    el = base._element if base is not None else ph._element
+    rpr = el.find(f".//{qn('a:lstStyle')}/{qn('a:lvl1pPr')}/{qn('a:defRPr')}")
+    size = int(rpr.get("sz")) / 100 if rpr is not None and rpr.get("sz") else 18.0
+    pts = el.find(f".//{qn('a:lstStyle')}/{qn('a:lvl1pPr')}/{qn('a:lnSpc')}/{qn('a:spcPts')}")
+    pitch = int(pts.get("val")) * 127 if pts is not None else int(size * CODE_PITCH * 12700)
+    body = el.find(f".//{qn('a:bodyPr')}")
+    ins = {k: int(body.get(k, d)) if body is not None else d
+           for k, d in (("lIns", 91440), ("tIns", 45720), ("bIns", 45720))}
+    return CodeBox(size, pitch, ins["lIns"], ins["tIns"], ins["bIns"], pts is not None)
+
+
+def _bare_shape(slide: Any, ph: Any, kind: Any, name: str, y: int, h: int, color: RGBColor) -> Any:
+    """A filled shape the code placeholder's width, with no outline, shadow or text style, placed in front of
+    whatever is already behind the placeholder and behind the placeholder itself."""
+    shape = slide.shapes.add_shape(kind, ph.left, Emu(y), ph.width, Emu(h))
+    shape.name = name
+    style = shape._element.find(qn("p:style"))
+    if style is not None:
+        shape._element.remove(style)
+    shape.fill.solid()
+    shape.fill.fore_color.rgb = color
+    shape.line.fill.background()
+    ph._element.addprevious(shape._element)
+    return shape
+
+
+def _plain_box(slide: Any, name: str, x: int, y: int, w: int, h: int, left: int, top: int) -> Any:
+    """A text box that never wraps, grows or adds insets beyond these, for a line-number column or label."""
+    box = slide.shapes.add_textbox(Emu(x), Emu(y), Emu(w), Emu(h))
+    box.name = name
+    tf = box.text_frame
+    tf.word_wrap, tf.auto_size = False, MSO_AUTO_SIZE.NONE
+    tf.margin_left, tf.margin_top, tf.margin_right, tf.margin_bottom = Emu(left), Emu(top), Emu(0), Emu(0)
+    return box
+
+
+def fill_code(slide: Any, ph: Any, code: Code, brand: Brand, code_font: str) -> None:
+    """Code as editable text, one run per token in its role's color from tokens.yaml code: keywords bold,
+    comments italic, never wrapped. Line numbers sit in their own muted column at the panel's left, a
+    highlighted line gets a band behind it, and a `title=` filename sits on the panel's first line.
+
+    The layout's box is the most the code can take. With tokens.yaml code.panel set, the panel is drawn as
+    its own rounded shape trimmed to the code, and the placeholder trimmed with it, so a highlight band can
+    sit between the panel and the text. Alt text names the language (`python code`), which `import` reads
+    back.
+    """
+    tok = brand.tokens.get("code") or {}
+    colors = {role: _rgb(brand, ref) for role, ref in (tok.get("colors") or {}).items()}
+    muted = colors.get("comment")
+    box = _code_box(ph)
+    size, pitch, left, top = box.size, box.pitch, box.left, box.top
+    char = int(size * CODE_EM * 12700)
+    idx = ph.placeholder_format.idx
+    ph._element.find(f"{qn('p:nvSpPr')}/{qn('p:cNvPr')}").set(
+        "descr", f"{code.language} code" if code.language else "code")
+    tf = ph.text_frame
+    tf.word_wrap = False
+    tf.text = ""
+    first = top + (int(pitch * TITLE_DROP) if code.title else 0)
+    panel = _rgb(brand, tok.get("panel"))
+    if panel is not None:
+        x, y, w = ph.left, ph.top, ph.width
+        h = min(ph.height, first + len(code.lines) * pitch + box.bottom)
+        ph.left, ph.top, ph.width, ph.height = x, y, w, h  # every coordinate, or the inherited ones are lost
+        shape = _bare_shape(slide, ph, MSO_SHAPE.ROUNDED_RECTANGLE, f"Code panel {idx}", y, h, panel)
+        shape.adjustments[0] = CODE_RADIUS * 914400 / min(w, h)
+
+    def line(p: Any, runs: list[tuple[str, str]], color: RGBColor | None = None) -> None:
+        if not box.exact:
+            p.line_spacing = Emu(pitch)
+        for role, text in runs:
+            run = p.add_run()
+            run.text = text
+            mono(run, code_font)
+            if role in highlight.BOLD:
+                run.font.bold = True
+            if role in highlight.ITALIC:
+                run.font.italic = True
+            if color or colors.get(role):
+                run.font.color.rgb = color or colors[role]
+
+    if code.title:
+        tf.margin_top = Emu(first)
+        label = _plain_box(slide, f"Code title {idx}", ph.left, ph.top, ph.width, top + pitch, left, top)
+        p = label.text_frame.paragraphs[0]
+        line(p, [("plain", code.title)], muted)
+        p.runs[0].font.size = Pt(size)
+        p.line_spacing = Emu(pitch)
+    if code.numbers:
+        digits = len(str(len(code.lines)))
+        tf.margin_left = Emu(left + char * number_columns(code))
+        gutter = _plain_box(slide, f"Code line numbers {idx}", ph.left, ph.top, left + char * digits, ph.height,
+                            left, first)
+        for n in range(1, len(code.lines) + 1):
+            p = gutter.text_frame.paragraphs[0] if n == 1 else gutter.text_frame.add_paragraph()
+            p.alignment = PP_ALIGN.RIGHT
+            line(p, [("plain", str(n))], muted)
+            p.runs[0].font.size = Pt(size)
+            p.line_spacing = Emu(pitch)
+    for n, runs in enumerate(highlight.lines(code)):
+        line(tf.paragraphs[0] if n == 0 else tf.add_paragraph(), runs)
+    band = _rgb(brand, tok.get("highlight")) or RGBColor.from_string("E5E7EB")
+    spans: list[list[int]] = []
+    for n in code.highlight:
+        if spans and n == spans[-1][1] + 1:
+            spans[-1][1] = n
+        else:
+            spans.append([n, n])
+    for a, b in spans:  # a band per run of highlighted lines, in front of the panel and behind the text
+        _bare_shape(slide, ph, MSO_SHAPE.RECTANGLE, f"Code highlight {idx} lines {a}-{b}",
+                    ph.top + first + (a - 1) * pitch, (b - a + 1) * pitch, band)
 
 
 def color_bold(ph: Any, hex_color: str) -> None:

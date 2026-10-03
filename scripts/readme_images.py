@@ -24,10 +24,10 @@ BRANDS = ("dumbder-nifftlin", "cubicle-nine", "soap-club")
 ROWS = (1, 3, 4)  # the title, cards and chart slides of the showcase deck
 CONTACT_BRAND = "dumbder-nifftlin"  # the brand the README's deck.md example uses
 # decks.png: nine slides from the brands' pitch and review decks, a column per brand, picked for range and
-# color: every row holds one chart, the three charts are three types, and each cell shows its brand's
-# colors. (brand, deck, slide) per cell, row by row.
+# color: every row holds one chart, the three charts are three types, one cell is a highlighted code block,
+# and each cell shows its brand's colors. (brand, deck, slide) per cell, row by row.
 GRID = (
-    (("dumbder-nifftlin", "pitch", 7), ("cubicle-nine", "pitch", 1), ("soap-club", "review", 4)),
+    (("dumbder-nifftlin", "review", 14), ("cubicle-nine", "pitch", 1), ("soap-club", "review", 4)),
     (("dumbder-nifftlin", "pitch", 4), ("cubicle-nine", "pitch", 5), ("soap-club", "pitch", 5)),
     (("dumbder-nifftlin", "review", 12), ("cubicle-nine", "review", 5), ("soap-club", "pitch", 3)),
 )

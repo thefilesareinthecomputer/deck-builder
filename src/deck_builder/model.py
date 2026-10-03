@@ -42,7 +42,22 @@ class Icon:
     ref: str  # brand:icon/<id>
 
 
-Value = str | Bullets | Table | Chart | Image | Icon
+@dataclass
+class Code:
+    """A fenced code block: highlighted by language, never wrapped, kept as editable text."""
+
+    language: str  # the fence's language tag; "" for plain text
+    text: str  # tabs expanded to four spaces, trailing spaces and blank edge lines trimmed
+    highlight: list[int] = field(default_factory=list)  # 1-based lines to mark, from `{3,5-7}`
+    numbers: bool = False  # line numbers, from `lines`
+    title: str | None = None  # a filename line above the code, from `title="etl.py"`
+
+    @property
+    def lines(self) -> list[str]:
+        return self.text.split("\n")
+
+
+Value = str | Bullets | Table | Chart | Image | Icon | Code
 
 
 @dataclass
@@ -78,6 +93,8 @@ def kind_of(value: Value) -> str:
         return "image"
     if isinstance(value, Icon):
         return "icon"
+    if isinstance(value, Code):
+        return "code"
     if isinstance(value, list):
         return "bullets"
     return "text"

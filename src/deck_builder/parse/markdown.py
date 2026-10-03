@@ -2,17 +2,20 @@
 from __future__ import annotations
 
 import re
+import shlex
 from pathlib import Path
 from typing import Any
 
 import yaml
 
 from deck_builder.errors import Issue
-from deck_builder.model import Bullets, Chart, Deck, Image, Series, Slide, Table, Value, Where
+from deck_builder.model import Bullets, Chart, Code, Deck, Image, Series, Slide, Table, Value, Where
 
 SPEC_VERSION = 1
 FIELD_LINE = re.compile(r"^([a-z_][\w-]*):(\s|$)")
-FENCE = re.compile(r"^```(\w+)?\s*$")
+FENCE = re.compile(r"^(`{3,}|~{3,})(.*)$")
+HIGHLIGHT = re.compile(r"^\{(\d{1,6}(?:-\d{1,6})?(?:,\d{1,6}(?:-\d{1,6})?)*)\}$")
+TAB = 4  # spaces a tab in a code block becomes
 IMAGE = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)\s*$")
 IMAGE_FIELD_LINE = re.compile(r"^([a-z_][\w-]*):\s*!\[")  # YAML reads the ! as a tag, so this can't parse
 BULLET = re.compile(r"^(\s*)[-*+]\s+(.*)$")
@@ -22,7 +25,73 @@ NOTES = re.compile(r"^(Notes|\?\?\?):?\s*$")
 STRAY_HEADING = re.compile(r"^#{1,6}\s")
 # A line that changes a deck's structure: a heading, an image, a fence, a field line, a pipe-table row,
 # or the start of speaker notes.
-STRUCTURE = re.compile(r"^\s*(#|!\[|```|\||(?:[a-z_][\w-]*:(?:\s|$))|(Notes|\?\?\?):?\s*$)")
+STRUCTURE = re.compile(r"^\s*(#|!\[|```|~~~|\||(?:[a-z_][\w-]*:(?:\s|$))|(Notes|\?\?\?):?\s*$)")
+
+
+def fence_open(ln: str) -> tuple[str, str] | None:
+    """(fence, info string) when ln opens a fenced block: three or more backticks or tildes at the start
+    of the line. A backtick fence's info string can't hold a backtick (CommonMark)."""
+    m = FENCE.match(ln)
+    if not m:
+        return None
+    fence, info = m.group(1), m.group(2).strip()
+    if fence[0] == "`" and "`" in info:
+        return None
+    return fence, info
+
+
+def fence_closes(ln: str, fence: str) -> bool:
+    """ln closes a block opened with fence: the same character at least as many times, and nothing else.
+    So a four-backtick block can hold a three-backtick fence, and a tilde block a backtick one."""
+    s = ln.rstrip()
+    return len(s) >= len(fence) and set(s) == {fence[0]}
+
+
+def fence_state(fence: str | None, ln: str) -> str | None:
+    """The fence still open after line ln, or None outside a block."""
+    if fence is None:
+        opened = fence_open(ln)
+        return opened[0] if opened else None
+    return None if fence_closes(ln, fence) else fence
+
+
+def code_from_fence(info: str, body: list[str]) -> tuple[Code | None, str | None]:
+    """A fenced block's info string and lines -> (Code, None), (None, None) when it holds no code, or
+    (None, why it's wrong). The info string is the language, then any of `{3,5-7}` (lines to highlight),
+    `lines` (line numbers) and `title="etl.py"` (a filename line)."""
+    info = re.sub(r"\{[^}]*\}", lambda m: m.group(0).replace(" ", ""), info)  # `{3, 5-7}` reads as one option
+    try:
+        words = shlex.split(info)
+    except ValueError as e:
+        return None, f"can't read the options {info!r}: {e}"
+    language = ""
+    if words and not words[0].startswith("{") and "=" not in words[0] and words[0] != "lines":
+        language = words.pop(0)
+    text = "\n".join(ln.expandtabs(TAB).rstrip() for ln in body).strip("\n")
+    if not text.strip():
+        return None, None
+    code = Code(language=language, text=text)
+    n = len(code.lines)
+    for w in words:
+        hl = HIGHLIGHT.match(w)
+        if w == "lines":
+            code.numbers = True
+        elif w.startswith("title="):
+            code.title = w[len("title="):] or None
+        elif hl:
+            picked: set[int] = set()
+            for part in hl.group(1).split(","):
+                a, _, b = part.partition("-")
+                first, last = int(a), int(b or a)
+                if not 1 <= first <= last <= n:  # checked before expanding, so a range can't run to millions
+                    bad = first if not 1 <= first <= n else last
+                    return None, f"highlights line {bad}, and the block has {n} line{'s' * (n != 1)}"
+                picked.update(range(first, last + 1))
+            code.highlight = sorted(picked)
+        else:
+            return None, (f"unknown option {w!r} after the language; a code fence takes `{{3,5-7}}`, `lines` "
+                          'and `title="name"`')
+    return code, None
 
 
 def _unescape_notes_line(ln: str) -> str:
@@ -147,22 +216,33 @@ def parse_section(lines: list[str], where: Where, label: str, issues: list[Issue
     i = 0
     while i < len(lines):
         ln = lines[i]
-        fm = FENCE.match(ln)
-        if fm and fm.group(1) in ("chart", "table"):
+        opened = fence_open(ln)
+        if opened:
+            fence, info = opened
+            head = f"{fence}{info.split()[0] if info else ''}"
             j = i + 1
-            while j < len(lines) and not lines[j].startswith("```"):
+            while j < len(lines) and not fence_closes(lines[j], fence):
                 j += 1
             if j >= len(lines):
-                issues.append(Issue("PARSE", f"{label}: unclosed ```{fm.group(1)} block", **_at(where)))
+                issues.append(Issue("PARSE", f"{label}: unclosed {head} block", **_at(where)))
                 return None
-            try:
-                spec = yaml.safe_load("\n".join(lines[i + 1 : j])) or {}
-            except yaml.YAMLError as e:
-                issues.append(Issue("PARSE", f"{label}: bad YAML in ```{fm.group(1)} block: {e}", **_at(where)))
-                spec = {}
-            if not isinstance(spec, dict):
-                spec = {}
-            visuals.append(chart_from_spec(spec) if fm.group(1) == "chart" else table_from_spec(spec))
+            kind = info.split()[0] if info else ""
+            if kind in ("chart", "table"):
+                try:
+                    spec = yaml.safe_load("\n".join(lines[i + 1 : j])) or {}
+                except yaml.YAMLError as e:
+                    issues.append(Issue("PARSE", f"{label}: bad YAML in {head} block: {e}", **_at(where)))
+                    spec = {}
+                if not isinstance(spec, dict):
+                    spec = {}
+                visuals.append(chart_from_spec(spec) if kind == "chart" else table_from_spec(spec))
+            else:
+                code, why = code_from_fence(info, lines[i + 1 : j])
+                if why:
+                    issues.append(Issue("PARSE", f"{label}: {head} block: {why}", **_at(where)))
+                    return None
+                if code is not None:
+                    visuals.append(code)
             i = j + 1
             continue
         if ln.lstrip().startswith("|"):
@@ -229,11 +309,10 @@ def parse(path: Path, row: dict[str, str] | None = None) -> tuple[Deck, list[Iss
     sub = re.compile(r"^" + "#" * (level + 1) + r"\s+([\w-]+)\s*$")
 
     blocks: list[tuple[int, str, list[str]]] = []
-    in_fence = False
+    fence: str | None = None
     for n, ln in enumerate(body.splitlines(), start=offset + 1):
-        if ln.startswith("```"):
-            in_fence = not in_fence
-        m = None if in_fence else head.match(ln)
+        fence = fence_state(fence, ln)
+        m = None if fence else head.match(ln)
         if m:
             blocks.append((n, m.group(1).strip(), []))
         elif blocks:
@@ -262,8 +341,10 @@ def parse(path: Path, row: dict[str, str] | None = None) -> tuple[Deck, list[Iss
         rest = lines[i:]
 
         notes = ""
+        fence = None
         for k, ln in enumerate(rest):
-            if NOTES.match(ln.strip()):
+            fence = fence_state(fence, ln)
+            if not fence and NOTES.match(ln.strip()):  # a `Notes:` line inside a code block is code
                 notes = "\n".join(_unescape_notes_line(x) for x in rest[k + 1 :]).strip()
                 rest = rest[:k]
                 break
@@ -274,15 +355,14 @@ def parse(path: Path, row: dict[str, str] | None = None) -> tuple[Deck, list[Iss
             slide.fields[str(key)] = _scalar_field(v)
 
         sections: list[tuple[str, list[str]]] = [("body", [])]
-        in_fence = False
+        fence = None
         for ln in rest:
-            if ln.startswith("```"):
-                in_fence = not in_fence
-            m = None if in_fence else sub.match(ln)
+            fence = fence_state(fence, ln)
+            m = None if fence else sub.match(ln)
             if m:
                 sections.append((m.group(1), []))
                 continue
-            if not in_fence and STRAY_HEADING.match(ln):
+            if not fence and STRAY_HEADING.match(ln):
                 issues.append(Issue("PARSE", f"{ln.strip()!r} isn't a slide or a field: '{'#' * level} ' starts a "
                                     f"slide, and '{'#' * (level + 1)} name' names a field with no spaces in it",
                                     **_at(where)))

@@ -43,3 +43,4 @@ generate:
   slide_size: "16:9"
   layout_set: designed           # the designed set's defaults: band takeaways, labels in the process arrows
   logo_on_master: primary
+  code: {theme: dark}            # light code on the ink color

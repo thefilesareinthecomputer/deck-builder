@@ -22,9 +22,9 @@ from deck_builder.assets import recolor_icon, sha256_file
 from deck_builder.brand.registry import Brand
 from deck_builder.build.normalize import content_digest, normalize
 from deck_builder.build.text import CODE_FONT_DEFAULT, fill_text
-from deck_builder.build.visuals import color_bold, fill_chart, fill_picture, fill_table
+from deck_builder.build.visuals import color_bold, fill_chart, fill_code, fill_picture, fill_table
 from deck_builder.errors import EnvError, Issue
-from deck_builder.model import Chart, Deck, Icon, Image, Slide, Table
+from deck_builder.model import Chart, Code, Deck, Icon, Image, Slide, Table
 from deck_builder.validate import asset_source, plain, resolve_asset, text_of
 
 EMU_PER_INCH = 914400
@@ -203,6 +203,9 @@ class Builder:
                 fill_chart(slide, ph, val, self.brand)
             elif isinstance(val, Table):
                 fill_table(slide, ph, val, self.brand)
+            elif isinstance(val, Code):
+                fill_code(slide, ph, val, self.brand, self.code_font)
+                fentry.update({"language": val.language, "lines": len(val.lines), "shape": ph.name})
             elif isinstance(val, Image):
                 self._picture(slide, ph, val.ref, val.alt, at, fentry, None, fs)
             elif isinstance(val, Icon):

@@ -5,9 +5,9 @@ from typing import Any
 
 import yaml
 
-from deck_builder.model import Chart, Deck, Image, Table, Value
+from deck_builder.model import Chart, Code, Deck, Image, Table, Value
 from deck_builder.parse.markdown import FIELD_LINE, STRUCTURE
-from deck_builder.write.cells import bullets_text
+from deck_builder.write.cells import bullets_text, code_md
 
 FRONT_ORDER = ("spec_version", "brand", "title", "author", "date", "default_layout", "slide_level", "template",
                "tokens", "output")
@@ -74,6 +74,8 @@ def section_md(value: Value) -> str:
         return chart_md(value)
     if isinstance(value, Image):
         return f"![{value.alt}]({value.ref})"
+    if isinstance(value, Code):
+        return code_md(value)
     if isinstance(value, list):
         return bullets_text(value)
     return str(value)

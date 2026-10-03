@@ -4,18 +4,19 @@ from __future__ import annotations
 import csv
 import io
 
-from deck_builder.model import Chart, Deck, Table
+from deck_builder.model import Chart, Code, Deck, Table, kind_of
 from deck_builder.write.cells import cell_text
 
 
 def lossy_reasons(deck: Deck) -> list[str]:
+    """CSV holds text-only decks: no front matter, charts, tables or code blocks."""
     reasons = []
     if deck.meta:
         reasons.append(f"CSV has no place for front matter ({', '.join(deck.meta)})")
     for n, s in enumerate(deck.slides, start=1):
         for k, v in s.fields.items():
-            if isinstance(v, Chart | Table):
-                reasons.append(f"slide {n} field {k!r} is a {'chart' if isinstance(v, Chart) else 'table'}")
+            if isinstance(v, Chart | Table | Code):
+                reasons.append(f"slide {n} field {k!r} is a {kind_of(v)}")
     return reasons
 
 

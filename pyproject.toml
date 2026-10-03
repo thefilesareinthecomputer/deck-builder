@@ -25,6 +25,7 @@ dependencies = [
     "defusedxml>=0.7,<0.8",
     "jsonschema>=4.23,<5",
     "pillow>=11.0,<13",
+    "pygments>=2.21,<3",
 ]
 
 [project.scripts]

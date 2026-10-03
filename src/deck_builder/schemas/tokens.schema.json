@@ -13,18 +13,18 @@
       "required": ["idx", "kind"],
       "properties": {
         "idx": {"type": "integer", "minimum": 0},
-        "kind": {"enum": ["text", "bullets", "table", "chart", "image", "icon"]},
+        "kind": {"enum": ["text", "bullets", "table", "chart", "image", "icon", "code"]},
         "required": {"type": "boolean"},
         "max_chars": {"type": "integer", "minimum": 1},
         "max_bullets": {"type": "integer", "minimum": 1},
         "max_bullet_chars": {"type": "integer", "minimum": 1},
         "max_level": {"type": "integer", "minimum": 0},
         "max_rows": {"type": "integer", "minimum": 1},
-        "max_cols": {"type": "integer", "minimum": 1},
+        "max_cols": {"type": "integer", "minimum": 1, "description": "tables: columns; code: characters a line holds"},
         "color": {"$ref": "#/$defs/colorRef"},
         "emphasis": {"$ref": "#/$defs/colorRef", "description": "text fields: the color of **bold** runs"},
         "line_chars": {"type": "integer", "minimum": 1, "description": "text fields: characters a line holds, which check wraps the text at"},
-        "max_lines": {"type": "number", "exclusiveMinimum": 0, "description": "text fields: lines the box holds; check estimates the wrapped text, bullet spacing included, against it"},
+        "max_lines": {"type": "number", "exclusiveMinimum": 0, "description": "text fields: lines the box holds; check estimates the wrapped text, bullet spacing included, against it. code: lines the panel holds"},
         "fit": {"type": "boolean", "description": "image fields: always fit the image inside the box, never crop it"},
         "fit_max": {"type": "number", "exclusiveMinimum": 0, "maximum": 1, "description": "image fields: a fitted image takes at most this share of the box"}
       }
@@ -36,6 +36,26 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {"code_font": {"type": "string"}}
+    },
+    "code": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "code blocks: written by brand init, each role color at 4.5:1 on the panel and the highlight band",
+      "properties": {
+        "theme": {"enum": ["light", "dark"]},
+        "panel": {"$ref": "#/$defs/colorRef"},
+        "highlight": {"$ref": "#/$defs/colorRef"},
+        "colors": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "keyword": {"$ref": "#/$defs/colorRef"}, "string": {"$ref": "#/$defs/colorRef"},
+            "comment": {"$ref": "#/$defs/colorRef"}, "number": {"$ref": "#/$defs/colorRef"},
+            "function": {"$ref": "#/$defs/colorRef"}, "type": {"$ref": "#/$defs/colorRef"},
+            "operator": {"$ref": "#/$defs/colorRef"}, "plain": {"$ref": "#/$defs/colorRef"}
+          }
+        }
+      }
     },
     "chart": {
       "type": "object",

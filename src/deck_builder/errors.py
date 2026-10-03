@@ -109,6 +109,24 @@ CODES: dict[str, tuple[str, str]] = {
         "under the character budget.",
         "Shorten the bullets that wrap so each fits on one line, use fewer bullets, or move detail to the notes.",
     ),
+    "CODE_LONG": (
+        "A code block has a line longer than its panel is wide, or more lines than the panel holds (a `title=` "
+        "filename line takes two). Code never wraps, so the line would run off the panel. As a warning: an "
+        "inline `code` span longer than a line of its text field, which breaks mid-token.",
+        "Break the long line where the language allows, shorten names, cut lines that don't make the point, "
+        "or split the code across two slides. Keep an inline span short, or move it to a code block.",
+    ),
+    "CODE_LANGUAGE": (
+        "A code block's language tag isn't one the highlighter knows, so the block builds as plain text.",
+        "Use the language's usual name or short alias (python, sql, yaml, bash, json, ts); `text` is plain on "
+        "purpose.",
+    ),
+    "CODE_LINES_MANY": (
+        "A code block on a projected slide has more than 12 lines, more than an audience reads during one "
+        "slide. A convention from `docs design`, so it warns.",
+        "Cut to the lines that make the point and mark them with `{3,5-7}`, or move the full listing to the "
+        "notes or an appendix.",
+    ),
     "BULLETS_MANY": (
         "A list on a projected slide has more than four bullets, past what an audience holds at once. "
         "A convention from `docs design`, so it warns.",
@@ -185,7 +203,7 @@ CODES: dict[str, tuple[str, str]] = {
         "Use an .xlsx workbook, or remove the sheet: reference.",
     ),
     "CONVERT_LOSSY": (
-        "The target format can't hold everything in the input, such as charts in CSV.",
+        "The target format can't hold everything in the input, such as charts or code blocks in CSV.",
         "Convert to .xlsx or .md instead.",
     ),
     "IMPORT_LOSSY": (

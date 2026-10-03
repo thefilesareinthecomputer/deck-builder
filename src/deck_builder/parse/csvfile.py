@@ -7,7 +7,7 @@ from pathlib import Path
 
 from deck_builder.errors import Issue
 from deck_builder.model import Deck, Image, Slide, Value, Where
-from deck_builder.parse.markdown import BULLET, IMAGE, parse_text_block
+from deck_builder.parse.markdown import BULLET, IMAGE, code_from_fence, fence_closes, fence_open, parse_text_block
 
 SheetResolver = Callable[[str], Value | None]
 
@@ -20,6 +20,12 @@ def cell_value(raw: str) -> Value | None:
     im = IMAGE.match(v)
     if im:
         return Image(ref=im.group(2).strip(), alt=im.group(1))
+    lines = v.split("\n")
+    opened = fence_open(lines[0])
+    if opened and len(lines) > 1 and fence_closes(lines[-1], opened[0]):  # a fenced code block, whole
+        code, _ = code_from_fence(opened[1], lines[1:-1])
+        if code is not None:
+            return code
     if "\n" in v or BULLET.match(v):
         return parse_text_block(v.splitlines())
     return v

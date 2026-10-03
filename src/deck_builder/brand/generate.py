@@ -26,9 +26,10 @@ from pptx.parts.slide import SlideLayoutPart
 from pptx.util import Emu
 
 from deck_builder.brand.inspect import estimate_chars
-from deck_builder.brand.kit import contrast
-from deck_builder.brand.layouts import PH, Decor, LayoutDef, Scale, Style, layout_set
+from deck_builder.brand.kit import contrast, luminance
+from deck_builder.brand.layouts import CODE_EM, CODE_PAD_Y, CODE_PITCH, PH, Decor, LayoutDef, Scale, Style, layout_set
 from deck_builder.build.normalize import read_parts, rezip
+from deck_builder.build.text import CODE_FONT_DEFAULT
 from deck_builder.template import POTX_CT, PPTX_CT
 
 EMU = 914400
@@ -50,9 +51,9 @@ NUMBER_W = 0.4  # a two-digit number at 10 pt is about 0.15 in, so the footer st
 FOOTER_IDX, NUMBER_IDX = 20, 21
 FURNITURE_KINDS = {"SLIDE_NUMBER": "sldNum", "FOOTER": "ftr", "DATE": "dt"}  # dt never gets a box
 SLIDENUM_FIELD = "{B6F15528-21DE-4FAA-801E-634DDDAF4B2B}"  # any fixed id keeps builds byte-identical
-PH_TYPE = {"title": "title", "body": "body", "pic": "pic", "chart": "chart", "tbl": "tbl"}
-KIND_FOR = {"pic": "image", "chart": "chart", "tbl": "table"}
-PROMPT = {"title": "Title", "body": "Text", "pic": "Picture", "chart": "Chart", "tbl": "Table"}
+PH_TYPE = {"title": "title", "body": "body", "pic": "pic", "chart": "chart", "tbl": "tbl", "code": "body"}
+KIND_FOR = {"pic": "image", "chart": "chart", "tbl": "table", "code": "code"}
+PROMPT = {"title": "Title", "body": "Text", "pic": "Picture", "chart": "Chart", "tbl": "Table", "code": "Code"}
 
 
 def emu(inches: float) -> int:
@@ -110,12 +111,28 @@ def _rpr(ph: PH) -> str:
     return f"<a:defRPr{attrs}>{fill}</a:defRPr>" if attrs or fill else ""
 
 
-def _sp(shape_id: int, ph: PH) -> str:
+def _code_body(ph: PH, code_font: str) -> str:
+    """A code placeholder's text: the monospace font (marked fixed-pitch, so a machine without it substitutes
+    another monospace font), exact line spacing, no bullets, no space between lines, and never wrapped."""
+    size = ph.size or 18
+    rpr = (f'<a:defRPr sz="{int(size * 100)}" b="0"><a:solidFill><a:schemeClr val="{ph.color or "tx1"}"/>'
+           f'</a:solidFill><a:latin typeface="{escape(code_font)}" pitchFamily="49" charset="0"/></a:defRPr>')
+    lvl1 = (f'<a:lvl1pPr marL="0" indent="0" algn="l"><a:lnSpc><a:spcPts val="{int(size * CODE_PITCH * 100)}"/>'
+            f'</a:lnSpc><a:spcBef><a:spcPts val="0"/></a:spcBef><a:buNone/>{rpr}</a:lvl1pPr>')
+    pad_x, pad_y = emu(ph.inset or 0.0), emu(CODE_PAD_Y)
+    return (f'<p:txBody><a:bodyPr wrap="none" lIns="{pad_x}" tIns="{pad_y}" rIns="{pad_x}" bIns="{pad_y}" '
+            f'anchor="t"><a:noAutofit/></a:bodyPr><a:lstStyle>{lvl1}</a:lstStyle><a:p><a:r><a:rPr lang="en-US"/>'
+            f"<a:t>{PROMPT['code']}</a:t></a:r></a:p></p:txBody>")
+
+
+def _sp(shape_id: int, ph: PH, code_font: str = CODE_FONT_DEFAULT) -> str:
     ph_el = (f'<p:ph type="{PH_TYPE[ph.kind]}"/>' if ph.kind == "title"
              else f'<p:ph type="{PH_TYPE[ph.kind]}" idx="{ph.idx}"/>')
     xfrm = (f'<a:xfrm><a:off x="{emu(ph.x)}" y="{emu(ph.y)}"/>'
             f'<a:ext cx="{emu(ph.w)}" cy="{emu(ph.h)}"/></a:xfrm>')
-    if ph.kind in ("title", "body"):
+    if ph.kind == "code":
+        body = _code_body(ph, code_font)
+    elif ph.kind in ("title", "body"):
         algn = f' algn="{ph.align}"' if ph.align else ""
         if ph.bullets:  # air between items, and the bullet or number in the brand's primary color
             bullet = (f'<a:spcBef><a:spcPts val="{int((ph.size or 18) * 50)}"/></a:spcBef>'
@@ -154,7 +171,7 @@ def _scheme(ref: str) -> str:
 
 
 def _decor_sp(shape_id: int, dec: Decor) -> str:
-    """A filled rectangle with no outline or text, drawn behind the layout's placeholders."""
+    """A filled shape with no outline or text, drawn behind the layout's placeholders."""
     return (f'<p:sp><p:nvSpPr><p:cNvPr id="{shape_id}" name="Decoration {shape_id}"/><p:cNvSpPr/>'
             f'<p:nvPr userDrawn="1"/></p:nvSpPr><p:spPr><a:xfrm><a:off x="{emu(dec.x)}" y="{emu(dec.y)}"/>'
             f'<a:ext cx="{emu(dec.w)}" cy="{emu(dec.h)}"/></a:xfrm>'
@@ -196,13 +213,13 @@ def _furniture_sp(shape_id: int, kind: str, idx: int, box: tuple[float, float, f
 
 
 def layout_xml(ld: LayoutDef, boxes: dict[str, tuple[float, float, float]] | None = None,
-               color: str = "6B7280") -> bytes:
+               color: str = "6B7280", code_font: str = CODE_FONT_DEFAULT) -> bytes:
     bg = ""
     if ld.background:
         bg = (f'<p:bg><p:bgPr><a:solidFill><a:schemeClr val="{ld.background}"/></a:solidFill>'
               "<a:effectLst/></p:bgPr></p:bg>")
     sps = "".join(_decor_sp(100 + i, dec) for i, dec in enumerate(ld.decor))  # first, so it sits behind
-    sps += "".join(_sp(i + 2, ph) for i, ph in enumerate(ld.phs))
+    sps += "".join(_sp(i + 2, ph, code_font) for i, ph in enumerate(ld.phs))
     if boxes and not ld.hide_master:  # title, section and closing slides get no furniture
         n = len(ld.phs) + 2
         sps += "".join(_furniture_sp(n + i, kind, {"ftr": FOOTER_IDX, "sldNum": NUMBER_IDX}[kind], box, color)
@@ -216,7 +233,7 @@ def layout_xml(ld: LayoutDef, boxes: dict[str, tuple[float, float, float]] | Non
 
 
 def replace_layouts(prs: Any, defs: list[LayoutDef], boxes: dict[str, tuple[float, float, float]] | None = None,
-                    color: str = "6B7280") -> None:
+                    color: str = "6B7280", code_font: str = CODE_FONT_DEFAULT) -> None:
     master = prs.slide_masters[0]
     for layout in list(master.slide_layouts):
         master.slide_layouts.remove(layout)
@@ -226,7 +243,7 @@ def replace_layouts(prs: Any, defs: list[LayoutDef], boxes: dict[str, tuple[floa
     next_id = 2147483649
     for n, ld in enumerate(defs, start=1):
         part = SlideLayoutPart(PackURI(f"/ppt/slideLayouts/slideLayout{n}.xml"), CT.PML_SLIDE_LAYOUT, package,
-                               parse_xml(layout_xml(ld, boxes, color)))
+                               parse_xml(layout_xml(ld, boxes, color, code_font)))
         part.relate_to(master_part, RT.SLIDE_MASTER)
         rid = master_part.relate_to(part, RT.SLIDE_LAYOUT)
         el = etree.SubElement(lst, qn("p:sldLayoutId"))
@@ -346,19 +363,52 @@ def ramp_floor(primary: str, label: str) -> int:
 GRAPHIC_CONTRAST = 3.0  # bars, lines and slices against the background (WCAG 2.2 SC 1.4.11)
 
 
-def chart_color(name: str, hex_color: str, background: str) -> str:
-    """A chart color as tokens.yaml names it, or, when it has under 3:1 against the background, the
-    darkest-needed shade of the same hue, as hex: the brand's palette stays as it is, and the chart
-    stays readable."""
-    if contrast(hex_color, background) >= GRAPHIC_CONTRAST:
+def legible(name: str, hex_color: str, backgrounds: list[str], need: float) -> str:
+    """name when hex_color has `need` contrast against every background, or else the nearest shade of the
+    same hue that does, as hex: darker on light backgrounds, lighter on dark ones. The brand's palette stays
+    as it is, and what's drawn in the color stays readable."""
+    def worst(c: str) -> float:
+        return min(contrast(c, bg) for bg in backgrounds)
+
+    if worst(hex_color) >= need:
         return name
+    step = 0.01 if luminance(backgrounds[0]) < 0.18 else -0.01
     r, g, b = (int(hex_color[i:i + 2], 16) / 255 for i in (0, 2, 4))
     hue, lum, sat = colorsys.rgb_to_hls(r, g, b)
     shade = hex_color
-    while lum > 0 and contrast(shade, background) < GRAPHIC_CONTRAST:
-        lum = max(0.0, lum - 0.01)
+    while (lum < 1 if step > 0 else lum > 0) and worst(shade) < need:
+        lum = min(1.0, max(0.0, lum + step))
         shade = "".join(f"{round(c * 255):02X}" for c in colorsys.hls_to_rgb(hue, lum, sat))
     return shade
+
+
+def chart_color(name: str, hex_color: str, background: str) -> str:
+    """A chart color as tokens.yaml names it, or, under 3:1 against the background, a darker shade of it."""
+    return legible(name, hex_color, [background], GRAPHIC_CONTRAST)
+
+
+TEXT_CONTRAST = 4.5
+# Each code role's palette source on a light panel, as (theme slot, palette name). Three hues and ink:
+# the primary for structure (keywords bold), the accent for values, muted for comments (italic).
+CODE_ROLES = {"keyword": ("dk2", "primary"), "type": ("dk2", "primary"), "function": ("dk2", "primary"),
+              "string": ("accent2", "accent"), "number": ("accent2", "accent"), "comment": ("accent3", "muted"),
+              "operator": ("dk1", "ink"), "plain": ("dk1", "ink")}
+CODE_DARK = {"operator": ("lt1", "background"), "plain": ("lt1", "background")}  # light text on a dark panel
+BAND_SHARE = 0.1  # the highlight band: this much of the primary over a light panel (of white, over a dark one)
+
+
+def code_tokens(meta: dict[str, Any], theme: str, name_for: Any) -> dict[str, Any]:
+    """tokens.yaml `code`: the theme, the panel, the highlight band and one color per role, each at 4.5:1
+    against both the panel and the band, darkened or lightened in its own hue where it isn't."""
+    slots = slot_colors(meta)
+    dark = theme == "dark"
+    panel_slot, panel_name = ("dk1", "ink") if dark else ("lt2", "surface")
+    panel = slots[panel_slot]
+    band = _mix("FFFFFF" if dark else slots["dk2"], panel, BAND_SHARE)
+    colors = {}
+    for role, (slot, fallback) in {**CODE_ROLES, **(CODE_DARK if dark else {})}.items():
+        colors[role] = legible(name_for(slot, fallback), slots[slot], [panel, band], TEXT_CONTRAST)
+    return {"theme": theme, "panel": name_for(panel_slot, panel_name), "highlight": band, "colors": colors}
 
 
 def _mix(a: str, b: str, share: float) -> str:
@@ -409,6 +459,10 @@ def tokens_for(defs: list[LayoutDef], meta: dict[str, Any], scale: Scale | None 
             if kind == "table":  # rows that fit the placeholder at one line each, header included
                 spec["max_rows"] = max(3, min(10, int(ph.h * 72 / (s.table * TABLE_ROW_FACTOR)) - 1))
                 spec["max_cols"] = 6
+            if kind == "code":  # monospace: characters a line holds and lines the panel holds, exactly
+                size = ph.size or 18
+                spec["max_cols"] = int(ph.text_w * 72 / (size * CODE_EM))
+                spec["max_lines"] = int((ph.h - 2 * CODE_PAD_Y) * 72 / (size * CODE_PITCH))
             if ph.icon and ph.color:
                 spec["color"] = color_name(ph.color)  # white on a tile or chevron
             if ph.emphasis:
@@ -427,8 +481,9 @@ def tokens_for(defs: list[LayoutDef], meta: dict[str, Any], scale: Scale | None 
             entry["row"] = True
         entry["fields"] = fields
         layouts[ld.key] = entry
-    return {
+    out: dict[str, Any] = {
         "spec_version": 1,
+        "text": {"code_font": code_font(meta)},
         # Quiet chart furniture: axis labels and the legend in the muted color (ink when muted is too light
         # for 4.5:1), and gridlines a faint tint of ink.
         "chart": {"font_size": 12, "text_color": name_for("dk1", "ink"),
@@ -447,6 +502,16 @@ def tokens_for(defs: list[LayoutDef], meta: dict[str, Any], scale: Scale | None 
         "furniture": {"slide_numbers": bool((meta.get("generate") or {}).get("slide_numbers", True)),
                       "color": furniture_color(meta)[0]},  # decided here: muted, or ink when muted is too light
     }
+    if any(fs["kind"] == "code" for ls in layouts.values() for fs in ls["fields"].values()):
+        out["code"] = code_tokens(meta, str(((meta.get("generate") or {}).get("code") or {}).get("theme", "light")),
+                                  name_for)
+    return out
+
+
+def code_font(meta: dict[str, Any]) -> str:
+    """brand.yaml fonts.code, or Menlo: it ships with macOS, and code runs are marked fixed-pitch, so
+    PowerPoint on a machine without it substitutes another monospace font such as Consolas."""
+    return str(((meta.get("fonts") or {}).get("code") or {}).get("family") or CODE_FONT_DEFAULT)
 
 
 # ---------------------------------------------------------------- package
@@ -494,7 +559,7 @@ def generate(meta: dict[str, Any], source_dir: Path) -> tuple[bytes, dict[str, A
     boxes = furniture_boxes(w_in, h_in, bool(gen.get("slide_numbers", True)))
     color = furniture_color(meta)[1]
     style_master(prs, w_in, h_in, boxes, color, scale)
-    replace_layouts(prs, defs, boxes, color)
+    replace_layouts(prs, defs, boxes, color, code_font(meta))
     logo_id = gen.get("logo_on_master")
     if logo_id:
         rel = (meta.get("logos") or {}).get(logo_id)

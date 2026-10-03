@@ -56,6 +56,7 @@ def own_kits(tmp_path_factory):
     """Each brand's own kit: the showcase (the README's deck) and the nine brand decks."""
     cfg, out = kits(tmp_path_factory, "own-kits")
     bulk(cfg, out, "showcase")
+    bulk(cfg, out, "code")
     for slug, name in DECKS:
         assert main(["--config", cfg, "build", str(DEMO / "decks" / slug / name / "deck.md"), "-o",
                      str(out / "decks" / f"{slug}-{name}.pptx")]) == 0, (slug, name)
@@ -78,6 +79,17 @@ def test_showcase_renders_in_the_brand_fonts_with_no_flags(own_kits, slug, capsy
     cfg, out = own_kits
     res = rendered_clean(cfg, out / "showcase" / f"{slug}.pptx", capsys)
     assert [i for i in res["issues"] if i["code"] == "MISSING_FONT"] == []
+
+
+@pytest.mark.parametrize("slug", SLUGS)
+def test_code_deck_renders_in_the_code_font_with_no_flags(own_kits, slug, capsys):
+    """No line of code runs past its panel (OVERFLOW_MEASURED reads each code token as pdftotext splits it),
+    and the code renders in Menlo, which ships with macOS."""
+    from deck_builder.qa.fonts import embedded
+
+    cfg, out = own_kits
+    res = rendered_clean(cfg, out / "code" / f"{slug}.pptx", capsys)
+    assert any(f.startswith("menlo") for f in embedded(Path(res["render_dir"]) / "deck.pdf"))
 
 
 @pytest.mark.parametrize("slug,name", DECKS)
