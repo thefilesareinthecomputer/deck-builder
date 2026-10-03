@@ -46,6 +46,7 @@
         "text_color": {"$ref": "#/$defs/colorRef"},
         "gridlines": {"type": "boolean"},
         "gridline_color": {"$ref": "#/$defs/colorRef"},
+        "axis_text_color": {"$ref": "#/$defs/colorRef", "description": "axis labels, the category axis line and the legend; text_color when left out"},
         "gap_width": {"type": "integer", "minimum": 0},
         "line_width": {"type": "number", "exclusiveMinimum": 0},
         "colors": {"type": "array", "items": {"$ref": "#/$defs/colorRef"}}

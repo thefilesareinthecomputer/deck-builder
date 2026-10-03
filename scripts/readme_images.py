@@ -1,8 +1,8 @@
 """Regenerate the README images from the demo-brand fixtures: `uv run python scripts/readme_images.py`.
 
-Builds tests/fixtures/demo-brands/showcase/deck.md and the nine decks in decks/ into the demo brands,
-renders them with LibreOffice, and writes docs/images/decks.png (one slide from each of the nine decks),
-docs/images/showcase.png (one deck in three brands, a column per brand) and docs/images/contact-sheet.png
+Builds tests/fixtures/demo-brands/showcase/deck.md and the brand decks in decks/ into the demo brands,
+renders them with LibreOffice, and writes docs/images/decks.png (nine slides from the brand decks, a column
+per brand), docs/images/showcase.png (one deck in three brands, a column per brand) and docs/images/contact-sheet.png
 (one brand's contact sheet, the review surface). Run it after any
 change to the generator, the layouts or the renderer, and commit the images with that change.
 """
@@ -23,14 +23,14 @@ FIXTURES = REPO / "tests" / "fixtures" / "demo-brands"
 BRANDS = ("dumbder-nifftlin", "cubicle-nine", "soap-club")
 ROWS = (1, 3, 4)  # the title, cards and chart slides of the showcase deck
 CONTACT_BRAND = "dumbder-nifftlin"  # the brand the README's deck.md example uses
-# decks.png, the README's first image: one slide from each of the nine brand decks, a column per brand and
-# a row per deck, picked so no two cells share a layout.
-DECKS = ("pitch", "review", "edge")
-PICKS = {
-    ("dumbder-nifftlin", "pitch"): 5, ("cubicle-nine", "pitch"): 4, ("soap-club", "pitch"): 2,
-    ("dumbder-nifftlin", "review"): 12, ("cubicle-nine", "review"): 10, ("soap-club", "review"): 4,
-    ("dumbder-nifftlin", "edge"): 4, ("cubicle-nine", "edge"): 12, ("soap-club", "edge"): 10,
-}
+# decks.png: nine slides from the brands' pitch and review decks, a column per brand, picked for range and
+# color: every row holds one chart, the three charts are three types, and each cell shows its brand's
+# colors. (brand, deck, slide) per cell, row by row.
+GRID = (
+    (("dumbder-nifftlin", "pitch", 7), ("cubicle-nine", "pitch", 1), ("soap-club", "review", 4)),
+    (("dumbder-nifftlin", "pitch", 4), ("cubicle-nine", "pitch", 5), ("soap-club", "pitch", 5)),
+    (("dumbder-nifftlin", "review", 12), ("cubicle-nine", "review", 5), ("soap-club", "pitch", 3)),
+)
 SLIDE = (560, 315)
 GAP = 24
 RADIUS = 10
@@ -81,13 +81,15 @@ def main() -> None:
         render_dirs = {b: built / f"{b}.render" for b in BRANDS}
         grid([[render_dirs[b] / f"slide-{n:02d}.png" for b in BRANDS] for n in ROWS], out / "showcase.png")
         shutil.copyfile(render_dirs[CONTACT_BRAND] / "contact-01.png", out / "contact-sheet.png")
-        for brand in BRANDS:
-            for deck in DECKS:
-                pptx = built / "decks" / f"{brand}-{deck}.pptx"
-                run("--config", config, "build", str(FIXTURES / "decks" / brand / deck / "deck.md"), "-o", str(pptx))
-                run("--config", config, "render", str(pptx), "--slides", str(PICKS[brand, deck]),
-                    "--backend", "libreoffice")
-        grid([[built / "decks" / f"{b}-{d}.render" / f"slide-{PICKS[b, d]:02d}.png" for b in BRANDS] for d in DECKS],
+        picks: dict[tuple[str, str], list[int]] = {}
+        for brand, deck, n in (cell for row in GRID for cell in row):
+            picks.setdefault((brand, deck), []).append(n)
+        for (brand, deck), slides in picks.items():
+            pptx = built / "decks" / f"{brand}-{deck}.pptx"
+            run("--config", config, "build", str(FIXTURES / "decks" / brand / deck / "deck.md"), "-o", str(pptx))
+            run("--config", config, "render", str(pptx), "--slides", ",".join(map(str, slides)),
+                "--backend", "libreoffice")
+        grid([[built / "decks" / f"{b}-{d}.render" / f"slide-{n:02d}.png" for b, d, n in row] for row in GRID],
              out / "decks.png")
     print(f"wrote {out / 'decks.png'}, {out / 'showcase.png'} and {out / 'contact-sheet.png'}")
 

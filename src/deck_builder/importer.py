@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from pptx.enum.chart import XL_CHART_TYPE
 from pptx.enum.shapes import MSO_SHAPE_TYPE, PP_PLACEHOLDER
 from pptx.oxml.ns import qn
 from pptx.text.text import _Run
@@ -37,7 +38,7 @@ TITLES = {PP_PLACEHOLDER.TITLE, PP_PLACEHOLDER.CENTER_TITLE, PP_PLACEHOLDER.VERT
 FITS = {"text": {"text", "bullets"}, "image": {"image"}, "icon": {"icon"}, "table": {"table"},
         "chart": {"chart"}}
 EXACT_ONLY = ("takeaway",)  # filled only from the matching placeholder idx, never by type or position
-CHART_NAMES = {v: k for k, v in CHART_TYPES.items()}
+CHART_NAMES = {v: k for k, v in CHART_TYPES.items()} | {XL_CHART_TYPE.LINE_MARKERS: "line"}  # older builds
 DIAGRAM_URI = "http://schemas.openxmlformats.org/drawingml/2006/diagram"
 NOT_FORMATTING = {"lang", "altLang", "dirty", "err", "smtClean", "smtId", "noProof", "bmk", "b", "i"}
 FILLS = ("a:solidFill", "a:gradFill", "a:pattFill", "a:blipFill", "a:noFill")

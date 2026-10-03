@@ -96,13 +96,13 @@ subtitle: Share of Q3 revenue by customer segment
 takeaway: Schools and hospitals now make up 36% of revenue
 
 ```chart
-type: doughnut
+type: bar
 number_format: '0%'
 labels: true
-categories: [Offices, Schools and hospitals, Retail and online]
+categories: [Offices, Schools, Hospitals, Retail, Online]
 series:
   - name: Share of revenue
-    values: [0.48, 0.36, 0.16]
+    values: [0.48, 0.22, 0.14, 0.09, 0.07]
 ```
 
 Notes:

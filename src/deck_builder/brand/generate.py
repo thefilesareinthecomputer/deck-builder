@@ -368,6 +368,7 @@ def _mix(a: str, b: str, share: float) -> str:
 
 
 TABLE_ROW_FACTOR = 2.0  # row height as a multiple of the table's font size
+GRIDLINE_SHARE = 0.12  # chart gridlines: this much ink over the background
 LINE_EM = 0.47  # an average character's width in ems for running text, measured on rendered decks
 
 
@@ -428,7 +429,11 @@ def tokens_for(defs: list[LayoutDef], meta: dict[str, Any], scale: Scale | None 
         layouts[ld.key] = entry
     return {
         "spec_version": 1,
+        # Quiet chart furniture: axis labels and the legend in the muted color (ink when muted is too light
+        # for 4.5:1), and gridlines a faint tint of ink.
         "chart": {"font_size": 12, "text_color": name_for("dk1", "ink"),
+                  "axis_text_color": furniture_color(meta)[0],
+                  "gridline_color": _mix(slots["dk1"], slots["lt1"], GRIDLINE_SHARE),
                   "colors": [chart_color(name_for(slot, role), slots[slot], slots["lt1"])
                              for slot, role in (("accent1", "primary"), ("accent2", "accent"),
                                                 ("accent3", "muted"), ("accent4", "accent4"))]},

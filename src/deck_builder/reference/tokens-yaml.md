@@ -10,8 +10,10 @@ text:
   code_font: Courier New         # for `code` in slide text
 chart:                           # styling for charts the engine draws; colors are palette names or hex
   font_size: 12
-  text_color: ink
-  gridline_color: "E5E7EB"
+  text_color: ink                # data labels
+  axis_text_color: muted         # axis labels, the baseline and the legend: muted, or ink when muted is
+                                 # under 4.5:1 on the background
+  gridline_color: "E8E8E8"       # hairline gridlines, a faint tint of ink
   colors: [primary, accent, muted]
 table:                           # brand init writes every key, so each is visible and tunable
   font_size: 16                  # body cells; from brand.yaml generate.type.table

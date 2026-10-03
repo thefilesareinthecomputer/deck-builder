@@ -527,6 +527,82 @@ series:
     assert xml.count("<c:showVal val=\"1\"/>") >= 2  # each series' labels shown, in white or ink by its fill
 
 
+def _charts(ws, capsys, body: str) -> list:
+    """Build the chart slides in body on the stock brand; the built charts, one per slide."""
+    deck = write_deck(ws, "---\nbrand: stock\n---\n" + body)
+    code, out = cli_json(ws, "build", str(deck), "-o", str(ws / "out" / "c.pptx"), capsys=capsys)
+    assert code == 0, out
+    return [sh.chart for s in Presentation(str(ws / "out" / "c.pptx")).slides for sh in s.shapes if sh.has_chart]
+
+
+def _chart_slide(title: str, spec: str) -> str:
+    return f"## {title}\nlayout: chart\n\n```chart\n{spec}```\n\n"
+
+
+def test_charts_are_quiet_hairline_gridlines_no_ticks_no_markers_and_muted_axis_text(ws, capsys):
+    from lxml import etree
+
+    tokens = ws / "brands" / "stock" / "tokens.yaml"
+    tok = yaml.safe_load(tokens.read_text())
+    tok["chart"].update(axis_text_color="6B7280", gridline_color="E5E7EB")
+    tokens.write_text(yaml.safe_dump(tok))
+    line, column = _charts(ws, capsys, _chart_slide("Lines", "type: line\ncategories: [a, b, c]\nseries:\n"
+                                                    "  - name: x\n    values: [1, 2, 3]\n") +
+                           _chart_slide("Bars", "type: column\ncategories: [a, b]\nseries:\n"
+                                        "  - name: x\n    values: [1, 2]\n  - name: y\n    values: [2, 1]\n"))
+    xml = etree.tostring(line._chartSpace).decode()
+    assert '<c:symbol val="none"/>' in xml  # lines have no markers
+    assert 'majorTickMark val="none"' in xml and "6B7280" in xml  # no ticks; axis text in the muted color
+    assert '<c:majorGridlines><c:spPr><a:ln w="6350">' in xml and "E5E7EB" in xml  # hairline gridlines
+    assert column.plots[0].overlap == -8 and column.plots[0].gap_width == 70  # a cluster's bars stand apart
+
+
+def test_a_labeled_bar_chart_drops_its_scale_and_reads_top_to_bottom(ws, capsys):
+    from lxml import etree
+
+    (chart,) = _charts(ws, capsys, _chart_slide("Shares", "type: bar\nlabels: true\ncategories: [a, b, c]\n"
+                                                "series:\n  - name: x\n    values: [5, 3, 2]\n"))
+    assert not chart.value_axis.has_major_gridlines  # each bar shows its own number
+    assert chart.category_axis.reverse_order  # a, b, c from the top, in the order written
+    val_ax = etree.tostring(chart.value_axis._element).decode()
+    assert 'tickLblPos val="none"' in val_ax and 'crosses val="max"' in val_ax  # any scale stays below
+
+
+def test_a_thin_stacked_segment_shows_no_label(ws, capsys):
+    from lxml import etree
+
+    (chart,) = _charts(ws, capsys, _chart_slide("Stack", "type: stacked-column\nlabels: true\ncategories: [a, b]\n"
+                                                "series:\n  - name: big\n    values: [100, 90]\n"
+                                                "  - name: small\n    values: [3, 40]\n"))
+    small = etree.tostring(chart.plots[0].series[1]._element).decode()
+    assert '<c:dLbl><c:idx val="0"/><c:delete val="1"/></c:dLbl>' in small  # 3 of 103: too thin for its label
+    assert 'c:idx val="1"/><c:delete' not in small  # 40 keeps its label
+
+
+def test_brand_init_writes_muted_axis_text_and_faint_gridlines():
+    from deck_builder.brand.generate import tokens_for
+    from deck_builder.brand.kit import contrast
+
+    meta = {"palette": {"ink": "1B1B1B", "background": "FFFFFF", "muted": "6B7280", "primary": "1F3A5F"}}
+    chart = tokens_for([], meta)["chart"]
+    assert chart["axis_text_color"] == "muted"  # 4.8:1 on white
+    assert contrast(chart["gridline_color"], "FFFFFF") < 1.5  # a faint tint that stays behind the data
+    too_light = {"palette": {**meta["palette"], "muted": "B0B0B0"}}
+    assert tokens_for([], too_light)["chart"]["axis_text_color"] == "ink"
+
+
+def test_pie_and_doughnut_charts_still_build_with_slice_colors_and_readable_labels(ws, capsys):
+    """The design rules use bars for shares, but decks can still hold a pie or doughnut (an imported deck)."""
+    spec = "labels: true\ncategories: [a, b]\nseries:\n  - name: share\n    values: [60, 40]\n"
+    pie, doughnut = _charts(ws, capsys, _chart_slide("Pie", f"type: pie\n{spec}") +
+                            _chart_slide("Doughnut", f"type: doughnut\n{spec}"))
+    for chart in (pie, doughnut):
+        points = chart.plots[0].series[0].points
+        assert [str(points[i].format.fill.fore_color.rgb) for i in range(2)] == ["1F3A5F", "E07A2F"]
+        assert str(points[0].data_label.font.color.rgb) == "FFFFFF"  # white on the dark primary slice
+        assert chart.has_legend  # on by default, so slices aren't told apart by color alone
+
+
 def test_a_read_deck_skips_the_text_limits(ws, capsys):
     meta = yaml.safe_load((ws / "brands" / "stock" / "brand.yaml").read_text())
     meta["generate"] = {"mode": "read"}

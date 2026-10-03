@@ -8,8 +8,9 @@ from typing import Any
 from PIL import Image as PILImage
 from pptx.chart.data import CategoryChartData
 from pptx.dml.color import RGBColor
-from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION, XL_TICK_LABEL_POSITION
+from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION, XL_MARKER_STYLE, XL_TICK_LABEL_POSITION, XL_TICK_MARK
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
+from pptx.oxml.ns import qn
 from pptx.oxml.xmlchemy import OxmlElement
 from pptx.util import Pt
 
@@ -23,12 +24,16 @@ CHART_TYPES = {
     "stacked-column": XL_CHART_TYPE.COLUMN_STACKED,
     "bar": XL_CHART_TYPE.BAR_CLUSTERED,
     "stacked-bar": XL_CHART_TYPE.BAR_STACKED,
-    "line": XL_CHART_TYPE.LINE_MARKERS,
+    "line": XL_CHART_TYPE.LINE,
     "pie": XL_CHART_TYPE.PIE,
     "doughnut": XL_CHART_TYPE.DOUGHNUT,
 }
 # Documented defaults, used only when tokens.yaml doesn't set the value.
-CHART_DEFAULTS = {"font_size": 12, "gap_width": 80, "line_width": 2.25, "gridlines": True}
+CHART_DEFAULTS = {"font_size": 12, "gap_width": 70, "line_width": 2.75, "gridlines": True}
+HAIRLINE = Pt(0.5)  # gridlines
+BASELINE = Pt(0.75)  # the category axis line, and the line between stacked segments
+CLUSTER_OVERLAP = -8  # bars in one group stand a hair apart, as a share of a bar's width
+THIN_SEGMENT = 0.06  # a stacked segment under this share of the tallest stack shows no label
 TABLE_DEFAULTS = {"font_size": 14, "header_font_size": 14, "row_height_factor": 2.2}
 
 
@@ -90,7 +95,13 @@ def _square_corners(chart: Any) -> None:
 
 
 def fill_chart(slide: Any, ph: Any, spec: Chart, brand: Brand) -> None:
-    """A native, editable chart in the placeholder, styled from tokens.yaml chart, with alt text."""
+    """A native, editable chart in the placeholder, styled from tokens.yaml chart, with alt text.
+
+    The styling is quiet: hairline gridlines, no tick marks, axis labels in the muted axis color, a thin
+    baseline, lines without markers, and a hairline of the background between stacked segments. A
+    clustered bar or column chart with data labels drops its value axis and gridlines, since each bar
+    shows its own number. Horizontal bars list their categories top to bottom in the order written.
+    """
     ct = CHART_TYPES[spec.type]
     data = CategoryChartData(number_format=spec.number_format)
     data.categories = spec.categories
@@ -114,6 +125,7 @@ def fill_chart(slide: Any, ph: Any, spec: Chart, brand: Brand) -> None:
     if text_color:
         chart.font.color.rgb = text_color
     pie = spec.type in ("pie", "doughnut")
+    stacked = spec.type.startswith("stacked-")
     plot = chart.plots[0]
     if colors:
         if pie:
@@ -125,14 +137,23 @@ def fill_chart(slide: Any, ph: Any, spec: Chart, brand: Brand) -> None:
                 c = colors[i % len(colors)]
                 if spec.type == "line":
                     s.format.line.color.rgb = c
-                    s.format.line.width = Pt(tok["line_width"])
-                    s.marker.format.fill.solid()
-                    s.marker.format.fill.fore_color.rgb = c
                 else:
                     s.format.fill.solid()
                     s.format.fill.fore_color.rgb = c
+    if spec.type == "line":
+        for s in plot.series:
+            s.format.line.width = Pt(tok["line_width"])
+            s.marker.style = XL_MARKER_STYLE.NONE
+            s.smooth = False
+    if stacked:  # a hairline of the background between segments, so each reads as its own block
+        paper = _rgb(brand, "background") or RGBColor.from_string("FFFFFF")
+        for s in plot.series:
+            s.format.line.color.rgb = paper
+            s.format.line.width = BASELINE
     if not pie and hasattr(plot, "gap_width"):
         plot.gap_width = tok["gap_width"]
+        if not stacked and len(spec.series) > 1:
+            plot.overlap = CLUSTER_OVERLAP
         for s in plot.series:  # without this, LibreOffice draws a negative bar as positive
             s.invert_if_negative = False
     if not pie:
@@ -158,28 +179,65 @@ def fill_chart(slide: Any, ph: Any, spec: Chart, brand: Brand) -> None:
         def readable(fill: Any) -> RGBColor:  # white or ink, whichever reads on this fill
             return RGBColor.from_string("FFFFFF" if contrast(str(fill), "FFFFFF") >= contrast(str(fill), ink) else ink)
 
-        if spec.type.startswith("stacked-") and colors:  # labels sit on the bars
+        if stacked and colors:  # labels sit on the bars
             for i, s in enumerate(plot.series):
                 dl = s.data_labels
                 dl.show_value = True
                 dl.number_format = spec.number_format
                 dl.number_format_is_linked = False
                 dl.font.color.rgb = readable(colors[i % len(colors)])
+        if stacked:  # a segment too thin to hold its number keeps none, rather than a number over the edges
+            stacks = [sum(abs(v) for v in vals if isinstance(v, int | float))
+                      for vals in zip(*(sr.values for sr in spec.series), strict=False)]
+            tallest = max(stacks, default=0)
+            for s, sr in zip(plot.series, spec.series, strict=False):
+                dlbls = s._element.find(qn("c:dLbls"))
+                thin = [j for j, v in enumerate(sr.values)
+                        if isinstance(v, int | float) and tallest and abs(v) < THIN_SEGMENT * tallest]
+                for k, j in enumerate(thin if dlbls is not None else []):
+                    lbl = OxmlElement("c:dLbl")  # one point's label, deleted; these lead c:dLbls, in idx order
+                    for tag, val in (("c:idx", str(j)), ("c:delete", "1")):
+                        el = OxmlElement(tag)
+                        el.set("val", val)
+                        lbl.append(el)
+                    dlbls.insert(k, lbl)
         if pie and colors:  # labels sit on the slices
             for i, pt in enumerate(plot.series[0].points):
                 pt.data_label.font.color.rgb = readable(colors[i % len(colors)])
     chart.has_title = bool(spec.title)
     if spec.title:
         chart.chart_title.text_frame.text = spec.title
+    axis_text = _rgb(brand, tok.get("axis_text_color")) or text_color
+    if legend and axis_text:
+        chart.legend.font.color.rgb = axis_text
     if not pie:
-        axis = chart.value_axis
-        axis.has_major_gridlines = bool(tok["gridlines"])
+        axis, cat = chart.value_axis, chart.category_axis
+        # Each bar shows its own number, so the scale and its gridlines would only repeat it.
+        labeled = spec.labels and not stacked and spec.type != "line"
+        axis.has_major_gridlines = bool(tok["gridlines"]) and not labeled
         grid = _rgb(brand, tok.get("gridline_color"))
-        if grid and axis.has_major_gridlines:
-            axis.major_gridlines.format.line.color.rgb = grid
+        if axis.has_major_gridlines:
+            axis.major_gridlines.format.line.width = HAIRLINE
+            if grid:
+                axis.major_gridlines.format.line.color.rgb = grid
         axis.format.line.fill.background()
         axis.tick_labels.number_format = spec.number_format
         axis.tick_labels.number_format_is_linked = False
+        if labeled:
+            axis.tick_label_position = XL_TICK_LABEL_POSITION.NONE
+        for ax in (axis, cat):
+            ax.major_tick_mark = XL_TICK_MARK.NONE
+            ax.minor_tick_mark = XL_TICK_MARK.NONE
+            if axis_text:
+                ax.tick_labels.font.color.rgb = axis_text
+        cat.format.line.width = BASELINE
+        if axis_text:
+            cat.format.line.color.rgb = axis_text
+        if spec.type in ("bar", "stacked-bar"):  # top to bottom in the order written, scale still below
+            cat.reverse_order = True
+            crosses = axis._element.find(qn("c:crosses"))
+            if crosses is not None:
+                crosses.set("val", "max")
 
 
 NUMERIC = re.compile(r"^[+\-−]?[$€£]?\d[\d,.]*\s*(%|pts?|x)?$")

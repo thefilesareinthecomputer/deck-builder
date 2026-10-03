@@ -22,7 +22,11 @@ on those layouts. The `deck-builder` and `deck-brand` skills read this topic bef
   right-aligned, and full content width directly under the title. Every column is at least as wide as
   its longest word, so no word breaks; the rest of the width follows content length. Five columns of
   short values fit a projected slide; more than that belongs in a read deck or an appendix.
-- **Charts are native.** Bar and column value axes start at zero, and data labels sit on the data.
+- **Charts are native and quiet.** Bar and column value axes start at zero, and data labels sit on the
+  data. Gridlines are hairlines in a faint tint, axis labels and the legend take the muted color, there
+  are no tick marks, lines have no markers, and stacked segments are split by a hairline of the
+  background. A bar or column chart with labels drops its value axis and gridlines, since each bar
+  shows its own number. Horizontal bars list their categories top to bottom in the order written.
 - **An optional takeaway.** Content, two-column, chart and table slides take a `takeaway:` field: one
   sentence in a full-width band in the primary color at the bottom, for the conclusion the slide
   supports. Leave it out and nothing is drawn.
@@ -90,8 +94,9 @@ on those layouts. The `deck-builder` and `deck-brand` skills read this topic bef
 
 ## Charts
 
-- Prefer bars and dots: position along a common scale is read most accurately. Use a pie only for a
-  few shares of one whole.
+- Prefer bars and dots: position along a common scale is read most accurately. Show shares of a whole
+  as a `bar` chart sorted largest first, not a pie or doughnut: lengths on one scale compare far more
+  accurately than angles and areas. The engine still builds pie and doughnut charts, for imported decks.
 - Keep a bar or column chart's value axis at zero; a cut axis makes small differences look large.
 - Label the data directly where you can, rather than sending the eye to a legend.
 - Eight colors at most in one chart. Color is never the only way to tell series apart: label them.

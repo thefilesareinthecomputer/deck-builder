@@ -13,6 +13,9 @@ All notable changes to this project are listed here. The format follows [Keep a 
 - Rebuilding refuses to replace a .pptx that was edited after it was built, unless `--force`; the .pptx and its manifest are written together. Bulk builds refuse output names that collide.
 - `brand adopt` keeps only masters, layouts and the theme from a .pptx, and drops external relationships and embedded objects; `import --adopt` never regenerates an existing kit. A kit holding both `template.potx` and `template.pptx`, or two fields on one placeholder, is invalid.
 - Imported hyperlinks keep only http, https and mailto; imported notes that look like deck.md structure are escaped, and an import whose deck.md wouldn't reparse to the same slides fails with `IMPORT_LOSSY`.
+- Charts are quieter: hairline gridlines in a faint tint, no tick marks, axis labels and the legend in the muted color (new `chart.axis_text_color`, which `brand init` writes with `gridline_color`), line charts with a heavier line and no markers, a hairline of the background between stacked segments, no label on a stacked segment too thin to hold one, and a small gap between the bars of one group. A bar or column chart with data labels drops its value axis and gridlines. Horizontal bar charts list their categories top to bottom in the order written. Regenerate a kit with `brand init <slug> --force` to get the new chart tokens.
+- `docs design` shows shares of a whole as a sorted bar chart, not a pie or doughnut; the engine still builds both. The demo decks use bars for shares.
+- README: an Example decks section after Write a deck holds the nine-slide grid, now chosen for color and range (pictures, three chart types, a title slide and shape layouts) from the demo brands' pitch and review decks.
 
 ### Added
 

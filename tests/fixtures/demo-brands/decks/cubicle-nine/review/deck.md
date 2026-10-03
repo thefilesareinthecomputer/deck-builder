@@ -136,17 +136,17 @@ Source: the cost ledger at close, October 31, against the budget approved on Jul
 ## Furniture was almost half of the spend
 layout: chart
 kicker: Cost
-subtitle: "Final cost: furniture 43%, power, data and strip-out 25%, labor and management 32%"
+subtitle: "Final cost: furniture 43%, labor and management 32%, power, data and strip-out 25%"
 takeaway: Labor and management came to 32%, under the 35% we planned
 
 ```chart
-type: doughnut
+type: bar
 number_format: '0%'
 labels: true
-categories: [Furniture, "Power, data and strip-out", Labor and management]
+categories: [Furniture, Labor and management, "Power, data and strip-out"]
 series:
   - name: Share of cost
-    values: [0.43, 0.25, 0.32]
+    values: [0.43, 0.32, 0.25]
 ```
 
 Notes:

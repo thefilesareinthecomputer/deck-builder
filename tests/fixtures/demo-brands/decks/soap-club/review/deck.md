@@ -103,11 +103,9 @@ subtitle: Where the $9 price of a web bar goes
 takeaway: A second soap maker costs less than the overtime we paid
 
 ```chart
-type: doughnut
+type: bar
 number_format: '0"%"'
 labels: true
-legend: true
-colors: [primary, accent, muted, "B9A9A4", "5E5B66"]
 categories: [Labor, Margin, Oils and butters, Shipping, Wrapping]
 series:
   - name: Share of price
