@@ -105,7 +105,7 @@ takeaway: Both near-misses came from deliveries, not from work on site
 - **The furniture order** went in two weeks late and slipped the hand-off by four days
 - **Lift bookings** clashed with another tenant's move on September 13
 - Order furniture at survey sign-off, not after the floor plan is final
-- Book the goods lift for the whole install at the start, not weekend by weekend
+- Book the goods lift for all eleven weekends at the start
 
 Notes:
 Drawn from the crew debrief on October 30 and the tenant interviews in the week after hand-over.

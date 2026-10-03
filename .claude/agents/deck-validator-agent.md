@@ -24,7 +24,8 @@ inside the workspace. If the tools are missing, stop and say so in your report.
 
 `check` enforces budgets, field kinds, assets and the brand's lint rules, and with `render: true`
 it measures overflow, empty placeholders and missing fonts. It also warns past the design rules'
-working limits (`BULLETS_MANY`, `WORDS_MANY`, `LAYOUT_RUN`, `SERIES_MANY`). Run `check` on the deck
+working limits (`BULLETS_MANY`, `WORDS_MANY`, `LAYOUT_RUN`, `SERIES_MANY`) and on the countable writing
+tells (`PROSE_TELL`). Run `check` on the deck
 once to confirm zero errors and list its warnings as they are. Don't restate what it reports; your
 job is everything it can't judge.
 

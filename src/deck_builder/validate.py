@@ -204,7 +204,46 @@ def resolve(deck: Deck, brand: Brand, deck_dir: Path) -> tuple[Deck, list[Issue]
 
 
 # Limits from the design research (`docs design`): convention, not standard, so they warn and never fail.
-MAX_BULLETS, MAX_WORDS, MAX_RUN, MAX_SERIES, MAX_CODE_LINES = 4, 60, 3, 8, 12
+MAX_BULLETS, MAX_WORDS, MAX_RUN, MAX_SERIES, MAX_CODE_LINES, MAX_CONTRASTS = 4, 60, 3, 8, 12, 2
+
+# The countable writing tells on slide text (`docs design`, "Writing on slides"). Each word is wrong on a slide
+# in any context; words a brand can use literally ("journey", "landscape") are left to the agents' judgment.
+PROSE_WORDS = {
+    "inflated word": ("leverage", "leveraging", "leveraged", "utilize", "utilizes", "utilizing", "unlock", "unlocks",
+                      "empower", "empowers", "seamless", "seamlessly", "robust", "holistic", "synergy", "synergies",
+                      "paradigm", "game-changing", "game changer", "cutting-edge", "best-in-class"),
+    "intensifier": ("significantly", "dramatically", "incredibly", "crucially", "vitally", "extremely"),
+    "filler transition": ("moreover", "furthermore", "that said", "in conclusion", "let's dive in"),
+    "teaser": ("the surprising part", "here's the catch", "here's the kicker", "changes everything"),
+}
+PROSE_SYMBOLS = {"—": " - ", "–": "-", "“": '"', "”": '"', "‘": "'", "’": "'", "…": "...", "→": "->", "←": "<-"}
+PROSE_FIX = {"symbol": "type the plain form", "emoji": "cut it", "inflated word": "say what it does in plain words",
+             "intensifier": "give the number, or cut the word", "filler transition": "cut it; the order does that work",
+             "teaser": "state the point instead of teasing it",
+             "contrast": f"more than {MAX_CONTRASTS} \"X, not Y\" contrasts in the deck; state it plainly"}
+_PROSE = {kind: re.compile(r"(?<![\w-])(" + "|".join(re.escape(w) for w in words) + r")(?![\w-])", re.IGNORECASE)
+          for kind, words in PROSE_WORDS.items()}
+EMOJI = re.compile("[\U0001F300-\U0001FAFF☀-➿]")
+CONTRAST = re.compile(r",\s+not\s+\w+", re.IGNORECASE)
+QUOTED = re.compile(r'"[^"\n]*"')
+
+
+def prose_tells(text: str) -> dict[str, list[str]]:
+    """The writing tells in slide text, by kind: symbols, emoji, inflated words, intensifiers, filler
+    transitions, teasers, and "X, not Y" contrasts. Inline code and quoted words are someone else's and skip."""
+    text = QUOTED.sub("", plain(INLINE_CODE.sub("", text)))
+    found: dict[str, list[str]] = {}
+    symbols = [s for s in PROSE_SYMBOLS if s in text]
+    if symbols:
+        found["symbol"] = [f"{s} (use {PROSE_SYMBOLS[s].strip() or s})" for s in symbols]
+    if emoji := EMOJI.findall(text):
+        found["emoji"] = emoji
+    for kind, pat in _PROSE.items():
+        if hits := [m.group(1) for m in pat.finditer(text)]:
+            found[kind] = hits
+    if contrasts := CONTRAST.findall(text):
+        found["contrast"] = contrasts
+    return found
 
 
 def _conventions(deck: Deck, brand: Brand, spec_layouts: dict[str, Any]) -> list[Issue]:
@@ -217,7 +256,7 @@ def _conventions(deck: Deck, brand: Brand, spec_layouts: dict[str, Any]) -> list
     chart whose series or slices are told apart by color alone (1.4.1)."""
     out: list[Issue] = []
     projected = ((brand.meta.get("generate") or {}).get("mode", "projected")) != "read"
-    run = 0
+    run = contrasts = 0
     titles: dict[str, int] = {}
     for n, s in enumerate(deck.slides, start=1):
         at: dict[str, Any] = {"file": s.where.file if s.where else None,
@@ -254,6 +293,15 @@ def _conventions(deck: Deck, brand: Brand, spec_layouts: dict[str, Any]) -> list
                                  severity="warning", actual=len(val.lines), limit=MAX_CODE_LINES, **at))
             if isinstance(val, Table | Chart | Image | Icon | Code):
                 continue
+            if name != "quote":  # a quote is someone else's words
+                tells = prose_tells(text_of(val))
+                for kind, found in tells.items():
+                    if kind == "contrast":
+                        contrasts += len(found)
+                        if contrasts <= MAX_CONTRASTS:
+                            continue
+                    out.append(Issue("PROSE_TELL", f"{kind} {', '.join(repr(f) for f in found)}: {PROSE_FIX[kind]}",
+                                     field=name, severity="warning", **at))
             words += len(plain(text_of(val)).split())
             if projected and isinstance(val, list) and len(val) > MAX_BULLETS and \
                     (fields_of.get(name) or {}).get("kind") == "bullets":

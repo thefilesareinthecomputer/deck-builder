@@ -56,7 +56,8 @@ in your report.
 
 ## Tone and style
 
-These apply to every title, field and speaker note you write.
+These apply to every title, field and speaker note you write. `check` reports the countable ones in slide
+text as `PROSE_TELL`; fix those like any other issue.
 
 - Compelling comes from the order of the slides and from real numbers, never from phrasing. No teasers or
   hooks ("the surprising part is", "here's the catch"), no withheld facts, no clickbait.

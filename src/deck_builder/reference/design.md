@@ -83,6 +83,18 @@ on those layouts. The `deck-builder` and `deck-brand` skills read this topic bef
 - **Pasted content gets the same treatment.** Text pasted in from documents, chats or other decks still
   goes through the fields of a layout: rewrite it to fit the budget instead of shrinking it to fit.
 
+## Writing on slides
+
+- Plain words and real numbers. An inflated word (leverage, seamless, robust), an intensifier standing in for
+  a number (significantly, dramatically) or a filler transition (moreover, that said) says less than the plain
+  word or the figure.
+- A slide holds attention by setting up a real question with the data and answering it. State the point; a
+  teaser ("here's the catch") withholds it.
+- Keep "X, not Y" for the one or two beliefs the audience really holds; state the rest plainly.
+- Type the plain characters: a spaced hyphen for a dash, straight quotes, three dots, `->`, and no emoji.
+- `check` warns on all of these in slide text as `PROSE_TELL`; speaker notes, code and quoted words are left
+  alone.
+
 ## Images, icons and logos
 
 - Use icons for parallel ideas, one style and one color per deck, from the brand's icon set.

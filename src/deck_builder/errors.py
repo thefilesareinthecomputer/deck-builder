@@ -127,6 +127,14 @@ CODES: dict[str, tuple[str, str]] = {
         "Cut to the lines that make the point and mark them with `{3,5-7}`, or move the full listing to the "
         "notes or an appendix.",
     ),
+    "PROSE_TELL": (
+        "Slide text has a countable writing tell: a dash, curly quote, ellipsis or arrow character, an emoji, an "
+        "inflated word (leverage, seamless, robust), an intensifier standing in for a number (significantly, "
+        "dramatically), a filler transition (moreover, that said), a teaser (here's the catch), or a third "
+        "\"X, not Y\" contrast in the deck. Speaker notes, code and quoted words are left alone.",
+        "Use the plain word or the number, cut the filler, state the point instead of teasing it, and type the "
+        "plain character. `docs design` has the writing rules.",
+    ),
     "BULLETS_MANY": (
         "A list on a projected slide has more than four bullets, past what an audience holds at once. "
         "A convention from `docs design`, so it warns.",
