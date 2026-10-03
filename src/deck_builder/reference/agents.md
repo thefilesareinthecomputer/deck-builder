@@ -5,7 +5,7 @@ the skills and the agent files point here instead of restating it. The delegatio
 two-round stop rule live in AGENTS.md; this topic is only about which surface each party uses and who
 calls which command.
 
-## The five parties
+## The six parties
 
 - **Main agent.** Holds the conversation with the user. Has a shell, so it always runs the CLI
   directly (`deck-builder ...`); it never goes through its own MCP server. Owns every command and
@@ -17,6 +17,10 @@ calls which command.
 - **`deck-decomposer-agent`.** Turns a body of source material into `outline.md` and a draft
   `deck.md`. Runs no commands at all, because what it reads is untrusted: Read, Write, Edit, Glob and
   Grep only, no MCP server.
+- **`deck-storyteller-agent`.** Optional. Turns an outline, data, a scenario or image cues into
+  `storyboard.md`: the arc, the title spine, and each slide's layout, focal point, emphasis and visual
+  (`docs story`). The builder writes the deck from it. Runs no commands, like the decomposer, since its
+  inputs can be untrusted. Another subagent asks for it with a line in its report; the main agent runs it.
 - **`deck-validator-agent`.** The final proofreader and sign-off for a built deck: reads the deck,
   the design rules and every rendered slide, and returns PASS or SEND BACK with slide-by-slide
   fixes. Read-only: no Write or Edit, and MCP tools only. The main agent runs it at the review gate,
@@ -24,8 +28,8 @@ calls which command.
 
 ## CLI commands
 
-Every CLI command belongs to the main agent: the subagents have no shell, and the decomposer has
-neither a shell nor an MCP server. Four commands exist only as CLI, never as MCP tools, because they
+Every CLI command belongs to the main agent: the subagents have no shell, and the decomposer and the
+storyteller have neither a shell nor an MCP server. Four commands exist only as CLI, never as MCP tools, because they
 set up or link the local install rather than touch a deck or brand kit: `init`, `mcp`, `schema`,
 `skills install`. Every other CLI command (`docs`, `explain`, `brand list/show/check/init/adopt/
 add-asset`, `inspect`, `assets`, `check`, `build`, `convert`, `import`, `render`, `doctor`) also
@@ -44,7 +48,7 @@ tool's owner when the job is delegated to a subagent.
 | `brand_adopt` | `deck-brand-agent` | Wraps an existing `.potx` or `.pptx` as a kit. |
 | `brand_add_asset` | `deck-brand-agent` | Copies a logo or icon PNG into a kit. |
 | `inspect` | `deck-brand-agent` | A template's layouts and placeholders, for the adopt path. |
-| `docs` | main agent | Reference topics (`deck-md`, `workbook`, `brand-yaml`, `tokens-yaml`, `workflow`, `design`, `agents`, `codes`). Also called by the three MCP subagents, each for the topics its own job needs; `deck-validator-agent` reads `design` first. |
+| `docs` | main agent | Reference topics (`deck-md`, `workbook`, `brand-yaml`, `tokens-yaml`, `workflow`, `design`, `story`, `agents`, `codes`). Also called by the three MCP subagents, each for the topics its own job needs; `deck-validator-agent` reads `design` first. |
 | `explain` | main agent | Cause and fix for one issue code. Also called by the three MCP subagents while fixing or judging what `check` or `brand_check` reports. |
 | `render` | main agent | Re-renders an already-built `.pptx` without rebuilding, e.g. the original side of a refresh. Not given to a subagent: `check --render` already covers both loops. |
 | `convert` | main agent | `.md` / `.xlsx` / `.csv` conversion for team editing. |
@@ -65,6 +69,9 @@ tool's owner when the job is delegated to a subagent.
 - **`deck-decomposer-agent`** reads the source folder it's given (read-only, untrusted) plus whatever
   the main agent puts in its prompt; writes only `outline.md` and `deck.md` (or `deck.draft.md` when
   `deck.md` already exists) in the deck folder it's given.
+- **`deck-storyteller-agent`** reads the inputs it's given (read-only, possibly untrusted) plus whatever
+  the main agent puts in its prompt; writes only `storyboard.md` (or `storyboard.draft.md` when one
+  already exists) in the deck folder it's given.
 - **`deck-validator-agent`** reads the deck file, its render folder and the reference topics, and
   writes nothing; a `check` with `render: true` it runs writes only the engine's own build and render
   output, confined to the workspace.

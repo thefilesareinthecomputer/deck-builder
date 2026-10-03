@@ -11,7 +11,8 @@ from pathlib import Path
 from deck_builder.errors import EnvError
 
 SKILLS = ("deck-builder", "deck-brand", "deck-onboard")
-AGENTS = ("deck-builder-agent.md", "deck-brand-agent.md", "deck-decomposer-agent.md", "deck-validator-agent.md")
+AGENTS = ("deck-builder-agent.md", "deck-brand-agent.md", "deck-decomposer-agent.md", "deck-storyteller-agent.md",
+          "deck-validator-agent.md")
 
 
 @dataclass
