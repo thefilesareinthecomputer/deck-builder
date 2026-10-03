@@ -1,8 +1,8 @@
 <h1 align="center">deck-builder</h1>
 
 <p align="center">
-  Turn markdown or Excel into fully editable PowerPoint decks, built on your own brand template.<br>
-  Every build is deterministic, every slide is checked, and guided setup takes you from install to first deck.
+  Write your slides in markdown or Excel and get back a real, editable PowerPoint deck on your own brand template.<br>
+  The same input always gives the same file, every slide gets checked, and a guided setup gets you to your first deck.
 </p>
 
 <p align="center">
@@ -27,28 +27,28 @@
 <p align="center">
   <img src="docs/images/showcase.png" width="100%" alt="The same deck built in three brands: a dark green paper supplier set in Georgia, a navy office-systems company set in Avenir Next, and a charcoal soap maker set in Helvetica Neue. Each column shows the title slide, three cards with colored labels and a bold target line, and a native column chart under a section label and subtitle, with its takeaway.">
 </p>
-<p align="center"><sub>One <code>deck.md</code>, built three times with a different brand: each brand's kit sets its own type, card colors and takeaway style. Every chart is native and every word remains editable.</sub></p>
+<p align="center"><sub>One <code>deck.md</code>, built three times with three different brands. Each brand sets its own type, card colors and takeaway style. The charts are real PowerPoint charts, and every word is still editable.</sub></p>
 
 <br>
 
-You or an agent supply the content, and deck-builder sets every slide in a placeholder of your PowerPoint template, so typography, color and layout always come from the brand. Content that exceeds its space fails validation with an issue code that explains the fix.
+You (or an agent) write the content. deck-builder puts every piece of it into a placeholder in your PowerPoint template, so the fonts, colors and layout always come from your brand. If something doesn't fit, `check` tells you what's wrong and how to fix it.
 
 <table>
   <tr>
-    <td width="33%" valign="top"><b>Built on your template</b><br>Generate a brand kit from your colors, fonts and logo, or adopt the PowerPoint template your team already uses.</td>
-    <td width="33%" valign="top"><b>Markdown or Excel</b><br>Author in <code>deck.md</code> or <code>deck.xlsx</code>. The formats convert losslessly, so writers and reviewers each work in the one they prefer.</td>
-    <td width="33%" valign="top"><b>Guided onboarding</b><br>In <a href="https://code.claude.com/docs/en/overview">Claude Code</a>, Anthropic's coding agent, onboarding checks your environment, configures your brand and builds a first deck with you.</td>
+    <td width="33%" valign="top"><b>Built on your template</b><br>Make a brand kit from your colors, fonts and logo, or use the PowerPoint template your team already has.</td>
+    <td width="33%" valign="top"><b>Markdown or Excel</b><br>Write in <code>deck.md</code> or <code>deck.xlsx</code>. They convert back and forth without losing anything, so writers and reviewers can each use the one they like.</td>
+    <td width="33%" valign="top"><b>Guided setup</b><br>In <a href="https://code.claude.com/docs/en/overview">Claude Code</a>, Anthropic's coding agent, onboarding checks your setup, sets up your brand and builds a first deck with you.</td>
   </tr>
   <tr>
-    <td valign="top"><b>Deterministic builds</b><br>Identical input produces an identical file, and the engine makes no network calls.</td>
-    <td valign="top"><b>Native, editable output</b><br>Real text in template placeholders, native charts and tables, speaker notes and alt text. Nothing is flattened into images.</td>
-    <td valign="top"><b>Automated visual QA</b><br>Each render measures where every word lands and flags only the slides that need review.</td>
+    <td valign="top"><b>Same input, same file</b><br>A build always gives you the same file for the same input, and the engine never goes online.</td>
+    <td valign="top"><b>Native and editable</b><br>You get real text in the template's placeholders, real charts and tables, speaker notes and alt text. Nothing gets flattened into a picture.</td>
+    <td valign="top"><b>Checked by eye and by measure</b><br>Each render measures where every word ended up and flags only the slides you need to look at.</td>
   </tr>
 </table>
 
 ## Install
 
-Requires Python 3.11 or later. The commands below use [uv](https://docs.astral.sh/uv/), the quickest way to install; pipx or pip work too (see below). Rendering also requires poppler and LibreOffice, the verified renderer; PowerPoint on macOS is supported but not yet verified. `deck-builder doctor` checks what is installed.
+You need Python 3.11 or later. The commands below use [uv](https://docs.astral.sh/uv/), which is the quickest way in, but pipx and pip work too. To render slides you also need poppler and LibreOffice. PowerPoint on a Mac can render as well, but we haven't verified it yet. `deck-builder doctor` tells you what's installed.
 
 ```bash
 git clone https://github.com/thefilesareinthecomputer/deck-builder.git && cd deck-builder
@@ -58,13 +58,13 @@ deck-builder skills install --yes     # optional: the skills and agents in every
 
 | Use it | Set up with | You get |
 |---|---|---|
-| **As a tool for agents and the CLI** (most common) | `uv tool install .` | `deck-builder` in any folder, and the MCP server (`deck-builder mcp`) the subagents run on |
+| **As a tool for agents and the CLI** (most common) | `uv tool install .` | `deck-builder` in any folder, plus the MCP server (`deck-builder mcp`) the agents use |
 | **As a skill in your other Claude Code projects** | `deck-builder skills install --yes`, after the tool | The three skills and five agents, linked into `~/.claude` |
-| **From the clone**, to try it or work on it | `uv run deck-builder ...` | No install; a Claude Code session opened in the clone has the skills |
+| **From the clone**, to try it or work on it | `uv run deck-builder ...` | No install; a Claude Code session opened in the clone already has the skills |
 
-**Without uv:** `pipx install .`, or `pip install .` inside a virtual environment, puts the same `deck-builder` command on your PATH, and `deck-builder skills install --yes` follows as above.
+**Without uv:** `pipx install .`, or `pip install .` inside a virtual environment, puts the same `deck-builder` command on your PATH. Then run `deck-builder skills install --yes` as above.
 
-After a `git pull`, update with `uv tool install --reinstall .` (or `pipx install --force .`). To work on the engine itself, install with `--editable` so the tool runs the clone's source; an editable install still needs `uv tool install --editable --reinstall .` after a pull that adds a dependency (0.2.0 adds Pygments), or every command fails on the missing module.
+After you pull new changes, run `uv tool install --reinstall .` (or `pipx install --force .`). If you're working on the engine itself, install with `--editable` so the tool runs straight from the clone. An editable install still needs `uv tool install --editable --reinstall .` when a pull adds a dependency (0.2.0 adds Pygments); otherwise every command fails with a missing module.
 
 ## Quick start
 
@@ -74,32 +74,32 @@ cd ~/decks
 deck-builder check workspace/decks/quarterly-review --render
 ```
 
-`check --render` validates, builds and renders the example deck. The deck is written to `workspace/out/quarterly-review.pptx`, and its slide images and contact sheet to `workspace/out/quarterly-review.render/`.
+`check --render` checks the example deck, builds it and renders it. The deck lands in `workspace/out/quarterly-review.pptx`, and its slide images and contact sheet go in `workspace/out/quarterly-review.render/`.
 
 > [!TIP]
-> **Working in Claude Code?** Ask in plain words: "set up deck-builder", "make a deck from these notes", "fix the fonts in this deck". Onboarding runs the steps above with you and then sets up your brand.
+> **Using Claude Code?** Just ask: "set up deck-builder", "make a deck from these notes", "fix the fonts in this deck". Onboarding walks through these steps with you and then sets up your brand.
 
 ## How it works
 
-A deck is a text file. Each `##` heading is one slide, and its `layout:` line picks one of the brand's layouts. A layout has fields, such as title, subtitle, body and caption, that map to placeholders in the PowerPoint template, and each field has a character budget: the most text that fits in its placeholder.
+A deck is a text file. Each `##` heading starts a slide, and its `layout:` line picks one of the brand's layouts. Each layout has fields, like title, subtitle, body and caption, and each field maps to a placeholder in the template. Every field also has a character budget, which is the most text that fits in its box.
 
 1. **Write** the content in `deck.md` or `deck.xlsx`.
-2. **Check** it with `deck-builder check`. A layout the brand does not have, a missing image or text over a field's budget fails with an issue code, and `deck-builder explain <CODE>` describes the cause and the fix.
-3. **Build** the `.pptx`. Every piece of text lands in a template placeholder, so fonts, colors and positions come from the template.
-4. **Render** the `.pptx` to images and review the contact sheet, an overview image with up to 20 slides per sheet. The render measures where each word landed and flags slides with overflowing text, empty placeholders or substituted fonts.
+2. **Check** it with `deck-builder check`. If the brand doesn't have a layout, an image is missing or text runs over its budget, you get an issue code, and `deck-builder explain <CODE>` tells you the cause and the fix.
+3. **Build** the `.pptx`. Every piece of text goes into a template placeholder, so the fonts, colors and positions all come from the template.
+4. **Render** the `.pptx` to images and look over the contact sheet, which puts up to 20 slides on one image. The render measures where each word landed and flags any slide with text running over, an empty placeholder or a swapped-in font.
 
-`check --render` runs steps 2 through 4 in one command, which is what the quick start ran. Fix the flagged slides in the deck file and run it again.
+`check --render` does steps 2 to 4 in one go, and that's what the quick start ran. Fix any flagged slides in the deck file and run it again.
 
 <p align="center">
   <img src="docs/images/contact-sheet.png" width="100%" alt="A contact sheet of eleven rendered slides labeled slide 1 to slide 11: title, agenda, three cards, a chart, a big number, three risk bands, a table, an image beside bullets, a row of partner logos, three icons and a closing slide. It is the image an agent reviews after a render.">
 </p>
-<p align="center"><sub>A contact sheet from a clean render, with nothing flagged. A flagged slide receives a red border and label, so a reviewer finds it without opening every slide.</sub></p>
+<p align="center"><sub>A contact sheet from a clean render. A flagged slide gets a red border and a label, so you can find it without opening every slide.</sub></p>
 
 ## Write a deck
 
-A deck and a brand are separate. The deck holds only content (text, data and image references) and names its brand with one line, `brand: <slug>`. The brand kit holds the whole design: template, fonts, colors, logos and budgets. Change that one line, or pass `--brand <slug>`, and the same content builds in a different design; the image at the top is one deck built that way three times.
+A deck and a brand are separate things. The deck only holds content: text, data and image references. It names its brand with one line, `brand: <slug>`. The brand kit holds the whole design: the template, fonts, colors, logos and budgets. Change that one line, or pass `--brand <slug>`, and the same content builds in a different design. The image at the top is one deck built that way three times.
 
-`key: value` lines under a heading fill the layout's fields, and the rest of the slide fills its body; `### name` starts the content for a named field, such as each card's bullets. The three slides below form the first column of that image. They use the `dumbder-nifftlin` demo brand; to try them in the quick-start workspace, change the brand to `neutral`.
+Each `key: value` line under a heading fills one of the layout's fields, and the rest of the slide goes into the body. `### name` starts the content for a named field, like each card's bullets. The three slides below are the first column of that image. They use the `dumbder-nifftlin` demo brand; to try them in your quick-start workspace, change the brand to `neutral`.
 
 ````markdown
 ---
@@ -159,9 +159,11 @@ Notes:
 Source: the Q3 shipment ledger.
 ````
 
-Field values are YAML, so quote any value that contains `: `. `deck-builder brand show <slug>` lists a brand's layouts, fields and character budgets. The [full showcase deck](tests/fixtures/demo-brands/showcase/deck.md) builds into all three brands with a single `build --data` command.
+Field values are YAML, so put quotes around any value with `: ` in it. `deck-builder brand show <slug>` lists a brand's layouts, fields and budgets. The [full showcase deck](tests/fixtures/demo-brands/showcase/deck.md) builds into all three brands with one `build --data` command.
 
-Code goes in a fenced block with its language. It builds as editable text, highlighted in the brand's colors on a panel that fits it, and never wraps; `check` reports a line too long for the panel. `{6-8}` marks lines, `lines` numbers them and `title=` names the file. The first slide in the grid below is this one:
+You can also write a deck as a spreadsheet. In `deck.xlsx` each slide is a row, and charts and tables get their own sheets. A plain `deck.csv` works for decks that are only text, and `build --data rows.csv` builds one deck per row from a template deck.
+
+Code goes in a fenced block with its language. It builds as real, editable text, highlighted in the brand's colors on a panel sized to fit, and it never wraps. If a line is too long for the panel, `check` tells you. `{6-8}` highlights lines, `lines` adds line numbers, and `title=` shows the file name. This is the first slide in the grid below:
 
 ````markdown
 ## The web form now saves each line
@@ -181,33 +183,37 @@ def add_line(basket, item, quantity):
 ```
 ````
 
+A few more options help with emphasis and pacing. `layout: statement` puts one sentence in large type. `layout: image-full` runs a photo edge to edge with the title on a band across the bottom. `build: <field>` fades a list, a chart or a set of cards in one click at a time while you present. In a long deck, `current: n` on the agenda shows which part you're in.
+
 ## Example decks
 
 <p align="center">
   <img src="docs/images/decks.png" width="100%" alt="Nine slides from the three demo brands' decks, one column per brand. Dark green and tan paper supplier: a Python function on a dark code panel with three highlighted lines, a column chart of on-time delivery against the regional average, and three labeled risk bands. Navy and orange office-systems company: a navy title slide, five process chevrons in a ramp of navy, and a line chart of planned against actual installs. Charcoal and terracotta soap maker: a stacked column chart of revenue by channel, a photo of soap bars beside four bullets, and three cards with charcoal labels.">
 </p>
-<p align="center"><sub>Nine slides from the demo brands' pitch and review decks, a column per brand. Each brand's kit sets its own type, colors, chart palette, code panel and takeaway style.</sub></p>
+<p align="center"><sub>Nine slides from the demo brands' pitch and review decks, one column per brand. Each brand sets its own type, colors, chart palette, code panel and takeaway style.</sub></p>
 
 ## Design
 
-Every generated kit follows one design standard, built from presentation research and documented in `deck-builder docs design`. Titles are bold sentences in the same place on every slide. Short content sits at the optical center instead of hugging the top. Comparisons sit on tinted panels, tables are quiet (a dark header, thin rules, right-aligned figures, no word ever broken), and charts are too: bars start at zero, gridlines are hairlines, axis labels are muted, and a labeled bar chart drops its scale. Shares of a whole are sorted bars, never pies or doughnuts. Code sits on a quiet panel in a monospace font: keywords bold, comments italic, every token color at 4.5:1 on the panel, and a light or dark panel per brand. An optional `takeaway:` band states each slide's conclusion, and one short accent rule is the only decoration.
+Every generated kit follows one design standard, based on presentation research; `deck-builder docs design` has the full rules. Titles are bold sentences in the same spot on every slide. Short content sits at the optical center instead of hugging the top. Comparisons go on tinted panels.
 
-Set `generate.mode` in `brand.yaml` by how the deck is used: `projected` (the default) for a room, with nothing under 18 pt, or `read` for decks sent ahead and read on screen, with a 14 pt body on a readable measure. `generate.type` adjusts any size.
+Tables stay quiet, with a dark header, thin rules, numbers aligned right and no word ever split across lines. Charts stay quiet too. Bars start at zero, gridlines are hairlines, axis labels are muted, and a bar chart with labels drops its scale. We show shares of a whole as sorted bars and don't use pies or doughnuts. Code sits on a quiet panel in a monospace font, with bold keywords and italic comments, and every color in it reads at 4.5:1. An optional `takeaway:` band states each slide's conclusion, and one short accent rule is the only decoration. Slides never animate from one to the next. The only motion is a half-second fade inside a slide, and only where you ask for it.
 
-`generate.layout_set: designed` adds layouts built from shapes rather than loose text: two to five cards with colored label bands, three to six process chevrons, two to four labeled bands and a row of logos, plus a section label and a subtitle line on every content slide. Options give icons a tile, process steps an icon each and the takeaway an italic style. Images with transparent pixels, such as logos, are fitted inside their box instead of cropped, and every brand can place the engine's starter icons.
+Set `generate.mode` in `brand.yaml` to match how the deck will be used. `projected`, the default, is for presenting to a room, so nothing goes under 18 pt. `read` is for decks people read on their own screen, with a 14 pt body at a comfortable line length. `generate.type` changes any single size.
 
-Accessibility follows WCAG 2.2 AA, the standard accessibility law points to. Generated layouts keep projected text at 18 pt or more and white labels at 4.5:1 contrast. `brand check` reports any color pair the kit uses that falls under the WCAG ratios, chart colors that look alike to people with color blindness, and type under the legibility floor; `check` reports a deck's images without alt text, duplicate slide titles and charts told apart by color alone. Colors stay the brand owner's call, so these are warnings. `deck-builder docs design` has the details.
+`generate.layout_set: designed` adds layouts built from shapes instead of loose text: two to five cards with colored labels, three to six process chevrons, two to four labeled bands and a row of logos. It also adds a section label and a subtitle line to every content slide. Options give icons a tile, give each process step an icon, and switch the takeaway to an italic line. Images with transparent backgrounds, like logos, get fitted inside their box instead of cropped, and every brand can use the engine's starter icons.
+
+Accessibility follows WCAG 2.2 AA, the standard that accessibility laws point to. Generated layouts keep projected text at 18 pt or more and white labels at 4.5:1 contrast. `brand check` warns about color pairs under the WCAG ratios, chart colors that look alike to people with color blindness, and type that's too small. `check` warns about images without alt text, two slides with the same title, charts that rely on color alone, and filler words like "leverage" or "dramatically". These are warnings rather than errors, because colors stay the brand owner's call. `deck-builder docs design` has the details.
 
 ## Fix up an existing deck
 
-To make a deck consistent (fonts, sizes, colors and slide numbers) or move it onto your brand, import it and rebuild:
+To clean up a deck (its fonts, sizes, colors and slide numbers) or move it onto your brand, import it and rebuild it:
 
 ```bash
 deck-builder import old.pptx workspace/decks/refresh --brand <slug>
 deck-builder check workspace/decks/refresh --render
 ```
 
-`import` turns the .pptx back into `deck.md` and its images, and the rebuild takes every style from the brand and numbers every content slide. The original file is never changed. Anything that doesn't map to a layout field, such as SmartArt or a stray text box, is listed in `import-report.md` and kept in that slide's speaker notes, so nothing is lost. In Claude Code, ask for it directly: "fix the fonts and slide numbers in this deck" or "put this deck on our brand".
+`import` turns the .pptx back into `deck.md` plus its images. The rebuild takes every style from the brand and numbers every content slide. Your original file is never touched. Anything that doesn't fit a layout field, like SmartArt or a stray text box, goes into `import-report.md` and into that slide's speaker notes, so nothing gets lost. In Claude Code, just ask: "fix the fonts and slide numbers in this deck" or "put this deck on our brand".
 
 ## Brands
 
@@ -220,15 +226,15 @@ brands/<slug>/
   references/      # optional: past decks to match, read-only
 ```
 
-A generated kit is self-contained: `brand init <slug> --force` rebuilds it from its own recipe and ingredients, and `brand check` warns `KIT_STALE` when the recipe changed since.
+A generated kit has everything it needs. `brand init <slug> --force` rebuilds it from its own recipe and assets, and `brand check` warns with `KIT_STALE` if the recipe has changed since then.
 
 | Starting point | Command |
 |---|---|
 | Your colors, fonts and logo | `deck-builder brand init <slug> --from brand.yaml` generates the template and `tokens.yaml` |
-| An existing template | `deck-builder brand adopt <slug> --template client.potx` wraps it; a test render then tunes the budgets |
+| An existing template | `deck-builder brand adopt <slug> --template client.potx` wraps it, and a test render then tunes the budgets |
 | Nothing yet | The `neutral` brand that `init` creates |
 
-A deck selects its brand with `brand: <slug>`, and `--brand` overrides it for a single build. Brands resolve from the `brand_paths` in `deck-builder.toml`, so a kit can live in any folder.
+A deck picks its brand with `brand: <slug>`, and `--brand` overrides that for one build. Brands are found through `brand_paths` in `deck-builder.toml`, so a kit can live in any folder.
 
 ## Commands
 
@@ -236,12 +242,12 @@ A deck selects its brand with `brand: <slug>`, and `--brand` overrides it for a 
 |---|---|
 | `init` | Create the workspace, config, neutral brand and example decks |
 | `doctor` | Check Python packages, poppler, LibreOffice, PowerPoint and its automation permission |
-| `check <deck> [--render]` | Validate a deck; with `--render`, also build, render and measure |
+| `check <deck> [--render]` | Check a deck; with `--render`, also build, render and measure it |
 | `build <deck> [--data rows.csv]` | Build the `.pptx` and its manifest; with `--data`, one deck per row |
-| `convert <in> <out>` | Convert between `.md`, `.xlsx` and `.csv`, refusing anything lossy |
+| `convert <in> <out>` | Convert between `.md`, `.xlsx` and `.csv`, refusing anything that would lose content |
 | `import <pptx> <out>` | Turn an existing deck back into `deck.md`, its images and a report of what needs a decision |
-| `render <pptx>` | PDF, slide PNGs, contact sheets, measured overflow, flagged slides |
-| `brand list`, `brand show <slug>`, `brand check <slug>` | Find brands, see a brand's layouts and budgets, verify a kit |
+| `render <pptx>` | PDF, slide PNGs, contact sheets, measured overflow and flagged slides |
+| `brand list`, `brand show <slug>`, `brand check <slug>` | Find brands, see a brand's layouts and budgets, and check a kit |
 | `brand init`, `brand adopt` | Generate a kit, or wrap an existing template; `brand init <slug> --force` regenerates a kit from its own `brand.yaml` |
 | `brand add-asset <slug> <png> --as logo/<id>` | Copy a logo or icon (`icon/<id>`) into a kit |
 | `inspect <template>` | A template's layouts, placeholders and theme |
@@ -249,44 +255,46 @@ A deck selects its brand with `brand: <slug>`, and `--brand` overrides it for a 
 | `docs [topic]`, `explain <CODE>` | Reference topics and issue-code fixes for the installed version |
 | `schema brand\|tokens\|manifest` | The JSON Schema for `brand.yaml`, `tokens.yaml` or a build manifest |
 | `skills install` | Link this clone's skills and agents into `~/.claude` |
-| `mcp` | Serve the engine as MCP tools over stdio for the agents, confined to the workspace |
+| `mcp` | Serve the engine as MCP tools over stdio for the agents, kept inside the workspace |
 
-A `<deck>` is a `.md`, `.xlsx` or `.csv` file, or a folder containing one. Every command accepts `--json`. Exit codes are 0 for success, 1 for issues to fix and 2 for usage or environment errors. `deck-builder docs` lists the reference topics, and [docs/issue-codes.md](docs/issue-codes.md) documents every issue code.
+A `<deck>` can be a `.md`, `.xlsx` or `.csv` file, or a folder with one in it. Every command takes `--json`. The exit code is 0 for success, 1 when there are issues to fix and 2 for a usage or setup problem. `deck-builder docs` lists the reference topics, and [docs/issue-codes.md](docs/issue-codes.md) explains every issue code.
 
 ## Claude Code
 
-deck-builder includes skills and agents for Claude Code. Describe the deck you need, from a brief or a folder of notes, and review the rendered result.
+deck-builder comes with skills and agents for Claude Code. Describe the deck you need, from a brief or a folder of notes, and then review what it renders.
 
 | Piece | Job |
 |---|---|
-| `deck-onboard` skill | Setup, missing tools, choosing a brand path, a first deck |
-| `deck-brand` skill | Brand kits: colors, fonts, logos, icons, layouts, templates |
+| `deck-onboard` skill | Setup, missing tools, choosing where brands live, and a first deck |
+| `deck-brand` skill | Brand kits: colors, fonts, logos, icons, layouts and templates |
 | `deck-builder` skill | Writing, checking, converting, building and reviewing decks |
-| `deck-decomposer-agent` | Turns a folder of notes into an outline with sources and a draft `deck.md` to co-author |
-| `deck-storyteller-agent` | Optional. Turns an outline, data, a scenario or image cues into a storyboard: the arc, the title spine, and each slide's layout, focal point, emphasis and visual, for the builder to write the deck from |
+| `deck-decomposer-agent` | Turns a folder of notes into an outline with sources and a draft `deck.md` for you to edit |
+| `deck-storyteller-agent` | Optional. Turns an outline, data or a scenario into a storyboard: the story's arc, the slide titles and how each slide should look, for the builder to write the deck from |
 | `deck-brand-agent` | Builds or adopts a brand kit and tunes its budgets with a test render |
-| `deck-builder-agent` | Runs the check, build and render loop on a larger deck in its own context |
-| `deck-validator-agent` | Proofreads a built deck against the design and accessibility rules, every slide, and signs it off or sends it back with fixes; read-only |
+| `deck-builder-agent` | Runs the check, build and render loop on a bigger deck in its own context |
+| `deck-validator-agent` | Proofreads a built deck against the design and accessibility rules, slide by slide, and signs it off or sends it back with fixes; it never edits |
 
-The agents have no shell access. The decomposer and the storyteller run no commands at all; the others reach the engine only through its MCP server (`deck-builder mcp`), confined to the workspace (and the configured `brand_paths` folders for brand tools) and refusing this clone's own `src/`, `.claude/` and `.git/` regardless of those settings; the CLI must be on your PATH (`uv tool install .` from the repository). `deck-builder skills install --yes` makes the skills and agents available in other projects.
+The agents can't run shell commands. The decomposer and the storyteller run no commands at all. The other agents reach the engine only through its MCP server (`deck-builder mcp`), which keeps them inside the workspace (and the `brand_paths` folders for brand work) and always refuses this clone's own `src/`, `.claude/` and `.git/`. The CLI has to be on your PATH (`uv tool install .` from the repo). `deck-builder skills install --yes` makes the skills and agents available in your other projects.
+
 ## Principles
 
-- **Content in, design out.** Decks contain text, data and image references. Layout, typography and color come only from the brand kit, and budgets are never relaxed to make content fit.
-- **Confined by default.** A deck reads images only from its own folder, a build writes only the `.pptx` files it creates, and bulk data cannot add slides or images. Imported decks are treated as untrusted input. The MCP server's tools are confined to the workspace (and `brand_paths` for brand tools) and refuse this clone's own `src/`, `.claude/` and `.git/`; an agent's own Write and Edit tools are limited only by its instructions, not by code.
-- **Restraint.** Visual additions such as slide numbers, footers and status dots use the smallest mark that does the job.
+- **Content in, design out.** Decks hold text, data and image references. Layout, type and color come only from the brand kit, and budgets never get loosened to make content fit.
+- **Confined by default.** A deck only reads images from its own folder, a build only writes the `.pptx` files it makes, and bulk data can't add slides or images. Imported decks are treated as untrusted. The MCP server keeps its tools inside the workspace (and `brand_paths` for brand work) and refuses this clone's own `src/`, `.claude/` and `.git/`. An agent's own Write and Edit tools are limited by its instructions, not by code.
+- **Restraint.** Visual extras like slide numbers, footers and status dots use the smallest mark that does the job.
 
 ## Status
 
-Current release: v0.1.0. See the [changelog](CHANGELOG.md). Known limitations:
+The current release is v0.1.0, and the [changelog](CHANGELOG.md) lists what's changed since. Known limits:
 
-- The PowerPoint render backend has not yet been verified on a Mac with PowerPoint installed, so its renders include the `RENDER_UNVERIFIED` warning. LibreOffice renders are a close proxy.
-- Icons are PNG alpha masks; SVG is not supported.
+- We haven't verified the PowerPoint render backend on a Mac with PowerPoint yet, so its renders come with a `RENDER_UNVERIFIED` warning. LibreOffice renders are a close match.
+- The in-slide fade (`build:`) is written for PowerPoint, and playing it there is part of that same check. LibreOffice reads it as its own fade.
+- Icons are PNG masks; SVG isn't supported.
 
 ## Development
 
 ```bash
-uv run pytest                          # unit, round-trip and static tests, plus the render tier when LibreOffice is installed
-uv run pytest -m render                # render tier only
+uv run pytest                          # everything: unit and CLI integration tests, the scenario suite, and the render tier when LibreOffice is installed
+uv run pytest -m render                # the render tier only
 uv run ruff check && uv run mypy
 uv run python scripts/readme_images.py # regenerate the images in this README
 ```
@@ -296,10 +304,10 @@ uv run python scripts/readme_images.py # regenerate the images in this README
 | `scripts/readme_images.py` | Builds the showcase deck and the brand decks the example grid draws from, in the three demo brands, and redraws `docs/images/` |
 | `scripts/demo_brand_logos.py` | Redraws the demo brands' logo wordmarks from their SVG sources (macOS fonts) |
 | `scripts/make_example_assets.py` | Draws the neutral brand's logo and icons and the example deck's image |
-| `scripts/make_starter_icons.py` | Draws the engine's starter icons, which any brand can place |
+| `scripts/make_starter_icons.py` | Draws the engine's starter icons, which any brand can use |
 | `scripts/probe_powerpoint.sh <deck.pptx>` | Tests the PowerPoint render backend on a Mac with PowerPoint |
 
-The three fictional brands in `tests/fixtures/demo-brands/` serve as the test and showcase brands; their names and artwork were created for this repository. Everything under `workspace/` is ignored by git, so decks and brands created there stay out of the repository. Releases follow the [release checklist](docs/release-checklist.md).
+The three made-up brands in `tests/fixtures/demo-brands/` are the test and showcase brands, and their names and artwork were made for this repo. Everything under `workspace/` is ignored by git, so the decks and brands you make there stay out of the repo. Releases follow the [release checklist](docs/release-checklist.md).
 
 ## License
 
