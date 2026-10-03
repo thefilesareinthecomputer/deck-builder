@@ -531,7 +531,7 @@ def doctor_cmd(args: argparse.Namespace) -> Result:
     editable = mcp_check.editable if mcp_check is not None and mcp_check.editable is not None \
         else doctor.editable_install()
     r = Result(command="doctor", data={"checks": [c.as_dict() for c in checks], "render_backend": backend,
-                                       "can_build": all(c.status == "ok" for c in checks[:7]),
+                                       "can_build": all(c.status == "ok" for c in checks[:1 + len(doctor.PACKAGES)]),
                                        "editable_install": editable})
     if not r.data["can_build"]:
         r.ok, r.exit_code = False, 2

@@ -10,7 +10,7 @@ import json
 import sys
 from collections.abc import Callable
 
-from deck_builder import __version__, commands, docs
+from deck_builder import __version__, docs
 from deck_builder.errors import EXIT_ENV, EnvError, Result
 
 Handler = Callable[[argparse.Namespace], Result]
@@ -18,6 +18,8 @@ Handler = Callable[[argparse.Namespace], Result]
 
 def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
     """Every subcommand and its handler. The MCP server parses tool calls with this same parser."""
+    from deck_builder import commands  # here, so a dependency missing from the install reaches main's message
+
     ap = argparse.ArgumentParser(
         prog="deck-builder",
         description="Build branded, editable PowerPoint decks from markdown or spreadsheets.",
@@ -137,7 +139,15 @@ def run(handler: Handler, args: argparse.Namespace) -> Result:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap, handlers = build_parser()
+    try:
+        ap, handlers = build_parser()
+    except ModuleNotFoundError as e:  # pulled a version with a new dependency, but didn't reinstall the tool
+        package = (e.name or "a required").split(".")[0]
+        print(f"error: this install of deck-builder is missing the {package!r} package, which this version of the "
+              "code needs. Reinstall from the clone: `uv tool install --reinstall .` (`uv tool install --editable "
+              "--reinstall .` for an editable install), or `uv sync` when you run it with `uv run`.",
+              file=sys.stderr)
+        return EXIT_ENV
     args = ap.parse_args(argv)
     if not args.command:
         ap.print_help()

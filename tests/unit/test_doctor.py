@@ -116,3 +116,63 @@ def test_doctor_warns_from_the_mcp_servers_install_not_the_doctor_processs_own(w
     main(["--config", str(ws / "deck-builder.toml"), "doctor"])
     text = capsys.readouterr().out
     assert "warning" in text and "editable install" in text
+
+
+# ---------------------------------------------------------------- after an update
+
+
+def test_an_install_behind_the_clone_is_stale_with_the_reinstall_as_its_fix():
+    assert doctor.install_version("0.2.0", "0.2.0", "0.2.0").status == "ok"
+    assert doctor.install_version("0.2.0", None, None).status == "ok"  # not in a clone, no MCP server
+    behind = doctor.install_version("0.2.0", "0.1.0", "0.2.0")  # the agents' tool wasn't reinstalled
+    assert behind.status == "stale" and "0.1.0" in behind.detail and "--reinstall" in behind.fix
+    assert doctor.install_version("0.1.0", "0.1.0", "0.2.0").status == "stale"  # pulled, not reinstalled
+
+
+def test_the_clone_version_comes_from_its_own_pyproject(tmp_path):
+    (tmp_path / "pyproject.toml").write_text('[project]\nname = "deck-builder"\nversion = "9.9.9"\n')
+    (tmp_path / "decks" / "q3").mkdir(parents=True)
+    assert doctor.clone_version(tmp_path / "decks" / "q3") == "9.9.9"
+    (tmp_path / "pyproject.toml").write_text('[project]\nname = "other"\nversion = "1.0.0"\n')
+    assert doctor.clone_version(tmp_path) is None
+
+
+def test_agents_a_release_added_but_skills_install_hasnt_linked_are_stale(tmp_path):
+    from deck_builder.skills import AGENTS
+
+    assert doctor.linked_agents(tmp_path).status == "optional"  # never installed: nothing to update
+    (tmp_path / "agents").mkdir()
+    for name in AGENTS[:-1]:
+        (tmp_path / "agents" / name).write_text("")
+    stale = doctor.linked_agents(tmp_path)
+    assert stale.status == "stale" and AGENTS[-1].removesuffix(".md") in stale.detail
+    (tmp_path / "agents" / AGENTS[-1]).write_text("")
+    assert doctor.linked_agents(tmp_path).status == "ok"
+
+
+def test_doctor_names_kits_another_version_generated(ws, capsys):
+    import yaml
+
+    from deck_builder.brand.kit import inputs_sha
+
+    kit = ws / "brands" / "stock"
+    tokens = yaml.safe_load((kit / "tokens.yaml").read_text())
+    meta = yaml.safe_load((kit / "brand.yaml").read_text())
+    tokens["generated"] = {"by": "deck-builder 0.0.1", "inputs_sha256": inputs_sha(kit, meta)}
+    (kit / "tokens.yaml").write_text(yaml.safe_dump(tokens))
+    main(["--config", str(ws / "deck-builder.toml"), "doctor", "--json"])
+    kits = next(c for c in json.loads(capsys.readouterr().out)["checks"] if c["name"] == "brand kits")
+    assert kits["status"] == "stale" and "stock" in kits["detail"] and "--force" in kits["fix"]
+
+
+def test_a_dependency_missing_from_the_install_says_how_to_reinstall():
+    """The update that broke an editable install: the code needs a package its environment lacks. The CLI
+    names it and the reinstall instead of a traceback."""
+    import subprocess
+
+    proc = subprocess.run([sys.executable, "-c", "import sys; sys.modules['pygments'] = None; "
+                           "from deck_builder.cli import main; raise SystemExit(main(['docs']))"],
+                          capture_output=True, text=True, timeout=60)
+    assert proc.returncode == 2
+    assert "missing the 'pygments' package" in proc.stderr and "--reinstall" in proc.stderr
+    assert "Traceback" not in proc.stderr

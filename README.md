@@ -19,7 +19,8 @@
   <a href="#fix-up-an-existing-deck"><b>Fix up a deck</b></a> &nbsp;|&nbsp;
   <a href="#brands"><b>Brands</b></a> &nbsp;|&nbsp;
   <a href="#commands"><b>Commands</b></a> &nbsp;|&nbsp;
-  <a href="#claude-code"><b>Claude Code</b></a>
+  <a href="#claude-code"><b>Claude Code</b></a> &nbsp;|&nbsp;
+  <a href="#updating"><b>Updating</b></a>
 </p>
 
 <br>
@@ -64,7 +65,7 @@ deck-builder skills install --yes     # optional: the skills and agents in every
 
 **Without uv:** `pipx install .`, or `pip install .` inside a virtual environment, puts the same `deck-builder` command on your PATH. Then run `deck-builder skills install --yes` as above.
 
-After you pull new changes, run `uv tool install --reinstall .` (or `pipx install --force .`). If you're working on the engine itself, install with `--editable` so the tool runs straight from the clone. An editable install still needs `uv tool install --editable --reinstall .` when a pull adds a dependency (0.2.0 adds Pygments); otherwise every command fails with a missing module.
+If you're working on the engine itself, install with `--editable` so the tool runs straight from the clone. To get a newer version later, see [Updating](#updating).
 
 ## Quick start
 
@@ -282,9 +283,30 @@ The agents can't run shell commands. The decomposer and the storyteller run no c
 - **Confined by default.** A deck only reads images from its own folder, a build only writes the `.pptx` files it makes, and bulk data can't add slides or images. Imported decks are treated as untrusted. The MCP server keeps its tools inside the workspace (and `brand_paths` for brand work) and refuses this clone's own `src/`, `.claude/` and `.git/`. An agent's own Write and Edit tools are limited by its instructions, not by code.
 - **Restraint.** Visual extras like slide numbers, footers and status dots use the smallest mark that does the job.
 
+## Updating
+
+Cloning and installing as above always gets you the latest code, so you don't need to pick a version. When a new one comes out, do this on each machine where you use deck-builder:
+
+1. Commit or stash anything you're changing in the clone, then run `git pull`.
+2. Reinstall the tool with `uv tool install --reinstall .`, or `uv tool install --editable --reinstall .` for an editable install (`pipx install --force .` without uv). Until you do, the tool keeps running the old version, and so do the agents, since they use the same install. If a new version needs a package your install doesn't have, every command stops and tells you to run this.
+3. If you use the skills and agents in other projects, run `deck-builder skills install --yes` again so any new agent gets linked, and restart any open Claude Code sessions.
+4. Run `deck-builder doctor`. It tells you if the installed tool is behind the clone, if an agent isn't linked, and which brand kits an older version made.
+5. Read the release's "Upgrading" notes in the [changelog](CHANGELOG.md), then run `deck-builder check` on the decks you're working on.
+
+Brand kits from an older version keep working; they just don't get the new layouts or styling. `deck-builder brand init <slug> --force` upgrades a kit by rebuilding it from its `brand.yaml`, which replaces any budgets you tuned and any edits you made to the template in PowerPoint. So try it on a copy first:
+
+1. Copy the kit's folder (`workspace/brands/<slug>` in a default workspace) to `<slug>-next` beside it, and change `slug:` in the copy's `brand.yaml` to `<slug>-next`.
+2. Run `deck-builder brand init <slug>-next --force`.
+3. Run `deck-builder check <deck> --brand <slug>-next --render` on your decks and compare the renders with the old kit's.
+4. Once you're happy, move your tuning over, upgrade the original kit the same way, and delete the copy.
+
+Kits adopted from a client's own template never change. Decks you've already built don't change either. Rebuilding a deck with a new version can change how it looks, and a rebuild won't replace a `.pptx` you've edited by hand unless you pass `--force`.
+
+To stay on one version instead, install its tag: `uv tool install git+https://github.com/thefilesareinthecomputer/deck-builder@v0.2.0`.
+
 ## Status
 
-The current release is v0.2.0, and the [changelog](CHANGELOG.md) lists what's in it. Cloning and installing as above always gets you the latest code, so you don't need to pick a version. Known limits:
+The current release is v0.2.0, and the [changelog](CHANGELOG.md) lists what's in it. Known limits:
 
 - We haven't verified the PowerPoint render backend on a Mac with PowerPoint yet, so its renders come with a `RENDER_UNVERIFIED` warning. LibreOffice renders are a close match.
 - The in-slide fade (`build:`) is written for PowerPoint, and playing it there is part of that same check. LibreOffice reads it as its own fade.
