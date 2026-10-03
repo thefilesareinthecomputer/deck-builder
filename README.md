@@ -64,7 +64,7 @@ deck-builder skills install --yes     # optional: the skills and agents in every
 
 **Without uv:** `pipx install .`, or `pip install .` inside a virtual environment, puts the same `deck-builder` command on your PATH, and `deck-builder skills install --yes` follows as above.
 
-After a `git pull`, update with `uv tool install --reinstall .` (or `pipx install --force .`). To work on the engine itself, install with `--editable` so the tool runs the clone's source.
+After a `git pull`, update with `uv tool install --reinstall .` (or `pipx install --force .`). To work on the engine itself, install with `--editable` so the tool runs the clone's source; an editable install still needs `uv tool install --editable --reinstall .` after a pull that adds a dependency (0.2.0 adds Pygments), or every command fails on the missing module.
 
 ## Quick start
 
