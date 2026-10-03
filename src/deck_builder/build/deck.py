@@ -22,7 +22,7 @@ from deck_builder.assets import recolor_icon, sha256_file
 from deck_builder.brand.registry import Brand
 from deck_builder.build.normalize import content_digest, normalize
 from deck_builder.build.text import CODE_FONT_DEFAULT, fill_text
-from deck_builder.build.visuals import color_bold, fill_chart, fill_code, fill_picture, fill_table
+from deck_builder.build.visuals import color_bold, fill_chart, fill_code, fill_picture, fill_table, mark_current
 from deck_builder.errors import EnvError, Issue
 from deck_builder.model import Chart, Code, Deck, Icon, Image, Slide, Table
 from deck_builder.validate import asset_source, plain, resolve_asset, text_of
@@ -220,6 +220,9 @@ class Builder:
                 fentry["chars"] = len(plain(text_of(val)))
                 fentry["shape"] = ph.name  # lets the render step name the field that overflowed
             entry["fields"][name] = fentry
+        if s.current is not None:
+            mark_current(slide, phs, ls["fields"], s.current, self.brand, cards=s.layout.startswith("cards-"))
+            entry["current"] = s.current
         for idx, ph in phs.items():
             if idx not in used:  # no empty "Click to add text" boxes left behind
                 ph._element.getparent().remove(ph._element)

@@ -379,7 +379,31 @@ def _check_slide(s: Slide, n: int, spec_layouts: dict[str, Any], prs_layouts: di
         val = s.fields.get(name)
         if fs.get("required") and (val is None or (isinstance(val, str) and not val.strip())):
             out.append(Issue("MISSING_FIELD", f"required field {name!r} is empty", field=name, **at))
+    if s.current is not None:
+        out += _check_current(s, fspecs, at)
     return out
+
+
+CARD_LABEL = re.compile(r"^label(\d+)$")
+
+
+def current_slots(s: Slide, fspecs: dict[str, Any]) -> int:
+    """How many things `current:` can mark on this slide: its cards on a cards layout, else the items of its
+    `body` list (an agenda, or any list), else 0."""
+    if s.layout.startswith("cards-"):
+        return sum(1 for k in fspecs if CARD_LABEL.match(k))
+    body = s.fields.get("body")
+    return len(body) if isinstance(body, list) and (fspecs.get("body") or {}).get("kind") == "bullets" else 0
+
+
+def _check_current(s: Slide, fspecs: dict[str, Any], at: dict[str, Any]) -> list[Issue]:
+    count, n = current_slots(s, fspecs), s.current
+    if not count:
+        return [Issue("PARSE", f"current: marks a card or a list item, and layout {s.layout!r} has neither "
+                      "cards nor a body list", field="current", **at)]
+    if isinstance(n, bool) or not isinstance(n, int) or not 1 <= n <= count:
+        return [Issue("PARSE", f"current: {n!r} must be a whole number from 1 to {count}", field="current", **at)]
+    return []
 
 
 def _check_field(name: str, val: Value, fs: dict[str, Any], want: str, brand: Brand, deck_dir: Path,

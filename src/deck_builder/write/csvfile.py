@@ -26,8 +26,9 @@ def write(deck: Deck) -> str:
         fields += [k for k in s.fields if k not in fields]
     buf = io.StringIO()
     w = csv.writer(buf, lineterminator="\n")
-    w.writerow(["slide", "layout", "title", *fields, "notes"])
+    current = any(s.current is not None for s in deck.slides)
+    w.writerow(["slide", "layout", "title", *(["current"] if current else []), *fields, "notes"])
     for n, s in enumerate(deck.slides, start=1):
-        w.writerow([n, s.layout, s.title, *(cell_text(s.fields[f]) if f in s.fields else "" for f in fields),
-                    s.notes])
+        w.writerow([n, s.layout, s.title, *([s.current if s.current is not None else ""] if current else []),
+                    *(cell_text(s.fields[f]) if f in s.fields else "" for f in fields), s.notes])
     return buf.getvalue()

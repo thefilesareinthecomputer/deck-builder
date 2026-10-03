@@ -98,6 +98,8 @@ def write(deck: Deck) -> str:
     out = [front_matter(deck.meta)]
     for s in deck.slides:
         block = [f"{'#' * level} {s.title}", _line("layout", s.layout)]
+        if s.current is not None:
+            block.append(_line("current", s.current))
         sections = []
         for name, value in s.fields.items():
             if _is_line_field(name, value):

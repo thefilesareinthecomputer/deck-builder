@@ -350,7 +350,7 @@ def parse(path: Path, row: dict[str, str] | None = None) -> tuple[Deck, list[Iss
                 break
 
         layout = str(kv.pop("layout", meta.get("default_layout", "")) or "")
-        slide = Slide(title=title, layout=layout, notes=notes, where=where)
+        slide = Slide(title=title, layout=layout, notes=notes, where=where, current=kv.pop("current", None))
         for key, v in kv.items():
             slide.fields[str(key)] = _scalar_field(v)
 

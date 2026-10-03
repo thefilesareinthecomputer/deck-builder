@@ -41,6 +41,7 @@ FITS = {"text": {"text", "bullets"}, "image": {"image"}, "icon": {"icon"}, "tabl
 # The shapes the build draws around a code block, named for its placeholder idx: they become the block's
 # options on import, never content of their own.
 CODE_PART = re.compile(r"^Code (panel|title|line numbers|highlight) (\d{1,6})(?: lines (\d{1,6})-(\d{1,6}))?$")
+CURRENT = re.compile(r"^current (\d{1,3})$")
 EXACT_ONLY = ("takeaway",)  # filled only from the matching placeholder idx, never by type or position
 CHART_NAMES = {v: k for k, v in CHART_TYPES.items()} | {XL_CHART_TYPE.LINE_MARKERS: "line"}  # older builds
 DIAGRAM_URI = "http://schemas.openxmlformats.org/drawingml/2006/diagram"
@@ -573,7 +574,9 @@ class Importer:
             # so trim it here too; otherwise this slide's notes could never round-trip through deck.md.
             notes = ((notes + "\n\n" if notes else "") + f"Unplaced from the original:\n{lines}").rstrip()
         rep.title = title
-        return Slide(title=title, layout=key, fields=fields, notes=notes), rep
+        marked = CURRENT.match(str(slide._element.cSld.get("name") or ""))  # written by the build for `current:`
+        return Slide(title=title, layout=key, fields=fields, notes=notes,
+                     current=int(marked.group(1)) if marked else None), rep
 
 
 def _words(name: str) -> set[str]:

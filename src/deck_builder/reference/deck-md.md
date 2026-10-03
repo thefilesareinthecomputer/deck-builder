@@ -42,6 +42,8 @@ Source: the Q3 shipment ledger.
 - `### name` starts the section for field `name`. Any other heading line inside a slide, such as
   `### Two words` or `# Note`, is a PARSE error.
 - A section holds text or one visual, not both. Give a caption its own field.
+- `current: n` under the heading marks item n of the slide's list (an agenda) or card n of a `cards-N`
+  slide: everything else is muted, for a map slide that a deck in parts returns to.
 
 ## Value kinds
 

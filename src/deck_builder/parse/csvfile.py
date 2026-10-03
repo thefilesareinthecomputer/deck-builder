@@ -4,6 +4,7 @@ from __future__ import annotations
 import csv
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 from deck_builder.errors import Issue
 from deck_builder.model import Deck, Image, Slide, Value, Where
@@ -47,7 +48,10 @@ def slides_from_rows(rows: list[tuple[int, dict[str, str]]], file: str, issues: 
         title = cells.pop("title", "").strip()
         notes = cells.pop("notes", "").replace("\r\n", "\n").strip()
         cells.pop("slide", None)
-        s = Slide(title=title, layout=layout, notes=notes, where=where)
+        current: Any = cells.pop("current", "").strip() or None
+        if isinstance(current, str) and current.isdecimal():
+            current = int(current)
+        s = Slide(title=title, layout=layout, notes=notes, where=where, current=current)
         for k, raw in cells.items():
             ref = raw.strip()
             if ref.startswith("sheet:"):

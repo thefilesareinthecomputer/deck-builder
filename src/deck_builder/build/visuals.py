@@ -10,6 +10,7 @@ from PIL import Image as PILImage
 from pptx.chart.data import CategoryChartData
 from pptx.dml.color import RGBColor
 from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION, XL_MARKER_STYLE, XL_TICK_LABEL_POSITION, XL_TICK_MARK
+from pptx.enum.dml import MSO_THEME_COLOR
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import MSO_ANCHOR, MSO_AUTO_SIZE, PP_ALIGN
 from pptx.oxml.ns import qn
@@ -485,6 +486,45 @@ def fill_code(slide: Any, ph: Any, code: Code, brand: Brand, code_font: str) -> 
     for a, b in spans:  # a band per run of highlighted lines, in front of the panel and behind the text
         _bare_shape(slide, ph, MSO_SHAPE.RECTANGLE, f"Code highlight {idx} lines {a}-{b}",
                     ph.top + first + (a - 1) * pitch, (b - a + 1) * pitch, band)
+
+
+def mark_current(slide: Any, phs: dict[int, Any], fields: dict[str, Any], keep: int, brand: Brand,
+                 cards: bool) -> None:
+    """`current: n`, the "you are here" of a returning map slide. On cards, every other card's label band takes
+    the card's own surface color with ink text, so card n is the only one in the primary ramp. On a list,
+    every other item, its bullet or number included, takes the muted furniture color, which `brand init` keeps
+    at 4.5:1 on the background. The slide's name records n, so `import` reads it back."""
+    slide._element.cSld.set("name", f"current {keep}")
+    if cards:
+        for name, fs in fields.items():
+            m = re.match(r"label(\d+)$", name)
+            ph = phs.get(fs["idx"]) if m and int(m.group(1)) != keep else None
+            if ph is None:
+                continue
+            ph.fill.solid()
+            ph.fill.fore_color.theme_color = MSO_THEME_COLOR.BACKGROUND_2
+            for p in ph.text_frame.paragraphs:
+                for run in p.runs:
+                    run.font.color.theme_color = MSO_THEME_COLOR.TEXT_1
+        return
+    muted = _rgb(brand, (brand.tokens.get("furniture") or {}).get("color"))
+    body = phs.get((fields.get("body") or {}).get("idx", -1))
+    if muted is None or body is None:
+        return
+    for i, p in enumerate(body.text_frame.paragraphs, start=1):
+        if i == keep:
+            continue
+        for run in p.runs:
+            run.font.color.rgb = muted
+        ppr = p._p.get_or_add_pPr()
+        for old in ppr.findall(qn("a:buClr")):
+            ppr.remove(old)
+        bu = OxmlElement("a:buClr")
+        clr = OxmlElement("a:srgbClr")
+        clr.set("val", str(muted))
+        bu.append(clr)
+        spacing = [el for el in ppr if el.tag in (qn("a:lnSpc"), qn("a:spcBef"), qn("a:spcAft"))]
+        ppr.insert(len(spacing), bu)  # after the spacing, before the bullet's other settings
 
 
 def color_bold(ph: Any, hex_color: str) -> None:

@@ -118,6 +118,8 @@ def write(deck: Deck, brand: Brand | None) -> bytes:
     headers = ["slide", "layout", "title"]
     if "title" in budgets:
         headers.append("#chars:title")
+    if any(s.current is not None for s in deck.slides):
+        headers.append("current")
     for f in fields:
         headers.append(f)
         if f in budgets:
@@ -128,8 +130,8 @@ def write(deck: Deck, brand: Brand | None) -> bytes:
         cell = _text(ws, 1, i, h)
         cell.font = Font(bold=True, color="6B7280" if h.startswith("#") else None)
         letter = get_column_letter(i)
-        ws.column_dimensions[letter].width = (8 if h == "slide" else 16 if h == "layout" else 12 if h.startswith("#")
-                                              else 40)
+        ws.column_dimensions[letter].width = (8 if h in ("slide", "current") else 16 if h == "layout"
+                                              else 12 if h.startswith("#") else 40)
     ws.freeze_panes = "D2"
 
     used = {"slides", "deck", "readme", "_lists"}
@@ -139,6 +141,8 @@ def write(deck: Deck, brand: Brand | None) -> bytes:
         ws.cell(row=r, column=col["slide"], value=n)
         _text(ws, r, col["layout"], s.layout)
         _text(ws, r, col["title"], s.title).alignment = wrap
+        if s.current is not None:
+            ws.cell(row=r, column=col["current"], value=s.current)
         for f in fields:
             if f not in s.fields:
                 continue

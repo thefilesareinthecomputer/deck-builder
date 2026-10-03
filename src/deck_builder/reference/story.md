@@ -61,7 +61,9 @@ opens by returning to the map with its own part marked. The audience always know
 much is left.
 
 - Every sub-slide of a part shares one kicker, the part's name, so the section label does the wayfinding.
-- On the returning map slide, the current part is the one item in bold.
+- On the returning map slide, `current: n` marks the part: on an `agenda` (or any list) every other item
+  takes the muted color, and on `cards-N` every other card's label loses its color, so the part is the one
+  thing in full color.
 - Each part ends on its own conclusion, in a takeaway or a `big-number` or `quote` slide, and the closing
   slide states each part as its conclusion.
 - A part that needs more than six sub-slides is two parts.

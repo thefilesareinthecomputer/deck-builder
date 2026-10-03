@@ -75,6 +75,7 @@ class Slide:
     fields: dict[str, Value] = field(default_factory=dict)
     notes: str = ""
     where: Where | None = field(default=None, compare=False)
+    current: Any = None  # `current: n`: the list item or card to keep in full color; check requires a whole number
 
 
 @dataclass
