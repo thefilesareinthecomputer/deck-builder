@@ -160,6 +160,7 @@ class LayoutDef:
     hide_master: bool = False
     decor: list[Decor] = field(default_factory=list)
     row: bool = False  # the build spaces the filled numbered slots (logo1, caption1 ...) evenly across the row
+    bleed: bool = False  # a picture runs edge to edge, past the margins (image-full)
 
 
 @dataclass
@@ -292,6 +293,17 @@ def _defs(g: Grid, s: Scale, body_anchor: str, big_number: str, mode: str = "pro
            color="tx2", required=True),
         PH("attribution", "body", 2, g.m + 0.8, 5.35, g.cw - 1.6, 0.6, size=18),
     ], heading="quote", decor=[rule(g.m + 0.9, 5.15)]))
+    # The splash page: a photo edge to edge, its title and caption on a band of the ink color at
+    # IMAGE_BAND_OPACITY, so white text stays readable over a light photo; check measures it on the photo.
+    band = f"tx1~{IMAGE_BAND_OPACITY}"
+    add(LayoutDef("image-full", "Image Full", "One photo filling the slide, its title on a band at the bottom, "
+                  "for the moment, place or product the deck is about; use it once", [
+        PH("image", "pic", 1, 0, 0, g.w, g.h, required=True),
+        PH("title", "title", 0, 0, g.h - IMAGE_BAND_Y, g.w, 0.85, size=s.title, anchor="b", bold=s.title_bold,
+           color="bg1", fill=band, inset=g.m, required=True),
+        PH("caption", "body", 2, 0, g.h - IMAGE_BAND_Y + 0.85, g.w, 0.55, size=s.lede, color="bg1", fill=band,
+           inset=g.m),
+    ], hide_master=True, bleed=True))
     add(LayoutDef("image-right", "Image Right", "Bullets on the left, an image on the right", [
         _title(g, s),
         PH("body", "body", 1, two[0][0], BODY_Y, two[0][1], single_h, size=s.two_col, bullets=True,
@@ -389,6 +401,8 @@ CARDS, STEPS, BANDS = (2, 3, 4, 5), (3, 4, 5, 6), (2, 3, 4)  # the designed set'
 TILE, TILE_ICON = 1.3, 0.75  # an icon tile and the white icon on it
 STEP_ICON = 0.6  # a white icon inside a process chevron
 LOGO_SHARE = 0.6  # a transparent image (a logo) takes at most this share of a large picture box
+IMAGE_BAND_OPACITY = 65  # percent: the ink band under image-full's title; keeps white text at 4.5:1 on most photos
+IMAGE_BAND_Y = 1.75  # inches: the band's top, measured up from the slide's bottom edge
 LOGO_SLOTS = 6
 # Every card, step and band is required: its shape is drawn on the layout, so an empty one would show.
 
@@ -543,7 +557,8 @@ SETS = {
     "standard": ["title", "section", "content", "two-col", "big-number", "chart", "table", "image", "quote",
                  "closing"],
     "full": ["title", "section", "agenda", "content", "two-col", "comparison", "big-number", "statement", "chart",
-             "table", "image", "image-right", "code", "code-right", "icon-row", "team", "quote", "closing"],
+             "table", "image", "image-full", "image-right", "code", "code-right", "icon-row", "team", "quote",
+             "closing"],
 }
 # The designed set: the full set, every content slide with a section label and a subtitle line, plus
 # cards, process, band and logo-row layouts built from shapes rather than loose text.

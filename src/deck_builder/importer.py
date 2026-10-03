@@ -42,6 +42,7 @@ FITS = {"text": {"text", "bullets"}, "image": {"image"}, "icon": {"icon"}, "tabl
 # options on import, never content of their own.
 CODE_PART = re.compile(r"^Code (panel|title|line numbers|highlight) (\d{1,6})(?: lines (\d{1,6})-(\d{1,6}))?$")
 CURRENT = re.compile(r"^current (\d{1,3})$")
+BLEED_SHARE = 0.8  # a picture covering this much of the slide can go on a full-bleed layout
 EXACT_ONLY = ("takeaway",)  # filled only from the matching placeholder idx, never by type or position
 CHART_NAMES = {v: k for k, v in CHART_TYPES.items()} | {XL_CHART_TYPE.LINE_MARKERS: "line"}  # older builds
 DIAGRAM_URI = "http://schemas.openxmlformats.org/drawingml/2006/diagram"
@@ -530,6 +531,11 @@ class Importer:
         names = self._candidates(slide) if same_template else []
         best: tuple[float, float, str, dict[str, Found], Found | None, list[Found]] | None = None
         keys = names or list(self.brand.tokens.get("layouts") or {})
+        if not names:  # a full-bleed layout only for a picture that fills most of the slide
+            pres = slide.part.package.presentation_part.presentation
+            whole = (pres.slide_width or 1) * (pres.slide_height or 1)
+            splash = any(f.kind == "image" and f.box[2] * f.box[3] >= BLEED_SHARE * whole for f in found)
+            keys = [k for k in keys if splash or not self.brand.tokens["layouts"][k].get("bleed")]
         for key in keys:
             ls = self.brand.tokens["layouts"][key]
             fspecs = ls.get("fields") or {}

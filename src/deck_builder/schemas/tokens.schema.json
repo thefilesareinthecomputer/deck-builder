@@ -120,6 +120,7 @@
           "heading_field": {"type": "string"},
           "description": {"type": "string"},
           "row": {"type": "boolean", "description": "the build spaces the filled numbered slots (logo1, caption1 ...) evenly across the row"},
+          "bleed": {"type": "boolean", "description": "a picture runs edge to edge; import picks this layout only for a picture that fills most of the slide"},
           "fields": {
             "type": "object",
             "minProperties": 1,

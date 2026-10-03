@@ -162,7 +162,11 @@ def _sp(shape_id: int, ph: PH, code_font: str = CODE_FONT_DEFAULT) -> str:
 
 
 def _scheme(ref: str) -> str:
-    """A theme color, or a tint written "tx1@15": 15% of tx1 over the background."""
+    """A theme color, a tint written "tx1@15" (15% of tx1 over the background), or a see-through shade written
+    "tx1~65" (tx1 at 65% opacity)."""
+    if "~" in ref:
+        slot, _, opacity = ref.partition("~")
+        return f'<a:schemeClr val="{slot}"><a:alpha val="{int(opacity) * 1000}"/></a:schemeClr>'
     slot, _, pct = ref.partition("@")
     if not pct:
         return f'<a:schemeClr val="{slot}"/>'
@@ -479,6 +483,8 @@ def tokens_for(defs: list[LayoutDef], meta: dict[str, Any], scale: Scale | None 
             entry["heading_field"] = ld.heading
         if ld.row:
             entry["row"] = True
+        if ld.bleed:
+            entry["bleed"] = True
         entry["fields"] = fields
         layouts[ld.key] = entry
     out: dict[str, Any] = {

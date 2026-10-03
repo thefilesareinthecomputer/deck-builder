@@ -92,7 +92,8 @@ def test_layouts_deck_uses_every_full_set_layout_and_builds_clean_in_all_three_b
 
     used = set(re.findall(r"(?m)^layout: (\S+)$", (DEMO / "layouts" / "deck.md").read_text()))
     assert used == {"title", "section", "agenda", "content", "two-col", "comparison", "big-number", "statement",
-                    "chart", "table", "image", "image-right", "icon-row", "quote", "closing"}  # code: demo-brands/code
+                    "chart", "table", "image", "image-full", "image-right", "icon-row", "quote",
+                    "closing"}  # code and code-right: demo-brands/code
     ws = workspace(tmp_path_factory, "full", FULL_SET)
     bulk(ws, "layouts", capsys)
     dark = Presentation(str(ws / "layouts" / "soap-club.pptx")).slides[5].slide_layout

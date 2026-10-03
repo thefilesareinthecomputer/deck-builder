@@ -14,7 +14,7 @@ from deck_builder import template as tpl
 
 DEMO = Path(__file__).resolve().parents[1] / "fixtures" / "demo-brands" / "brands"
 EMU = 914400
-HIDES_MASTER = {"Title", "Section", "Closing"}
+HIDES_MASTER = {"Title", "Section", "Closing", "Image Full"}  # image-full: nothing over the photo
 
 
 def init_brand(ws, capsys, slug="dumbder-nifftlin", **generate):

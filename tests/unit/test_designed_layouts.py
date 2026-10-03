@@ -26,7 +26,7 @@ def test_designed_set_extends_full_with_the_new_layouts() -> None:
 
 def test_every_placeholder_stays_inside_the_margins_and_above_the_footer() -> None:
     for ld in layout_set("designed", W, H):
-        for ph in ld.phs:
+        for ph in ld.phs if not ld.bleed else []:  # a full-bleed photo runs past the margins on purpose
             assert ph.x >= MARGIN - 1e-6, (ld.key, ph.field)
             assert ph.x + ph.w <= W - MARGIN + 1e-6, (ld.key, ph.field)
             assert ph.y + ph.h <= H - FOOTER + 1e-6, (ld.key, ph.field)

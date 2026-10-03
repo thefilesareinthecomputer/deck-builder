@@ -180,6 +180,12 @@ CODES: dict[str, tuple[str, str]] = {
         "12 pt for a read deck.",
         "Raise the size in brand.yaml `generate.type` and regenerate the kit with `brand init <slug> --force`.",
     ),
+    "IMAGE_TEXT_CONTRAST": (
+        "An image-full slide's white title, on its see-through band, measures under 4.5:1 against the lightest "
+        "part of the photo under the band (WCAG 2.2 SC 1.4.3).",
+        "Choose a photo, or a crop of it, that's darker where the band sits; or use the image or image-right "
+        "layout, which keep text off the photo.",
+    ),
     "MISSING_IMAGE": (
         "An image path doesn't exist, or the image is a web address.",
         "Fix the path; paths resolve relative to the deck file. Download a web image into the deck folder first.",

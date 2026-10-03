@@ -64,7 +64,7 @@ def test_the_designed_set_has_every_count_and_the_logo_row():
 def test_every_option_keeps_every_box_inside_the_margins(takeaway, tile, label, icons):
     st = Style(takeaway=takeaway, icon_tile=tile, band_label=label, process_icons=icons)
     for ld in layout_set("designed", W, H, style=st):
-        for ph in ld.phs:
+        for ph in ld.phs if not ld.bleed else []:  # a full-bleed photo runs past the margins on purpose
             assert ph.x >= MARGIN - 1e-6 and ph.x + ph.w <= W - MARGIN + 1e-6, (ld.key, ph.field)
             assert ph.y + ph.h <= H - FOOTER + 1e-6, (ld.key, ph.field)
         idxs = [ph.idx for ph in ld.phs if ph.kind != "title"]
@@ -226,6 +226,39 @@ def test_bold_on_cards_takes_the_primary_color(tmp_path, capsys):
     runs = [r for sh in prs.slides[0].shapes if sh.has_text_frame for p in sh.text_frame.paragraphs for r in p.runs]
     bold = [r for r in runs if r.font.bold and r.text in ("Weekly", "Daily")]
     assert len(bold) == 2 and all(str(r.font.color.rgb) == "1F3A5F" for r in bold)
+
+
+def test_image_full_puts_the_title_on_a_see_through_band_and_warns_when_the_photo_is_too_light(tmp_path, capsys):
+    """A 65% band of a dark ink keeps white text readable over a white photo; a brand with a light ink gets the
+    warning there."""
+    root = kit(tmp_path)
+    fields = tokens(root)["layouts"]["image-full"]["fields"]
+    assert set(fields) == {"image", "title", "caption"} and fields["image"]["required"]
+    light = tmp_path / "light"
+    light.mkdir()
+    assert main(["init", "--dir", str(light)]) == 0
+    meta = {**BRAND, "palette": {**BRAND["palette"], "ink": "707070"}, "generate": {"layout_set": "designed"}}
+    (light / "opts.yaml").write_text(yaml.safe_dump(meta), encoding="utf-8")
+    assert main(["--config", str(light / "deck-builder.toml"), "brand", "init", "opts", "--from",
+                 str(light / "opts.yaml")]) == 0
+    (light / "decks").mkdir()
+    body = ("---\nbrand: opts\n---\n\n## Cut by hand\nlayout: image-full\ncaption: Twelve people\n\n"
+            "### image\n![Bars](PHOTO)\n")
+    white = (250, 250, 250)
+    for ws, photo, rgb, warned in ((root, "dark.png", (40, 40, 44), False), (root, "white.png", white, False),
+                                   (light, "white.png", white, True)):
+        Image.new("RGB", (1600, 900), rgb).save(ws / "decks" / photo)
+        deck = write_deck(ws, body.replace("PHOTO", photo), name=f"{photo}.md")
+        capsys.readouterr()
+        code, out = cli_json(ws, "check", str(deck), capsys=capsys)
+        assert code == 0 and ("IMAGE_TEXT_CONTRAST" in codes(out)) == warned, (ws.name, photo, out["issues"])
+    _, prs = built(root, body.replace("PHOTO", "dark.png"), capsys)
+    slide = prs.slides[0]
+    assert slide.slide_layout._element.get("showMasterSp") == "0"  # no logo or slide number over the photo
+    pic = next(sh for sh in slide.placeholders if sh.placeholder_format.idx == 1)
+    assert (pic.left, pic.top, pic.width, pic.height) == (0, 0, prs.slide_width, prs.slide_height)
+    title = {lo.name: lo for lo in prs.slide_layouts}["Image Full"].placeholders[1]._element
+    assert title.xpath(".//p:spPr/a:solidFill/a:schemeClr/a:alpha/@val") == ["65000"]
 
 
 def test_a_statement_is_one_large_sentence_with_its_bold_phrase_in_the_primary_color(tmp_path, capsys):

@@ -56,6 +56,7 @@ on those layouts. The `deck-builder` and `deck-brand` skills read this topic bef
   | Two options, before and after, now and next | `comparison` or `two-col` |
   | Three parallel actions or ideas | `icon-row` |
   | A place, product or screen | `image` or `image-right` |
+  | The one moment, place or product the deck is about (once per deck; full and designed sets) | `image-full` |
   | A voice from outside the team | `quote` |
   | Rows a reader will look up | `table`, six rows or fewer |
   | A short argument | `content`, four bullets or fewer |

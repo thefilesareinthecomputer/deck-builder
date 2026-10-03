@@ -385,7 +385,50 @@ def _check_slide(s: Slide, n: int, spec_layouts: dict[str, Any], prs_layouts: di
         out += _check_current(s, fspecs, at)
     if s.build is not None:
         out += _check_build(s, fspecs, at)
+    photo = s.fields.get("image")
+    if s.layout == "image-full" and isinstance(photo, Image) and layout is not None:
+        out += _check_image_band(photo, brand, deck_dir, layout, at)
     return out
+
+
+def _check_image_band(img: Image, brand: Brand, deck_dir: Path, layout: Any, at: dict[str, Any]) -> list[Issue]:
+    """IMAGE_TEXT_CONTRAST when image-full's white title, on its see-through ink band, measures under 4.5:1
+    against the photo under the band: the photo cropped to fill the slide as the build does, the band
+    composited over it, and the lightest 5% of that area taken, so a small highlight doesn't count."""
+    from PIL import Image as PILImage
+
+    from deck_builder.brand import inspect as brand_inspect
+    from deck_builder.brand.kit import contrast
+    from deck_builder.brand.layouts import IMAGE_BAND_OPACITY
+
+    path, err = resolve_asset_confined(img.ref, brand, deck_dir)
+    phs = {ph.placeholder_format.idx: ph for ph in layout.placeholders}
+    if err or path is None or not path.is_file() or 0 not in phs or 1 not in phs or brand.template is None:
+        return []
+    slide_w, slide_h, title = phs[1].width, phs[1].height, phs[0]
+    colors = brand_inspect.theme(brand.template)["colors"]
+    ink, paper = colors.get("dk1", "000000"), colors.get("lt1", "FFFFFF")
+    a = IMAGE_BAND_OPACITY / 100
+    with PILImage.open(path) as im:
+        if im.mode in ("RGBA", "LA", "PA") or "transparency" in im.info:
+            return []  # a transparent image is fitted, not cropped to fill; there's no photo under the band
+        rgb = im.convert("RGB")
+        scale = max(slide_w / rgb.width, slide_h / rgb.height)  # EMU per pixel, cropped to fill
+        ox, oy = (rgb.width * scale - slide_w) / 2, (rgb.height * scale - slide_h) / 2
+        box = (int((title.left + ox) / scale), int((title.top + oy) / scale),
+               int((title.left + title.width + ox) / scale), int((slide_h + oy) / scale))
+        raw = rgb.crop(box).resize((96, 24)).tobytes()
+        px = [(raw[i], raw[i + 1], raw[i + 2]) for i in range(0, len(raw), 3)]
+    ir, ig, ib = (int(ink[i:i + 2], 16) for i in (0, 2, 4))
+    seen = sorted(f"{round(a * ir + (1 - a) * r):02X}{round(a * ig + (1 - a) * g):02X}{round(a * ib + (1 - a) * b):02X}"
+                  for r, g, b in px)
+    ratios = sorted(contrast(paper, c) for c in seen)
+    worst = ratios[len(ratios) // 20]  # the lightest 5% of the area under the band
+    if worst >= 4.5:
+        return []
+    return [Issue("IMAGE_TEXT_CONTRAST", f"the title on its band measures {worst:.1f}:1 over the light part of "
+                  f"{img.ref!r}; needs 4.5:1", field="image", severity="warning", actual=round(worst, 1),
+                  limit=4.5, **at)]
 
 
 SLOT_FIELD = re.compile(r"\D+(\d+)$")  # label2, body2 and footer2 are slot 2 of a cards layout

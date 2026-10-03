@@ -146,6 +146,13 @@ text3: Renew both school district contracts early
 layout: quote
 attribution: Facilities buyer, regional school district
 
+## The north warehouse opens in March
+layout: image-full
+caption: Room for six weeks of stock, two miles from the city
+
+### image
+![The new north warehouse](assets/{{brand}}-hero.png)
+
 ## A second shift makes **same-day delivery** the standard in every region by March
 layout: statement
 caption: The decision we ask for today
