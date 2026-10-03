@@ -1,0 +1,38 @@
+name: Bug report
+description: Something deck-builder does wrong.
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you ran and what it did, including any issue codes or error output.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce it
+      description: A minimal deck.md, or the command and its --json output. Use invented content.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: deck-builder --version
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: deck-builder doctor
+      description: The full output.
+      render: text
+    validations:
+      required: true

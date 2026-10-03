@@ -8,6 +8,7 @@ All notable changes to this project are listed here. The format follows [Keep a 
 
 - `doctor` checks what an update leaves behind: an installed tool older than the clone it runs in (or than the agents' MCP server), agents `skills install` hasn't linked yet, and brand kits another version generated. Pygments is in its package list.
 - README: an Updating section with the steps for each machine after a new version, and how to try a kit upgrade on a copy first.
+- `CONTRIBUTING.md` with the standards every change follows, issue forms for bugs and feature requests, a pull request template, and `SECURITY.md` for reporting a vulnerability privately.
 
 ### Changed
 

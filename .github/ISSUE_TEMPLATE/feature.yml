@@ -1,0 +1,31 @@
+name: Feature request
+description: A change you'd like deck-builder to make.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you're trying to do and what gets in the way.
+    validations:
+      required: true
+  - type: textarea
+    id: change
+    attributes:
+      label: The change you'd like
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+  - type: dropdown
+    id: visual
+    attributes:
+      label: Does it change how slides look?
+      options:
+        - "No"
+        - "Yes"
+        - Not sure
+    validations:
+      required: true

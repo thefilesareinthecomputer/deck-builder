@@ -44,11 +44,8 @@ says what each subagent may read and write.
 
 ## Working on the engine itself
 
-- `uv run pytest`, `uv run ruff check`, `uv run mypy` must pass before a commit.
-- `README.md` and the reference topics (`deck-builder docs`) describe how the engine behaves.
-  `tasks/` holds local working notes (the handoff, plans, the archived design spec) and isn't tracked.
-- Agent files load at session start: test an edited agent in a fresh process, e.g.
-  `claude -p --agent deck-builder-agent --allowedTools mcp__deck-builder "<test prompt>"`.
+Changes to this repo follow [CONTRIBUTING.md](CONTRIBUTING.md). Two more rules apply in a session here:
+
+- `tasks/` holds local working notes (the handoff, plans, the archived design spec) and isn't tracked.
 - Skills hold no engine logic. When a skill needs something the CLI can't do, tell the user;
   building it under `src/` is a separate task, done only when the user asks, with tests.
-- Example content uses invented companies only.
