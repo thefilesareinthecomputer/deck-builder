@@ -47,6 +47,7 @@ class Scale:
     kicker: float = 18  # the section label above a content-slide title (designed set)
     lede: float = 20  # the one-line subtitle under a content-slide title (designed set)
     code: float = 18  # code blocks (full and designed sets)
+    statement: float = 40  # the statement slide's one sentence (full and designed sets)
 
     @classmethod
     def from_meta(cls, gen: dict[str, Any]) -> Scale:
@@ -61,7 +62,7 @@ class Scale:
 MODES: dict[str, dict[str, Any]] = {
     "projected": {},
     "read": {"title": 28, "subtitle": 18, "body": 14, "two_col": 13, "icon_text": 13, "table": 12,
-             "big_number": 96, "kicker": 12, "lede": 15, "code": 12},
+             "big_number": 96, "kicker": 12, "lede": 15, "code": 12, "statement": 28},
 }
 READ_MEASURE = 9.0  # inches: a read deck's single-column body, about 90 characters a line at 14 pt
 
@@ -263,6 +264,14 @@ def _defs(g: Grid, s: Scale, body_anchor: str, big_number: str, mode: str = "pro
                required=True),
             PH("caption", "body", 1, g.m, 4.45, g.cw, 1.3, size=28, required=True),
         ], heading="number", decor=[rule(g.m + 0.1, 4.2)]))
+    # One sentence in large type, set like big-number: the sentence grows up from the accent rule, and an
+    # optional caption sits under it. **bold** takes the primary color.
+    add(LayoutDef("statement", "Statement", "One sentence in large type, for the turn of a story or the ask; "
+                  "the ## heading is the statement", [
+        PH("statement", "body", 1, g.m, 0.7, min(g.cw, 10.0), 3.0, size=s.statement, anchor="b", required=True,
+           emphasis="tx2"),
+        PH("caption", "body", 2, g.m, 4.15, min(g.cw, 10.0), 1.3, size=s.lede),
+    ], heading="statement", decor=[rule(g.m + 0.1, 3.9)]))
     add(LayoutDef("chart", "Chart", "A title and one native chart", [
         _title(g, s),
         PH("chart", "chart", 1, g.m, BODY_Y, g.cw, single_h, required=True),
@@ -533,8 +542,8 @@ SETS = {
     "minimal": ["title", "section", "content", "closing"],
     "standard": ["title", "section", "content", "two-col", "big-number", "chart", "table", "image", "quote",
                  "closing"],
-    "full": ["title", "section", "agenda", "content", "two-col", "comparison", "big-number", "chart", "table",
-             "image", "image-right", "code", "code-right", "icon-row", "team", "quote", "closing"],
+    "full": ["title", "section", "agenda", "content", "two-col", "comparison", "big-number", "statement", "chart",
+             "table", "image", "image-right", "code", "code-right", "icon-row", "team", "quote", "closing"],
 }
 # The designed set: the full set, every content slide with a section label and a subtitle line, plus
 # cards, process, band and logo-row layouts built from shapes rather than loose text.

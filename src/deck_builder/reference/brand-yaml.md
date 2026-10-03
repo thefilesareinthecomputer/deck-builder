@@ -83,6 +83,7 @@ generate:                        # read only by `brand init`
     kicker: 18                   # designed set: the section label above a content title (read: 12)
     lede: 20                     # designed set: the subtitle line under a content title (read: 15)
     code: 18                     # full and designed sets: code blocks (read: 12)
+    statement: 40                # full and designed sets: the statement slide's sentence (read: 28)
 ```
 
 Pick the mode by how the deck is used. A projected deck keeps every size at 18 pt or more. A read deck

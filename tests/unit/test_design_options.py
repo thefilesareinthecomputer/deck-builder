@@ -228,6 +228,27 @@ def test_bold_on_cards_takes_the_primary_color(tmp_path, capsys):
     assert len(bold) == 2 and all(str(r.font.color.rgb) == "1F3A5F" for r in bold)
 
 
+def test_a_statement_is_one_large_sentence_with_its_bold_phrase_in_the_primary_color(tmp_path, capsys):
+    root = kit(tmp_path)
+    assert {"statement", "quote", "big-number"} <= set(SETS["full"]) and "statement" in SETS["designed"]
+    statement = tokens(root)["layouts"]["statement"]
+    assert statement["heading_field"] == "statement" and set(statement["fields"]) == {"statement", "caption"}
+    assert statement["fields"]["statement"]["required"] and statement["fields"]["statement"]["max_chars"] < 200
+    _, prs = built(root, """
+        ---
+        brand: opts
+        ---
+        ## A second shift makes **same-day delivery** the standard by March
+        layout: statement
+        caption: The decision we ask for today
+        """, capsys)
+    ph = next(sh for sh in prs.slides[0].placeholders if sh.placeholder_format.idx == 1)
+    bold = [r for p in ph.text_frame.paragraphs for r in p.runs if r.font.bold]
+    assert [r.text for r in bold] == ["same-day delivery"] and str(bold[0].font.color.rgb) == "1F3A5F"
+    sizes = {lo.name: lo for lo in prs.slide_layouts}["Statement"].placeholders[0]._element.xpath(".//a:defRPr/@sz")
+    assert sizes == ["4000"]  # 40 pt on a projected deck
+
+
 def test_a_logo_row_spaces_its_filled_slots_evenly(tmp_path, capsys):
     root = kit(tmp_path)
     for name in ("a", "b"):

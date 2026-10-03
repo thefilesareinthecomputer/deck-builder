@@ -64,6 +64,7 @@ on those layouts. The `deck-builder` and `deck-brand` skills read this topic bef
   | Two to four themes, each with its points (designed set) | `bands-2` to `bands-4` |
   | The tools or companies a slide is about (designed set) | `logos` |
   | A query, config, command or function (full and designed sets) | `code`, or `code-right` beside bullets |
+  | The turn of a story or the ask, as one sentence (full and designed sets) | `statement` |
 
 - **Digestible amounts.** Four bullets or fewer, each two lines at most, and about 40 words on a
   projected slide. Working memory holds about four chunks; the exact limits are convention. Move

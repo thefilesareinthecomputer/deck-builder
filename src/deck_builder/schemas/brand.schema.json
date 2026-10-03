@@ -93,7 +93,8 @@
             "big_number": {"type": "number", "minimum": 48, "maximum": 200, "description": "the big-number numeral (default 120)"},
             "kicker": {"type": "number", "minimum": 9, "maximum": 24, "description": "designed set: the section label above a content title (default 18)"},
             "lede": {"type": "number", "minimum": 12, "maximum": 32, "description": "designed set: the subtitle line under a content title (default 20)"},
-            "code": {"type": "number", "minimum": 8, "maximum": 32, "description": "full and designed sets: code blocks (default 18; 12 in a read deck)"}
+            "code": {"type": "number", "minimum": 8, "maximum": 32, "description": "full and designed sets: code blocks (default 18; 12 in a read deck)"},
+            "statement": {"type": "number", "minimum": 20, "maximum": 72, "description": "full and designed sets: the statement slide's sentence (default 40; 28 in a read deck)"}
           }
         },
         "code": {

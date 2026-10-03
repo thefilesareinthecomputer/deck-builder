@@ -146,6 +146,10 @@ text3: Renew both school district contracts early
 layout: quote
 attribution: Facilities buyer, regional school district
 
+## A second shift makes **same-day delivery** the standard in every region by March
+layout: statement
+caption: The decision we ask for today
+
 ## Thank you
 layout: closing
 subtitle: Questions to operations@example.com

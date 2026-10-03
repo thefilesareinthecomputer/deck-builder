@@ -78,8 +78,8 @@ and write it in `after`:
 - **Subject to subject.** A different view of the same idea: the number, then the customer it happened to.
 - **Scene to scene.** A jump to the next part; mark it with a section slide or the returning map.
 - **Closure.** When the step between two slides is obvious, leave it out and let the audience make it.
-- **One splash.** The single most important slide gets the biggest treatment (`big-number`, a large image
-  on `image`, a `quote`), and only one slide in a deck gets it.
+- **One splash.** The single most important slide gets the biggest treatment (`big-number`, `statement`, a
+  large image on `image`, a `quote`), and only one slide in a deck gets it.
 
 Alternate dense and sparse slides: a table or a chart, then a slide with one number or one sentence. Three
 slides in a row on one layout read as a document (`check` warns as `LAYOUT_RUN`).
@@ -105,6 +105,7 @@ Type size is a property of the layout, so emphasis by size goes through the layo
 | To make this stand out | Use |
 |---|---|
 | One number | `big-number` |
+| One sentence: the turn, the conclusion of a part, the ask | `statement`, with its one bold phrase in the primary color |
 | A voice from outside the team | `quote` |
 | A short phrase inside a field | `**bold**`, one phrase per field, in the primary color on cards and bands |
 | The lines of code the slide is about | `{3,5-7}` on the code block |
