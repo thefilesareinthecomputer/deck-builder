@@ -23,9 +23,9 @@
 <br>
 
 <p align="center">
-  <img src="docs/images/decks.png" width="100%" alt="Nine slides from nine decks in three brands, one column per brand: a dark green paper supplier set in Georgia, a navy office-systems company set in Avenir Next, and a charcoal soap maker set in Helvetica Neue. The slides are process steps in chevrons, three cards, a big number, labeled risk bands, a doughnut chart, a stacked column chart, a price table, icons on square tiles and six process steps with white icons.">
+  <img src="docs/images/showcase.png" width="100%" alt="The same deck built in three brands: a dark green paper supplier set in Georgia, a navy office-systems company set in Avenir Next, and a charcoal soap maker set in Helvetica Neue. Each column shows the title slide, three cards with colored labels and a bold target line, and a native column chart under a section label and subtitle, with its takeaway.">
 </p>
-<p align="center"><sub>Nine decks, three per brand: a pitch, a review and a deck of edge cases. Every chart and table is native and every word remains editable.</sub></p>
+<p align="center"><sub>One <code>deck.md</code>, built three times with a different brand: each brand's kit sets its own type, card colors and takeaway style. Every chart is native and every word remains editable.</sub></p>
 
 <br>
 
@@ -95,11 +95,7 @@ A deck is a text file. Each `##` heading is one slide, and its `layout:` line pi
 
 ## Write a deck
 
-A deck and a brand are separate. The deck holds only content (text, data and image references) and names its brand with one line, `brand: <slug>`. The brand kit holds the whole design: template, fonts, colors, logos and budgets. Change that one line, or pass `--brand <slug>`, and the same content builds in a different design. Below is one deck built that way three times; each brand's kit sets its own type, card colors and takeaway style.
-
-<p align="center">
-  <img src="docs/images/showcase.png" width="100%" alt="The same deck built in three brands, one column per brand. Each column shows the title slide, three cards with colored labels and a bold target line, and a native column chart under a section label and subtitle, with its takeaway.">
-</p>
+A deck and a brand are separate. The deck holds only content (text, data and image references) and names its brand with one line, `brand: <slug>`. The brand kit holds the whole design: template, fonts, colors, logos and budgets. Change that one line, or pass `--brand <slug>`, and the same content builds in a different design; the image at the top is one deck built that way three times.
 
 `key: value` lines under a heading fill the layout's fields, and the rest of the slide fills its body; `### name` starts the content for a named field, such as each card's bullets. The three slides below form the first column of that image. They use the `dumbder-nifftlin` demo brand; to try them in the quick-start workspace, change the brand to `neutral`.
 
@@ -164,6 +160,11 @@ Source: the Q3 shipment ledger.
 Field values are YAML, so quote any value that contains `: `. `deck-builder brand show <slug>` lists a brand's layouts, fields and character budgets. The [full showcase deck](tests/fixtures/demo-brands/showcase/deck.md) builds into all three brands with a single `build --data` command.
 
 ## Design
+
+<p align="center">
+  <img src="docs/images/decks.png" width="100%" alt="Nine slides from nine decks in three brands, one column per brand. The slides are process steps in chevrons, three cards, a big number, labeled risk bands, a doughnut chart, a stacked column chart, a price table, icons on square tiles and six process steps with white icons.">
+</p>
+<p align="center"><sub>One slide from each of nine decks, three per brand: a pitch, a review and a deck of edge cases.</sub></p>
 
 Every generated kit follows one design standard, built from presentation research and documented in `deck-builder docs design`. Titles are bold sentences in the same place on every slide. Short content sits at the optical center instead of hugging the top. Comparisons sit on tinted panels, tables are quiet (a dark header, thin rules, right-aligned figures, no word ever broken), bar charts start at zero, and an optional `takeaway:` band states each slide's conclusion. One short accent rule is the only decoration.
 
