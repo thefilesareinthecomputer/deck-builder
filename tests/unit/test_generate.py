@@ -172,12 +172,30 @@ def test_regenerating_a_kit_keeps_a_copy_of_the_kit_it_replaces(ws, capsys, tmp_
     assert code == 0, out
     first = Path(out["backup"])
     assert first.parent == kit / "backups" and (first / "tokens.yaml").read_text() == tuned
+    assert len(out["budget_changes"]) == 1 and " max_chars 1" in out["budget_changes"][0]  # the tuned one, named
     assert {"brand.yaml", "template.potx", "assets"} <= {p.name for p in first.iterdir()}
     code, out = cli_json(ws, "brand", "init", "pemberton", "--force", capsys=capsys)
     second = Path(out["backup"])
     assert second != first and "backups" not in {p.name for p in second.iterdir()}  # no backups of backups
     code, out = cli_json(ws, "brand", "list", capsys=capsys)
     assert sorted(b["slug"] for b in out["brands"]) == ["pemberton", "stock"]  # a backup is never a second kit
+
+
+def test_brand_copy_makes_a_renamed_kit_and_leaves_the_original(ws, capsys, tmp_path):
+    kit, _ = _kit(ws, capsys, tmp_path)
+    tuned = (kit / "tokens.yaml").read_text().replace("max_chars: ", "max_chars: 1", 1)
+    (kit / "tokens.yaml").write_text(tuned)
+    before = {p.relative_to(kit): p.read_bytes() for p in kit.rglob("*") if p.is_file()}
+    code, out = cli_json(ws, "brand", "copy", "pemberton", "pemberton-2026", capsys=capsys)
+    assert code == 0, out
+    new = ws / "brands" / "pemberton-2026"
+    assert (new / "tokens.yaml").read_text() == tuned  # tuned budgets and template edits come along
+    assert yaml.safe_load((new / "brand.yaml").read_text())["slug"] == "pemberton-2026"
+    assert {p.relative_to(kit): p.read_bytes() for p in kit.rglob("*") if p.is_file()} == before  # untouched
+    code, out = cli_json(ws, "brand", "check", "pemberton-2026", capsys=capsys)
+    assert code == 0 and "KIT_STALE" not in [i["code"] for i in out["issues"]]
+    code, out = cli_json(ws, "brand", "copy", "pemberton", "pemberton-2026", capsys=capsys)
+    assert code == 2 and "already" in out["error"]  # never over an existing kit
 
 
 def test_replacing_an_asset_keeps_a_copy_of_the_kit(ws, capsys, tmp_path):

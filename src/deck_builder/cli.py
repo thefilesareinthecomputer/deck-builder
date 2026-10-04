@@ -47,11 +47,11 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
     p.add_argument("--powerpoint", action="store_true",
                    help="also test PowerPoint automation (launches PowerPoint; the first run shows a macOS prompt)")
     p = add("brand", "list, show, check, init or adopt brand kits, or add a logo or icon", commands.brand_cmd)
-    p.add_argument("action", choices=["list", "show", "check", "init", "adopt", "add-asset"],
+    p.add_argument("action", choices=["list", "show", "check", "init", "adopt", "add-asset", "copy"],
                    help="list brands; show one's layouts and budgets; check a kit; init a kit from brand.yaml; "
-                        "adopt a template; add-asset to copy a logo or icon in")
+                        "adopt a template; add-asset to copy a logo or icon in; copy a kit to a new slug")
     p.add_argument("slug", nargs="?", help="the brand's slug, e.g. neutral (every action but list)")
-    p.add_argument("file", nargs="?", help="add-asset: the PNG to copy into the kit")
+    p.add_argument("file", nargs="?", help="add-asset: the PNG to copy into the kit; copy: the new slug")
     p.add_argument("--as", dest="as_", metavar="KIND/ID", help="add-asset: logo/<id> or icon/<id>")
     p.add_argument("--from", dest="from_", metavar="BRAND_YAML", help="init: the brand.yaml to generate from")
     p.add_argument("--template", help="adopt: the .potx or .pptx to wrap")

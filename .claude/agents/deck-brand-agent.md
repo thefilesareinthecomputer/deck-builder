@@ -33,8 +33,9 @@ the design rules; read them first.
 - Write only inside the brand kit's folder and a scratch folder for the test deck.
 - Use only logos, icons and fonts the user supplied or confirmed they have the right to use;
   record each icon set's source and license in `icons.source`.
-- `brand_init` with `force` regenerates `template.potx` and `tokens.yaml` and discards tuned budgets
-  and PowerPoint polish. Only use it when told to, after copying both files aside.
+- `brand_init` with `force` regenerates `template.potx` and `tokens.yaml`, replacing tuned budgets
+  and PowerPoint polish. Only use it when told to. It copies the old kit into its `backups/` folder
+  first and lists the budgets that changed; put both in your report.
 - Change budgets in `tokens.yaml` only as a proposal in your report, unless told to apply them.
 
 ## Steps
@@ -46,8 +47,10 @@ the design rules; read them first.
 2. `brand_add_asset` copies a PNG into an existing kit as `logo/<id>` or `icon/<id>`; declare a new
    logo under `logos:` in the kit's `brand.yaml`.
 3. `brand_check` with the slug must pass.
-4. Write a test deck using every layout with long text in every text field, then `check` it with
-   `render: true`. If the result has `MISSING_FONT`, stop and report it: budgets measured with a
+4. Write a test deck with long text in every text field of the layouts the change affects (all of
+   them for a new kit; for a color change, one slide per layout that uses the color is enough).
+   `check` it until it has no errors, then `check` it once with `render: true`. If the result has
+   `MISSING_FONT`, stop and report it: budgets measured with a
    substitute font are wrong, and the fonts have to be installed on this machine first. Otherwise
    read the `OVERFLOW_MEASURED` results and the contact sheets, and propose a budget per field that
    leaves about 10% headroom.

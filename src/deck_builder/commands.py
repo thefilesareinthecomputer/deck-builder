@@ -170,7 +170,35 @@ def brand_cmd(args: argparse.Namespace) -> Result:
         return _adopt(args, cfg, r)
     if args.action == "add-asset":
         return _add_asset(args, cfg, r)
+    if args.action == "copy":
+        return _copy_brand(args, cfg, r)
     return _init_brand(args, cfg, r)
+
+
+def _copy_brand(args: argparse.Namespace, cfg: cfgmod.Config, r: Result) -> Result:
+    """A kit under a new slug, everything in it kept (tuned budgets, template edits, assets), so a brand can
+    be renamed or versioned by name without touching the original."""
+    new_slug = args.file
+    if not args.slug or not new_slug:
+        raise EnvError("brand copy needs the kit's slug and a new slug, e.g. `brand copy acme acme-2026`")
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", new_slug):
+        raise EnvError("a brand slug is lowercase letters, digits and hyphens, e.g. `acme` or `acme-2026`")
+    b = registry.get(cfg, args.slug)
+    target = confine.guard(b.path.parent / new_slug, "the kit folder")  # beside the original
+    if target.exists():
+        raise EnvError(f"{target} already exists; pick another slug")
+    shutil.copytree(b.path, target, symlinks=True, ignore=shutil.ignore_patterns(BACKUPS))
+    text = (target / "brand.yaml").read_text(encoding="utf-8")
+    renamed = re.sub(rf"(?m)^slug:\s*['\"]?{re.escape(b.slug)}['\"]?\s*$", f"slug: {new_slug}", text, count=1)
+    if renamed == text:  # an unusual slug line; rewrite the file rather than leave the old slug in the copy
+        meta = yaml.safe_load(text)
+        meta["slug"] = new_slug
+        renamed = yaml.safe_dump(meta, sort_keys=False, allow_unicode=True)
+    (target / "brand.yaml").write_text(renamed, encoding="utf-8")
+    r.data.update({"slug": new_slug, "from": b.slug, "path": str(target)})
+    r.summary = (f"ok brand copy {b.slug} -> {new_slug} at {target}; {b.slug} is unchanged. Point a deck at the "
+                 f"copy with `brand: {new_slug}` in its front matter")
+    return r
 
 
 def _add_asset(args: argparse.Namespace, cfg: cfgmod.Config, r: Result) -> Result:
@@ -210,7 +238,8 @@ def _add_asset(args: argparse.Namespace, cfg: cfgmod.Config, r: Result) -> Resul
     todo = "" if kind == "icon" or aid in logos else f"add `{aid}: {rel}` under logos: in brand.yaml to use it"
     if todo:
         r.data["todo"] = todo
-    r.summary = f"ok brand add-asset {b.slug}: brand:{kind}/{aid} at {rel}{'; ' + todo if todo else ''}{_kept(r)}"
+    r.summary = (f"ok brand add-asset {b.slug}: brand:{kind}/{aid} at {rel}{'; ' + todo if todo else ''}"
+                 f"{_kept(r, b.path)}")
     return r
 
 
@@ -299,7 +328,7 @@ def _init_brand(args: argparse.Namespace, cfg: cfgmod.Config, r: Result) -> Resu
         r.add(i)
     r.data["layouts"] = b.layout_names()
     r.summary = (f"{'ok' if r.ok else 'failed'} brand init {args.slug}: {len(b.layout_names())} layouts at "
-                 f"{target}, {_tally(r)}{_kept(r)}")
+                 f"{target}, {_tally(r)}{_kept(r, target)}")
     return r
 
 
@@ -421,12 +450,27 @@ def _adopt(args: argparse.Namespace, cfg: cfgmod.Config, r: Result) -> Result:
     removed = f", {slides_removed} slide(s) removed" if slides_removed else ""
     cleaned = f", {len(sanitized)} external/embedded item(s) removed" if sanitized else ""
     r.summary = (f"{'ok' if r.ok else 'failed'} brand adopt {args.slug}: {len(b.layout_names())} layouts "
-                 f"at {target}{removed}{cleaned}, {_tally(r)}{_kept(r)}")
+                 f"at {target}{removed}{cleaned}, {_tally(r)}{_kept(r, target)}")
     return r
 
 
-def _kept(r: Result) -> str:
-    return f"; the kit as it was is kept in {r.data['backup']}" if "backup" in r.data else ""
+def _kept(r: Result, target: Path) -> str:
+    """After a --force: where the old kit is, and which of its budgets the new kit doesn't keep."""
+    if "backup" not in r.data:
+        return ""
+    backup = Path(r.data["backup"])
+    try:
+        old, new = (yaml.safe_load((d / "tokens.yaml").read_text(encoding="utf-8")) or {} for d in (backup, target))
+    except (OSError, yaml.YAMLError, UnicodeDecodeError):
+        old, new = {}, {}
+    changes = kit.budget_changes(old, new) if isinstance(old, dict) and isinstance(new, dict) else []
+    if not changes:
+        return f"; the kit as it was is kept in {backup}"
+    r.data["budget_changes"] = changes
+    shown = "; ".join(changes[:3]) + ("; ..." if len(changes) > 3 else "")
+    many = f"{len(changes)} budgets differ" if len(changes) > 1 else "1 budget differs"
+    return (f"; the kit as it was is kept in {backup}. {many} from the kit it replaced ({shown}); copy back any "
+            f"that were tuned from {backup / 'tokens.yaml'}")
 
 
 def _first_difference(a: Deck, b: Deck) -> str:

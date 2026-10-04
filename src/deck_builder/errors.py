@@ -36,7 +36,8 @@ CODES: dict[str, tuple[str, str]] = {
     ),
     "BRAND_DUPLICATE": (
         "Two brand kits under brand_paths use the same slug.",
-        "Rename one kit's slug in its brand.yaml and folder, or remove one path from brand_paths.",
+        "Remove one path from brand_paths, or ask the user which kit keeps the slug; `deck-builder brand copy "
+        "<slug> <new-slug>` keeps the other under a new name.",
     ),
     "BRAND_INVALID": (
         "A brand kit is missing a required file or fails `brand check`.",

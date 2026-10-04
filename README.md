@@ -251,6 +251,7 @@ A deck picks its brand with `brand: <slug>`, and `--brand` overrides that for on
 | `brand list`, `brand show <slug>`, `brand check <slug>` | Find brands, see a brand's layouts and budgets, and check a kit |
 | `brand init`, `brand adopt` | Generate a kit, or wrap an existing template; `brand init <slug> --force` regenerates a kit from its own `brand.yaml` |
 | `brand add-asset <slug> <png> --as logo/<id>` | Copy a logo or icon (`icon/<id>`) into a kit |
+| `brand copy <slug> <new-slug>` | Copy a kit under a new slug, tuned budgets and template edits included, to rename or version a brand; the original stays as it is |
 | `inspect <template>` | A template's layouts, placeholders and theme |
 | `assets <brand or deck>` | Logos, icons, colors and images, with the slides that use them |
 | `docs [topic]`, `explain <CODE>` | Reference topics and issue-code fixes for the installed version |
@@ -297,7 +298,9 @@ Brand kits from an older version keep working; they just don't get the new layou
 
 1. Run `deck-builder brand init <slug> --force`. It prints where it kept the old kit.
 2. Run `deck-builder check <deck> --render` on your decks and look at the renders.
-3. Copy any tuned budgets you still want from the backup's `tokens.yaml` into the new one. To go back, copy the backup's files over the kit's.
+3. Copy any tuned budgets you still want from the backup's `tokens.yaml` into the new one; `brand init` lists the budgets that changed. To go back, copy the backup's files over the kit's.
+
+To compare before touching the original, run `deck-builder brand copy <slug> <slug>-next` and upgrade the copy instead.
 
 Kits adopted from a client's own template never change. Decks you've already built don't change either. Rebuilding a deck with a new version can change how it looks, and a rebuild won't replace a `.pptx` you've edited by hand unless you pass `--force`.
 

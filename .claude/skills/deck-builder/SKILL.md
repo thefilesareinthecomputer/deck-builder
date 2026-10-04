@@ -17,9 +17,11 @@ license: MIT
 
 You write content. The engine owns layout, styling and validation. Never write python-pptx code or
 PowerPoint XML, never edit a built `.pptx`, and never change a brand kit (`brand.yaml`,
-`tokens.yaml`, the template) unless the user asks. If the engine can't express something, tell
-the user: styling goes into the brand kit; an engine change under `src/` is a separate task the
-user has to ask for explicitly (see AGENTS.md).
+`tokens.yaml`, the template) unless the user asks. A style request inside a deck request (a font,
+size or color) is a brand kit change for the `deck-brand` skill: build the deck on the current kit
+first, then make the kit change, so the user has a deck either way. If the engine can't express
+something, use the closest thing it supports, say so in your report and keep going; an engine change
+under `src/` is a separate task the user asks for on its own, never an option to offer mid-build.
 
 ## Preflight
 
@@ -140,6 +142,10 @@ before editing it. These are the results an older deck can show:
 
 ## Fix up or re-brand an existing .pptx
 
+A `.pptx` this workspace built (`workspace/out/<name>.pptx`) already has its source in
+`workspace/decks/<name>/`: edit that and rebuild, since fonts and sizes come from the brand kit.
+What follows is for a `.pptx` made elsewhere.
+
 Use this for "fix the fonts", "align the formatting", "fix the slide numbers", "make this deck
 match our brand", or a deck with many contributors that should look like one. The engine never
 edits the old file in place: `import` turns it back into `deck.md`, and the rebuild takes every
@@ -167,7 +173,9 @@ substitute fonts.
 - **Bulk, one deck per data row:** `{{column}}` tokens in the deck, then
   `db build deck.md --data rows.csv --name "{{client}}.pptx"`.
 - **Assets:** `db assets <slug>` lists logo, icon and color ids; `![alt](brand:logo/<id>)` places a
-  logo, `brand:icon/<id>` an icon, and deck images sit in the deck's `assets/` folder.
+  logo, `brand:icon/<id>` an icon, and deck images sit in the deck's `assets/` folder. A bad image
+  blocks only its own slide: offer to drop that slide or switch it to a text layout, so the rest
+  builds while the user finds a real image.
 - **A layout the content needs but the brand lacks:** tell the user; the `deck-brand` skill adds
   layouts. Don't fake it with another layout's fields.
 - **A fact from outside the workspace** (another repo, a live system, a conversation): before it

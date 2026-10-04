@@ -82,7 +82,9 @@ Write the user's `brand.yaml` somewhere outside the kit first (the workspace's `
 scratch folder), then `brand init` copies it and its assets into `workspace/brands/<slug>/`.
 `brand init --force` regenerates `template.potx` and `tokens.yaml` from scratch, replacing tuned
 budgets and any PowerPoint polish. It first copies the whole kit into `<kit>/backups/<time>/` and
-reports that path: tell the user, and offer to copy their tuned budgets back where they still fit.
+reports that path and the budgets that changed: tell the user, and offer to copy back the ones they
+tuned. To rename or version a brand, `brand copy <slug> <new-slug>` copies the whole kit under the
+new slug and leaves the original alone; then point the decks' `brand:` at the new slug.
 
 Budgets in a generated `tokens.yaml` are estimates. Build a test deck with deliberately long
 text in each layout, run `check --render`, and propose tighter or looser budgets per field from

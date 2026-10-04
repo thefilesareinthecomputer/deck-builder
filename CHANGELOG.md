@@ -11,12 +11,15 @@ All notable changes to this project are listed here. The format follows [Keep a 
 - `CONTRIBUTING.md`, issue forms for bugs and feature requests, a pull request template, and `SECURITY.md`, which says how to report a vulnerability privately.
 - Every `--force` that replaces part of a brand kit (`brand init`, `brand adopt`, `brand add-asset`) first copies the whole kit, as it was, into `<kit>/backups/<time>/` and reports the path, so tuned budgets, template edits and assets are never lost. Backups aren't loaded as kits.
 - The `deck-builder` skill has a section on decks made with an older version: what `KIT_STALE`, `KIND_MISMATCH` and the newer warnings mean there, and that upgrading a kit is the user's call.
+- `brand copy <slug> <new-slug>` copies a kit, tuned budgets and template edits included, under a new slug beside the original, which stays as it is: the way to rename a brand or keep versions of it by name.
+- After a `--force`, `brand init` and `brand adopt` list each budget that differs from the kit they replaced (`budget_changes`), so a tuned budget is never reset without a word.
 
 ### Changed
 
 - A dependency missing from the install (a pull that added one, without a reinstall) stops every command with the package's name and the reinstall to run, instead of a traceback.
 - `explain KIT_STALE`, `doctor` and the MCP `brand_init` description say the kit still builds as it is, that upgrading is the brand owner's call, and where `--force` keeps the old kit.
 - Fewer repeated steps in the agent flows: the review gate runs a plain `check` and reuses the builder's render instead of building and rendering again; the validator takes the gate's warnings instead of running `check` a third time; a send-back continues the same subagent, which keeps the docs it read and runs one check cycle; and the brand skill's main agent skips the format docs when the brand agent writes the files. The two-round limit is stated once in AGENTS.md.
+- Steering from test sessions with uncooperative users: AGENTS.md says to load the matching skill before answering, to act on the engine's own error messages, and that kit folders change only through `brand` commands. The `deck-builder` skill builds the deck before a style change to the kit, uses the closest supported option instead of offering an engine change, edits the source deck of a `.pptx` it built rather than importing it, and lets a bad image block only its own slide. The brand agent's test deck covers only the layouts a change affects, and `BRAND_DUPLICATE` points to `brand copy` instead of renaming a folder.
 
 ### Fixed
 

@@ -9,7 +9,7 @@ Generated from the engine by `deck-builder docs codes`. Fix by code, not by mess
 | `SPEC_VERSION` | The input declares a spec_version newer than this engine supports. | Upgrade deck-builder, or lower spec_version if the input doesn't use newer features. |
 | `SCHEMA` | brand.yaml, tokens.yaml or a manifest doesn't match its JSON Schema. | Fix the listed keys; `deck-builder schema brand` or `deck-builder schema tokens` prints the schema. |
 | `UNKNOWN_BRAND` | The deck names a brand slug that no brand_paths entry contains. | Run `deck-builder brand list` and use a listed slug, or add the kit's folder to brand_paths. |
-| `BRAND_DUPLICATE` | Two brand kits under brand_paths use the same slug. | Rename one kit's slug in its brand.yaml and folder, or remove one path from brand_paths. |
+| `BRAND_DUPLICATE` | Two brand kits under brand_paths use the same slug. | Remove one path from brand_paths, or ask the user which kit keeps the slug; `deck-builder brand copy <slug> <new-slug>` keeps the other under a new name. |
 | `BRAND_INVALID` | A brand kit is missing a required file or fails `brand check`. | Run `deck-builder brand check <slug>` and fix what it lists. |
 | `TEMPLATE_MISMATCH` | tokens.yaml names a template layout or placeholder idx the template doesn't have. | Run `deck-builder inspect <template>` and correct template_layout or idx in tokens.yaml. |
 | `UNKNOWN_LAYOUT` | A slide uses a layout name the brand doesn't define. | Use a layout from `deck-builder brand show <slug>`. |

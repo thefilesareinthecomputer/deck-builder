@@ -29,9 +29,9 @@ calls which command.
 ## CLI commands
 
 Every CLI command belongs to the main agent: the subagents have no shell, and the decomposer and the
-storyteller have neither a shell nor an MCP server. Four commands exist only as CLI, never as MCP tools, because they
-set up or link the local install rather than touch a deck or brand kit: `init`, `mcp`, `schema`,
-`skills install`. Every other CLI command (`docs`, `explain`, `brand list/show/check/init/adopt/
+storyteller have neither a shell nor an MCP server. Five commands exist only as CLI, never as MCP tools:
+`init`, `mcp`, `schema` and `skills install` set up or link the local install, and `brand copy` copies a
+kit under a new slug, which the main agent runs when the user renames or versions a brand. Every other CLI command (`docs`, `explain`, `brand list/show/check/init/adopt/
 add-asset`, `inspect`, `assets`, `check`, `build`, `convert`, `import`, `render`, `doctor`) also
 exists as an MCP tool, named `brand_show` for `brand show` and so on; the table below gives that
 tool's owner when the job is delegated to a subagent.

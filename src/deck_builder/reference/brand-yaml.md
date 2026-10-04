@@ -12,7 +12,7 @@ slug: pemberton                  # folder name; decks say `brand: pemberton`
 version: 1.0.0                   # bump on any change that affects output
 description: Sales and ops decks
 
-palette:                         # named colors, 6-digit hex; name them by role, not hue
+palette:                         # named colors, 6-digit hex; keys in lowercase with hyphens, by role, not hue
   primary: "1F3A5F"
   accent: "E07A2F"
   ink: "1B1B1B"                  # body text

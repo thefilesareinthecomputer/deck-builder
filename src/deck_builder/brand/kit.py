@@ -246,6 +246,24 @@ def inputs_sha(kit_dir: Path, meta: dict[str, Any]) -> str:
     return h.hexdigest()
 
 
+BUDGET_KEYS = ("max_chars", "max_bullets", "max_bullet_chars", "max_lines", "max_rows", "max_cols", "max_level")
+
+
+def budget_changes(old: dict[str, Any], new: dict[str, Any]) -> list[str]:
+    """Each field budget in the old tokens.yaml that the new one doesn't keep, as `layout.field key old -> new`,
+    so a regenerate that resets budgets someone tuned says which. A version change recalibrates budgets too,
+    so the list is what changed, not a verdict on what was tuned."""
+    out = []
+    new_layouts = new.get("layouts") or {}
+    for lname, layout in (old.get("layouts") or {}).items():
+        new_fields = (new_layouts.get(lname) or {}).get("fields") or {}
+        for fname, field in (layout.get("fields") or {}).items():
+            now = new_fields.get(fname) or {}
+            out += [f"{lname}.{fname} {key} {field[key]} -> {now.get(key, 'gone')}"
+                    for key in BUDGET_KEYS if key in field and now.get(key) != field[key]]
+    return out
+
+
 def _made_by_early_brand_init(kit_dir: Path) -> bool:
     """Kits from before 0.2.0 have no generated record; brand init's header on tokens.yaml still tells them
     apart from an adopted kit, which is never stale."""
