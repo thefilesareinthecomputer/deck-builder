@@ -100,8 +100,9 @@ Before any built deck reaches the user:
    `docs design`, writes nothing, and returns `VERDICT: PASS` or `SEND BACK` with `severity | slide |
    field | finding | fix` lines.
 4. On SEND BACK, give its blocker and major findings to the same `deck-builder-agent` (continue it
-   with SendMessage, so it keeps what it has read) or fix them here, then validate again. Up to two
-   send-backs per deck; after that, report what's unresolved instead. Pass its engine or brand
+   with SendMessage, so it keeps what it has read) or fix them here, then validate again by
+   continuing the same validator with SendMessage, naming the slides that changed, so it reads only
+   those again. Up to two send-backs per deck; after that, report what's unresolved instead. Pass its engine or brand
    findings to the user, since they aren't content fixes.
 
 Then report: output path, slide count, render backend, any slide you're unsure about, and any
@@ -130,8 +131,9 @@ After the user updates deck-builder, run `db doctor` once, then `db check <deck>
 before editing it. These are the results an older deck can show:
 
 - `KIT_STALE`: an older version made the brand kit. The kit still builds as before, without the newer
-  layouts and styling. Upgrading it is the user's call, and the `deck-brand` skill does it; the kit as
-  it was is kept in its `backups/` folder. Afterward, `db brand show <slug>` lists the layouts and
+  layouts and styling. Ask the user before upgrading it, since that changes how their decks look and
+  replaces budgets they tuned; the `deck-brand` skill does it, keeps the kit as it was in its
+  `backups/` folder, and lists the budgets that changed. Afterward, `db brand show <slug>` lists the layouts and
   `db docs design` says what each is for.
 - `KIND_MISMATCH` on text that holds a fenced code block: that's a code block now, so move it to a
   `code` slide or make it inline code.

@@ -38,7 +38,9 @@ are rather than running it again. Don't restate what it reports; your job is eve
    and `docs` with topic `story` too: the storyboard is the approved storyline.
 3. The render folder: the contact sheets for rhythm, then every `slide-NN.png`, not only flagged
    ones. This is the one pass that looks at all of them. If there's no render, or the deck file is
-   newer than it, run `check` with `render: true` first (it builds, renders and measures).
+   newer than it, run `check` with `render: true` first (it builds, renders and measures). When the
+   main agent sends you back for another pass, read only the slides it names as changed (render
+   first if the deck is newer than the render); your findings on the other slides stand.
 
 ## Checklist
 
