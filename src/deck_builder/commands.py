@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import datetime as dt
 import json
 import os
 import re
@@ -199,15 +200,17 @@ def _add_asset(args: argparse.Namespace, cfg: cfgmod.Config, r: Result) -> Resul
     else:
         rel = str(logos.get(aid) or f"assets/{aid}.png")
     dest = inside(b.path, rel)
-    if dest.exists() and not args.force:
-        raise EnvError(f"{rel} already exists in brand {b.slug!r}; pass --force to replace it")
+    if dest.exists():
+        if not args.force:
+            raise EnvError(f"{rel} already exists in brand {b.slug!r}; pass --force to replace it")
+        r.data["backup"] = str(backup_kit(b.path))
     dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(src, dest)
     r.data.update({"slug": b.slug, "path": str(dest), "ref": f"brand:{kind}/{aid}"})
     todo = "" if kind == "icon" or aid in logos else f"add `{aid}: {rel}` under logos: in brand.yaml to use it"
     if todo:
         r.data["todo"] = todo
-    r.summary = f"ok brand add-asset {b.slug}: brand:{kind}/{aid} at {rel}{'; ' + todo if todo else ''}"
+    r.summary = f"ok brand add-asset {b.slug}: brand:{kind}/{aid} at {rel}{'; ' + todo if todo else ''}{_kept(r)}"
     return r
 
 
@@ -288,7 +291,7 @@ def _init_brand(args: argparse.Namespace, cfg: cfgmod.Config, r: Result) -> Resu
     if meta.get("slug") != args.slug:
         raise EnvError(f"{src.name} has slug {meta.get('slug')!r}; run `brand init {meta.get('slug')}` "
                        "or change the slug in the file")
-    target = _kit_dir(args, cfg)
+    target = _kit_dir(args, cfg, r)
     r.data.update({"slug": args.slug, "path": str(target)})
     init_kit(meta, src, target)
     b = registry.load_kit(target)
@@ -296,7 +299,7 @@ def _init_brand(args: argparse.Namespace, cfg: cfgmod.Config, r: Result) -> Resu
         r.add(i)
     r.data["layouts"] = b.layout_names()
     r.summary = (f"{'ok' if r.ok else 'failed'} brand init {args.slug}: {len(b.layout_names())} layouts at "
-                 f"{target}, {_tally(r)}")
+                 f"{target}, {_tally(r)}{_kept(r)}")
     return r
 
 
@@ -342,18 +345,38 @@ def init_kit(meta: dict[str, Any], src: Path, target: Path) -> None:
                 "# tune them after a test render (`deck-builder docs tokens-yaml`).\n")
 
 
-def _kit_dir(args: argparse.Namespace, cfg: cfgmod.Config) -> Path:
+def _kit_dir(args: argparse.Namespace, cfg: cfgmod.Config, r: Result) -> Path:
     if not args.slug or not re.fullmatch(r"[a-z0-9][a-z0-9-]*", args.slug):
         raise EnvError("a brand slug is lowercase letters, digits and hyphens, e.g. `acme` or `acme-2026`")
     root = Path(args.out) if args.out else cfg.brand_paths[0]
     # the slug is appended after root was checked; that folder name can already be an existing
     # symlink pointing outside every allowed root (a no-op outside an MCP call).
     target = confine.guard(root / args.slug, "the kit folder")
-    if (target / "brand.yaml").exists() and not args.force:
+    if (target / "brand.yaml").exists():
         replaced = "template, tokens.yaml and brand.yaml" if args.action == "adopt" else "template.potx and tokens.yaml"
-        raise EnvError(f"{target} already holds a brand kit; --force replaces its {replaced}, discarding tuned "
-                       "budgets and edits")
+        if not args.force:
+            raise EnvError(f"{target} already holds a brand kit; --force replaces its {replaced}, after keeping a "
+                           "copy of the whole kit in its backups/ folder")
+        r.data["backup"] = str(backup_kit(target))
     return target
+
+
+BACKUPS = "backups"
+
+
+def backup_kit(kit_dir: Path) -> Path:
+    """Copy a kit, all but its earlier backups, to <kit>/backups/<time>/ before a --force replaces any of it, so
+    tuned budgets, template edits and assets can always be copied back. Discovery only looks one folder deep
+    under a brand path, so a backup is never loaded as a second kit."""
+    root = confine.guard(kit_dir / BACKUPS, "the kit's backups folder")  # it can already be a symlink
+    stamp = dt.datetime.now().strftime("%Y-%m-%d-%H%M%S")
+    dest, n = root / stamp, 1
+    while dest.exists():
+        n += 1
+        dest = root / f"{stamp}-{n}"
+    shutil.copytree(kit_dir, dest, symlinks=True,  # a link is copied as a link, never followed out of the kit
+                    ignore=lambda d, names: [BACKUPS] if Path(d) == kit_dir else [])
+    return dest
 
 
 def _write_yaml(path: Path, data: dict[str, Any], header: str) -> None:
@@ -368,7 +391,7 @@ def _adopt(args: argparse.Namespace, cfg: cfgmod.Config, r: Result) -> Result:
     src = Path(args.template)
     if not src.is_file() or src.suffix.lower() not in (".potx", ".pptx"):
         raise EnvError(f"not a .potx or .pptx file: {src}")
-    target = _kit_dir(args, cfg)
+    target = _kit_dir(args, cfg, r)
     target.mkdir(parents=True, exist_ok=True)
     written = f"template{src.suffix.lower()}"
     slides_removed = 0
@@ -398,8 +421,12 @@ def _adopt(args: argparse.Namespace, cfg: cfgmod.Config, r: Result) -> Result:
     removed = f", {slides_removed} slide(s) removed" if slides_removed else ""
     cleaned = f", {len(sanitized)} external/embedded item(s) removed" if sanitized else ""
     r.summary = (f"{'ok' if r.ok else 'failed'} brand adopt {args.slug}: {len(b.layout_names())} layouts "
-                 f"at {target}{removed}{cleaned}, {_tally(r)}")
+                 f"at {target}{removed}{cleaned}, {_tally(r)}{_kept(r)}")
     return r
+
+
+def _kept(r: Result) -> str:
+    return f"; the kit as it was is kept in {r.data['backup']}" if "backup" in r.data else ""
 
 
 def _first_difference(a: Deck, b: Deck) -> str:

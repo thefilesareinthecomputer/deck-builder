@@ -120,6 +120,22 @@ deck.md or workbook is still this skill. Back up first: commit the workspace rep
 `deck.md` into `scratch/`. When `deck.md` already exists, edit it; never `import` over it. After
 a restructure, report a slide-mapping table: old slide, new slide, what changed.
 
+## A deck made with an older version
+
+After the user updates deck-builder, run `db doctor` once, then `db check <deck> --json` on each deck
+before editing it. These are the results an older deck can show:
+
+- `KIT_STALE`: an older version made the brand kit. The kit still builds as before, without the newer
+  layouts and styling. Upgrading it is the user's call, and the `deck-brand` skill does it; the kit as
+  it was is kept in its `backups/` folder. Afterward, `db brand show <slug>` lists the layouts and
+  `db docs design` says what each is for.
+- `KIND_MISMATCH` on text that holds a fenced code block: that's a code block now, so move it to a
+  `code` slide or make it inline code.
+- Warnings such as `PROSE_TELL` or `CODE_LONG`: fix the ones the user wants fixed, and leave text
+  they didn't ask about.
+- A rebuild can look different from the old `.pptx` (quieter charts, code in Menlo). Render it and
+  show the user before they replace a file they've already sent.
+
 ## Fix up or re-brand an existing .pptx
 
 Use this for "fix the fonts", "align the formatting", "fix the slide numbers", "make this deck

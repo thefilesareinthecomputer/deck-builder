@@ -7,14 +7,19 @@ All notable changes to this project are listed here. The format follows [Keep a 
 ### Added
 
 - `doctor` checks what an update leaves behind: an installed tool older than the clone it runs in (or than the agents' MCP server), agents `skills install` hasn't linked yet, and brand kits another version generated. Pygments is in its package list.
-- README: an Updating section with the steps for each machine after a new version, and how to try a kit upgrade on a copy first.
+- README: an Updating section with the steps for each machine after a new version, and how to upgrade a kit.
 - `CONTRIBUTING.md`, issue forms for bugs and feature requests, a pull request template, and `SECURITY.md`, which says how to report a vulnerability privately.
+- Every `--force` that replaces part of a brand kit (`brand init`, `brand adopt`, `brand add-asset`) first copies the whole kit, as it was, into `<kit>/backups/<time>/` and reports the path, so tuned budgets, template edits and assets are never lost. Backups aren't loaded as kits.
+- The `deck-builder` skill has a section on decks made with an older version: what `KIT_STALE`, `KIND_MISMATCH` and the newer warnings mean there, and that upgrading a kit is the user's call.
 
 ### Changed
 
 - A dependency missing from the install (a pull that added one, without a reinstall) stops every command with the package's name and the reinstall to run, instead of a traceback.
+- `explain KIT_STALE`, `doctor` and the MCP `brand_init` description say the kit still builds as it is, that upgrading is the brand owner's call, and where `--force` keeps the old kit.
 
 ### Fixed
+
+- Kits generated before 0.2.0 hold no record of what made them, so they never reported `KIT_STALE` and `doctor` called them current, although the 0.2.0 notes said they would. They now report it; adopted kits still never do.
 
 - `render --slides` with a number past the last slide, or below 1, used to report success with nothing rendered; it now refuses with the deck's slide count. A `dpi` outside 48 to 300 (the MCP tool's range) and a `contact_batch` under 1 are refused; `--dpi 0` used to fall back to the default silently, and `--dpi 5000` wrote blank images.
 - Files a user hands over no longer crash a command with a traceback: a `deck.md` or CSV that isn't UTF-8 (such as Excel's plain CSV export), a damaged `.xlsx` given as `--data`, a malformed `brand.yaml` for `brand init --from`, a `render` setting in `deck-builder.toml` that isn't a number, and a `.pptx` for `render` that isn't one each stop with a message naming the file. An image file that isn't really an image (a saved web page named `.png`) fails `check` with `ASSET_FORMAT` instead of crashing the build.

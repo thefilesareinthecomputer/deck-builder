@@ -112,7 +112,8 @@ TOOLS = {t.name: t for t in (
          (SLUG_ARG,)),
     Tool("brand_init", "Generate a brand kit (template.potx and tokens.yaml) from a brand.yaml into a brand_paths "
          "folder. Asset paths in the brand.yaml are relative to its own folder. With no from and force: true, it "
-         "regenerates an existing kit from its own brand.yaml, the fix for KIT_STALE.", ("brand", "init"), (
+         "regenerates an existing kit from its own brand.yaml (the fix for KIT_STALE, and the brand owner's call), "
+         "after copying the kit as it was into its backups/ folder.", ("brand", "init"), (
              SLUG_ARG,
              Arg("from", TEXT, "--from", BRAND_READ,
                  about="the brand.yaml to generate from; leave out with force to regenerate the kit from its own"),

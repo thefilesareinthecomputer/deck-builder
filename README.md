@@ -293,12 +293,11 @@ Cloning and installing as above always gets you the latest code, so you don't ne
 4. Run `deck-builder doctor`. It tells you if the installed tool is behind the clone, if an agent isn't linked, and which brand kits an older version made.
 5. Read the release's "Upgrading" notes in the [changelog](CHANGELOG.md), then run `deck-builder check` on the decks you're working on.
 
-Brand kits from an older version keep working; they just don't get the new layouts or styling. `deck-builder brand init <slug> --force` upgrades a kit by rebuilding it from its `brand.yaml`, which replaces any budgets you tuned and any edits you made to the template in PowerPoint. So try it on a copy first:
+Brand kits from an older version keep working; they just don't get the new layouts or styling. `deck-builder brand init <slug> --force` upgrades a kit by rebuilding it from its `brand.yaml`. That replaces any budgets you tuned and any edits you made to the template in PowerPoint, so it first copies the whole kit, as it was, into the kit's `backups/` folder. To upgrade one:
 
-1. Copy the kit's folder (`workspace/brands/<slug>` in a default workspace) to `<slug>-next` beside it, and change `slug:` in the copy's `brand.yaml` to `<slug>-next`.
-2. Run `deck-builder brand init <slug>-next --force`.
-3. Run `deck-builder check <deck> --brand <slug>-next --render` on your decks and compare the renders with the old kit's.
-4. Once you're happy, move your tuning over, upgrade the original kit the same way, and delete the copy.
+1. Run `deck-builder brand init <slug> --force`. It prints where it kept the old kit.
+2. Run `deck-builder check <deck> --render` on your decks and look at the renders.
+3. Copy any tuned budgets you still want from the backup's `tokens.yaml` into the new one. To go back, copy the backup's files over the kit's.
 
 Kits adopted from a client's own template never change. Decks you've already built don't change either. Rebuilding a deck with a new version can change how it looks, and a rebuild won't replace a `.pptx` you've edited by hand unless you pass `--force`.
 

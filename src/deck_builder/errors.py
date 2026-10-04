@@ -227,9 +227,11 @@ CODES: dict[str, tuple[str, str]] = {
     ),
     "KIT_STALE": (
         "A generated kit no longer matches what made it: brand.yaml's palette, fonts or generate settings, or "
-        "the logo on the master, changed after `brand init`, or a different deck-builder generated it.",
-        "Run `deck-builder brand init <slug> --force` to regenerate the kit from its own brand.yaml and assets. "
-        "That replaces tuned budgets and edits made to the template in PowerPoint.",
+        "the logo on the master, changed after `brand init`, or a different deck-builder generated it. The kit "
+        "still builds as it is.",
+        "Upgrading is the brand owner's call. `deck-builder brand init <slug> --force` rebuilds the kit from its "
+        "own brand.yaml and assets, replacing tuned budgets and template edits, after copying the whole kit as "
+        "it was into its backups/ folder, from which either can be copied back.",
     ),
     "LOW_CONTRAST": (
         "Two brand colors that sit on each other don't meet WCAG 2.2 contrast: 4.5:1 for text (ink on "
