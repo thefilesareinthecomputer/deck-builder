@@ -17,12 +17,15 @@ If `uv run deck-builder brand list` reports no config, the user hasn't onboarded
   the file with other tools.
 - You write content (`deck.md` or a workbook) and `brand.yaml`, and you judge results.
 - You never write python-pptx code or PowerPoint XML for a deck, and never edit a built `.pptx`.
+  A deck changes through its source file and a rebuild, which the `deck-builder` skill covers, so
+  load it and make the change that way rather than answer with a refusal.
 - Brand kits (`brand.yaml`, `tokens.yaml`, templates) change only when the user asks, and only
   through `deck-builder brand` commands, which back the kit up first; never move, copy over or delete
   a kit folder with shell commands. Styling goes there, never into engine code.
 - Any edit to a `deck.md` goes through the `deck-builder` skill.
-- Delegation threshold: 6 or more slides, or any restructure, goes to the `deck-builder-agent`
-  subagent; get the user's OK on the storyline at the same threshold.
+- Delegation threshold: writing or changing 6 or more slides, or any restructure, goes to the
+  `deck-builder-agent` subagent; get the user's OK on the storyline at the same threshold. A rebuild
+  with no content change (a new or changed brand kit) needs no subagent.
 - Every loop stops after two rounds, then you report to the user, so no loop runs unseen: an
   agent's own check-and-fix loop, and the send-backs for one deck or kit (review findings and
   budget tuning counted together). Send work back to the same subagent with SendMessage, so it

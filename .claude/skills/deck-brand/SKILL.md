@@ -78,9 +78,12 @@ db brand show <slug>                      # what a deck writer will see
 db check <test deck> --render --json      # build, render, measure
 ```
 
-Write the user's `brand.yaml` somewhere outside the kit first (the workspace's `decks/` or a
-scratch folder), then `brand init` copies it and its assets into `workspace/brands/<slug>/`.
-`brand init --force` regenerates `template.potx` and `tokens.yaml` from scratch, replacing tuned
+For a new kit, write the user's `brand.yaml` somewhere outside the kit first (the workspace's
+`decks/` or a scratch folder), then `brand init` copies it and its assets into
+`workspace/brands/<slug>/`. To change an existing kit (a color, a font), edit the kit's own
+`brand.yaml` and run `brand init <slug> --force` with no `--from`; nothing needs copying. A kit
+change reaches every deck on that kit, so when other decks use it and the user means one deck,
+`brand copy` it first and point that deck at the copy. `brand init --force` regenerates `template.potx` and `tokens.yaml` from scratch, replacing tuned
 budgets and any PowerPoint polish. It first copies the whole kit into `<kit>/backups/<time>/` and
 reports that path and the budgets that changed: tell the user, and offer to copy back the ones they
 tuned. To rename or version a brand, `brand copy <slug> <new-slug>` copies the whole kit under the

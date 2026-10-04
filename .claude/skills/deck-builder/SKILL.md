@@ -88,7 +88,8 @@ Speaker notes hold the source of every number and anything cut from the slide.
 
 ## Review gate (main agent)
 
-Before any built deck reaches the user:
+Before any built deck reaches the user. When only the brand kit changed and no content did, steps 1
+and 2 are the whole gate: look at the contact sheet and the flagged slides yourself.
 
 1. Run `db check <deck> --json` yourself; it must report no errors. The loop's last step already
    rendered the deck, so add `--render` only when the deck changed after that render.
@@ -106,7 +107,8 @@ Before any built deck reaches the user:
    findings to the user, since they aren't content fixes.
 
 Then report: output path, slide count, render backend, any slide you're unsure about, and any
-number or source you couldn't verify.
+number or source you couldn't verify. Ask about fixes only for what the request caused; list
+problems the deck already had for later, so a yes doesn't start work the user didn't ask for.
 
 ## Reading output
 
