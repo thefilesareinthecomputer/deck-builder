@@ -164,6 +164,9 @@ def build_steps(build: str, shapes: dict[str, Any], fields: dict[str, Any]) -> l
 
 
 class Builder:
+    """Adds a validated deck's slides to a presentation one at a time, filling each layout's placeholders
+    from the slide's fields and collecting build-time issues (such as ASSET_LOW_RES) in `issues`."""
+
     def __init__(self, brand: Brand, deck_dir: Path, cache_dir: Path, numbers: bool = True,
                  footer: str | None = None, first: int = 1) -> None:
         self.brand = brand
@@ -192,6 +195,8 @@ class Builder:
         return pic
 
     def slide(self, prs: Any, layouts: dict[Any, Any], s: Slide, n: int) -> dict[str, Any]:
+        """Add slide n on its template layout, fill its fields, drop unused placeholders, add the slide number
+        and footer, and return its manifest entry."""
         ls = self.brand.tokens["layouts"][s.layout]
         tl = ls["template_layout"]
         layout = tpl.find_layout(layouts, tl, ls.get("master"))

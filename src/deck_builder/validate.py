@@ -178,6 +178,9 @@ def _check_front_matter(deck: Deck) -> list[Issue]:
 
 
 def resolve(deck: Deck, brand: Brand, deck_dir: Path) -> tuple[Deck, list[Issue]]:
+    """Check a deck against its brand and return a resolved copy with the issues: front matter, max_slides,
+    each slide (layout, fields, budgets, assets, banned patterns) and the deck-wide conventions. The copy has
+    the deck-wide kicker filled in and a bare body moved to the layout's one matching field."""
     deck = copy.deepcopy(deck)
     issues: list[Issue] = _check_front_matter(deck)
     spec_layouts: dict[str, Any] = brand.tokens.get("layouts") or {}
@@ -319,6 +322,9 @@ def _file(deck: Deck) -> str | None:
 
 def _check_slide(s: Slide, n: int, spec_layouts: dict[str, Any], prs_layouts: dict[Any, Any],
                  brand: Brand, deck_dir: Path, banned: list[re.Pattern[str]]) -> list[Issue]:
+    """One slide's issues, fixing up the slide in place where the intent is clear: the heading copied into
+    the layout's heading field, and a `body` the layout has no field for moved to its one free field of the
+    same kind (KIND_MISMATCH when there's none or several)."""
     out: list[Issue] = []
     at: dict[str, Any] = {"file": s.where.file if s.where else None,
                           "line": s.where.line if s.where else None, "slide": n}
@@ -405,6 +411,8 @@ def _check_image_band(img: Image, brand: Brand, deck_dir: Path, layout: Any, at:
     phs = {ph.placeholder_format.idx: ph for ph in layout.placeholders}
     if err or path is None or not path.is_file() or 0 not in phs or 1 not in phs or brand.template is None:
         return []
+    if not _readable_image(path):
+        return []  # _check_asset reports it as ASSET_FORMAT
     slide_w, slide_h, title = phs[1].width, phs[1].height, phs[0]
     colors = brand_inspect.theme(brand.template)["colors"]
     ink, paper = colors.get("dk1", "000000"), colors.get("lt1", "FFFFFF")
@@ -693,4 +701,18 @@ def _check_asset(name: str, ref: str, brand: Brand, deck_dir: Path, at: dict[str
     if not path.is_file():
         return [Issue("MISSING_IMAGE", f"{ref!r} not found; paths resolve relative to the deck file",
                       field=name, **at)]
+    if not _readable_image(path):
+        return [Issue("ASSET_FORMAT", f"{ref!r} isn't a readable image (a saved web page or a damaged file?); "
+                      "open it and save it again as PNG or JPEG", field=name, **at)]
     return []
+
+
+def _readable_image(path: Path) -> bool:
+    from PIL import Image as PILImage
+
+    try:
+        with PILImage.open(path) as im:
+            im.verify()
+    except (OSError, SyntaxError, ValueError):  # Pillow's errors for bytes that aren't an image, or a broken one
+        return False
+    return True

@@ -83,7 +83,8 @@ TOOLS = {t.name: t for t in (
              Arg("name", {"type": "string", "pattern": r"^(?!.*\.\.)[^/\\]+\.pptx$"}, "--name",
                  about="bulk mode file name pattern, e.g. {{client}}.pptx"))),
     Tool("render", "Render a .pptx that build made (its .manifest.json must sit beside it) with the configured "
-         "backend. Returns render_dir, the slide PNGs, contact_sheets and flagged_slides.", ("render",), (
+         "backend. Returns render_dir, slide_png (the slide-NN.png name pattern), contact_sheets and "
+         "flagged_slides.", ("render",), (
              Arg("pptx", TEXT, path=ROOT, required=True, about="the built .pptx, e.g. workspace/out/q3.pptx"),
              Arg("slides", {"type": "string", "pattern": "^[0-9]+(,[0-9]+)*$"}, "--slides",
                  about="only these slide numbers, e.g. 3,7"),
@@ -132,7 +133,7 @@ TOOLS = {t.name: t for t in (
              FORCE)),
     Tool("inspect", "A template's layouts, placeholders (idx, type, position, size) and theme.", ("inspect",), (
         Arg("template", TEXT, path=BRAND_READ, required=True, about="a .potx or .pptx"),
-        Arg("yaml", FLAG, "--yaml", about="also a starter layouts block for tokens.yaml"))),
+        Arg("yaml", FLAG, "--yaml", about="instead of the report, a starter tokens block for tokens.yaml"))),
     Tool("assets", "Inventory a brand's assets (pass its slug) or a deck's (pass its path), with the slides that "
          "use each.", ("assets",), (
              Arg("target", TEXT, path=SLUG_OR_ROOT, required=True, about="a brand slug or a deck path"),)),

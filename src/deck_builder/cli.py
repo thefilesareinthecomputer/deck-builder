@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import traceback
 from collections.abc import Callable
 
 from deck_builder import __version__, docs
@@ -127,7 +128,9 @@ def emit(result: Result, as_json: bool) -> None:
 
 
 def run(handler: Handler, args: argparse.Namespace) -> Result:
-    """Run one command; an environment problem becomes a Result with `error` (and `code`) and exit 2."""
+    """Run one command; an environment problem becomes a Result with `error` (and `code`) and exit 2. So does
+    an unexpected exception, with its traceback on stderr, so --json output stays one object and a crash
+    never reads as exit 1 (issues to fix in the deck)."""
     try:
         return handler(args)
     except EnvError as e:
@@ -135,6 +138,12 @@ def run(handler: Handler, args: argparse.Namespace) -> Result:
         result.data["error"] = str(e)
         if e.code:
             result.data["code"] = e.code
+        return result
+    except Exception as e:
+        traceback.print_exc()
+        result = Result(command=args.command, ok=False, exit_code=EXIT_ENV)
+        result.data["error"] = (f"internal error in deck-builder: {type(e).__name__}: {e}. This is a bug; "
+                                "report it with the command and `deck-builder --version`.")
         return result
 
 

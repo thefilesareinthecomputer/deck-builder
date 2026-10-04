@@ -131,7 +131,10 @@ def parse(path: Path, row: dict[str, str] | None = None) -> tuple[Deck, list[Iss
 
 def read_table_rows(path: Path) -> list[dict[str, str]]:
     """The first sheet as rows of strings, for bulk --data."""
-    wb = load_workbook(path, read_only=True, data_only=True)
+    try:
+        wb = load_workbook(path, read_only=True, data_only=True)
+    except Exception as e:  # openpyxl raises several types for a bad file
+        raise EnvError(f"{path}: not a readable .xlsx workbook ({e})") from e
     rows = _rows(wb.worksheets[0])
     wb.close()
     if not rows:

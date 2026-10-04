@@ -23,7 +23,7 @@ uv sync                         # from the repo root; installs the Python depend
 uv run deck-builder doctor
 ```
 
-`doctor` lists each requirement as `ok`, `missing`, `optional` or `unverified`, with the install
+`doctor` lists each requirement as `ok`, `missing`, `optional`, `unverified` or `stale`, with the install
 command after `fix:`, and ends with whether building is ready and which renderer will be used.
 If `uv` is missing, offer two paths and let them pick: install uv (https://docs.astral.sh/uv/, one
 command), or skip it with `pipx install .` (or `pip install .` in a virtual environment; Python

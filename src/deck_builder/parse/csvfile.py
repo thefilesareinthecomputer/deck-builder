@@ -6,7 +6,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from deck_builder.errors import Issue
+from deck_builder.errors import EnvError, Issue
 from deck_builder.model import SLIDE_KEYS, Deck, Image, Slide, Value, Where
 from deck_builder.parse.markdown import BULLET, IMAGE, code_from_fence, fence_closes, fence_open, parse_text_block
 
@@ -33,8 +33,11 @@ def cell_value(raw: str) -> Value | None:
 
 
 def read_rows(path: Path) -> list[dict[str, str]]:
-    with path.open(newline="", encoding="utf-8-sig") as f:
-        return [{(k or "").strip(): (v or "") for k, v in r.items() if k} for r in csv.DictReader(f)]
+    try:
+        with path.open(newline="", encoding="utf-8-sig") as f:
+            return [{(k or "").strip(): (v or "") for k, v in r.items() if k} for r in csv.DictReader(f)]
+    except UnicodeDecodeError as e:
+        raise EnvError(f"{path} isn't UTF-8 text; in Excel, save it as \"CSV UTF-8\" and try again") from e
 
 
 def slides_from_rows(rows: list[tuple[int, dict[str, str]]], file: str, issues: list[Issue],

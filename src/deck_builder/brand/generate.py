@@ -399,6 +399,7 @@ CODE_ROLES = {"keyword": ("dk2", "primary"), "type": ("dk2", "primary"), "functi
               "operator": ("dk1", "ink"), "plain": ("dk1", "ink")}
 CODE_DARK = {"operator": ("lt1", "background"), "plain": ("lt1", "background")}  # light text on a dark panel
 BAND_SHARE = 0.1  # the highlight band: this much of the primary over a light panel (of white, over a dark one)
+TABLE_RULE_SHARE = 0.2  # the rule between table rows: this much ink over the background, visible but quiet
 
 
 def code_tokens(meta: dict[str, Any], theme: str, name_for: Any) -> dict[str, Any]:
@@ -502,7 +503,7 @@ def tokens_for(defs: list[LayoutDef], meta: dict[str, Any], scale: Scale | None 
         "table": {"font_size": s.table, "header_font_size": s.table, "row_height_factor": TABLE_ROW_FACTOR,
                   "header_fill": name_for("dk2", "primary"), "header_text": name_for("lt1", "background"),
                   "row_fill": name_for("lt1", "background"), "text": name_for("dk1", "ink"),
-                  "rule": _mix(slots["dk1"], slots["lt1"], 0.2),
+                  "rule": _mix(slots["dk1"], slots["lt1"], TABLE_RULE_SHARE),
                   "status": {"Green": "15803D", "Amber": "B45309", "Red": "B91C1C"}},
         "layouts": layouts,
         "furniture": {"slide_numbers": bool((meta.get("generate") or {}).get("slide_numbers", True)),

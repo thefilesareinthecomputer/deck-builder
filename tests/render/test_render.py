@@ -122,9 +122,10 @@ def test_render_selected_slides_only(project, capsys):
 @pytest.mark.parametrize("args, message", [
     (["--slides", "2,13"], "--slides 13: the deck has 12 slides"),
     (["--slides", "0"], "--slides takes slide numbers from 1"),
-    (["--dpi", "0"], "dpi must be 1 or more, not 0"),
+    (["--dpi", "0"], "dpi must be between 48 and 300, not 0"),
+    (["--dpi", "5000"], "dpi must be between 48 and 300, not 5000"),
 ])
-def test_render_refuses_slides_past_the_deck_and_a_dpi_under_one(project, capsys, args, message):
+def test_render_refuses_slides_past_the_deck_and_a_dpi_out_of_range(project, capsys, args, message):
     deck = project / "workspace" / "decks" / "quarterly-review" / "deck.md"
     run("--config", cfg(project), "build", str(deck), capsys=capsys)
     pptx = project / "workspace" / "out" / "quarterly-review.pptx"

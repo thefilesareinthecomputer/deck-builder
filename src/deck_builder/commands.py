@@ -275,7 +275,10 @@ def _init_brand(args: argparse.Namespace, cfg: cfgmod.Config, r: Result) -> Resu
                            "brand.yaml, give the slug of an existing kit and --force")
     if not src.is_file():
         raise EnvError(f"brand.yaml not found: {src}")
-    meta = yaml.safe_load(src.read_text(encoding="utf-8")) or {}
+    try:
+        meta = yaml.safe_load(src.read_text(encoding="utf-8")) or {}
+    except (yaml.YAMLError, UnicodeDecodeError) as bad:
+        raise EnvError(f"{src} isn't valid YAML: {bad}") from bad
     errs = schema.errors("brand", meta)
     if errs:
         for e in errs:
@@ -690,6 +693,7 @@ def inspect_cmd(args: argparse.Namespace) -> Result:
 
 
 def check(args: argparse.Namespace) -> Result:
+    """Validate a deck against its brand; with --render, also build it, render it and measure the slides."""
     cfg = _cfg(args)
     path = pipeline.deck_path(Path(args.deck))
     r = Result(command="check", data={"input": str(path)})
@@ -699,6 +703,7 @@ def check(args: argparse.Namespace) -> Result:
             r.data.update(_furniture(deck, brand))
         r.summary = f"{'ok' if r.ok else 'failed'} check {path.name}: {r.data['slides']} slides, {_tally(r)}"
         return r
+    qa_backends.choose(args.backend or cfg.render.backend)  # no renderer: say so before building anything
     done = _build_one(path, cfg, args, None, None, r)
     if done:
         r.data.update(done)
@@ -770,6 +775,7 @@ def _build_one(path: Path, cfg: cfgmod.Config, args: argparse.Namespace, out: Pa
 
 
 def build(args: argparse.Namespace) -> Result:
+    """Build a deck to .pptx; with --data, build one deck per data row (bulk mode)."""
     cfg = _cfg(args)
     path = pipeline.deck_path(Path(args.deck))
     r = Result(command="build", data={"input": str(path)})

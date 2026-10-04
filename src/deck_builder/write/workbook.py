@@ -182,6 +182,9 @@ def write(deck: Deck, brand: Brand | None) -> bytes:
 
 def _team_features(wb: Any, ws: Any, brand: Brand, budgets: dict[str, dict[str, int]], col: dict[str, int],
                    last_row: int) -> None:
+    """Help for people editing the workbook in Excel: a dropdown of the brand's layouts in the layout column,
+    a "used/limit" character count beside each budgeted field, and a red fill on a cell over its budget. The
+    lists and budgets the formulas look up sit on a hidden `_lists` sheet."""
     lists = wb.create_sheet("_lists")
     lists.sheet_state = "hidden"
     layouts = brand.layout_names()

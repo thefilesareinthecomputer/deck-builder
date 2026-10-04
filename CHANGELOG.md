@@ -16,7 +16,12 @@ All notable changes to this project are listed here. The format follows [Keep a 
 
 ### Fixed
 
-- `render --slides` with a number past the last slide, or below 1, used to report success with nothing rendered; it now refuses with the deck's slide count. `--dpi 0` used to fall back to the default silently, and a `dpi` or `contact_batch` under 1 is now refused.
+- `render --slides` with a number past the last slide, or below 1, used to report success with nothing rendered; it now refuses with the deck's slide count. A `dpi` outside 48 to 300 (the MCP tool's range) and a `contact_batch` under 1 are refused; `--dpi 0` used to fall back to the default silently, and `--dpi 5000` wrote blank images.
+- Files a user hands over no longer crash a command with a traceback: a `deck.md` or CSV that isn't UTF-8 (such as Excel's plain CSV export), a damaged `.xlsx` given as `--data`, a malformed `brand.yaml` for `brand init --from`, a `render` setting in `deck-builder.toml` that isn't a number, and a `.pptx` for `render` that isn't one each stop with a message naming the file. An image file that isn't really an image (a saved web page named `.png`) fails `check` with `ASSET_FORMAT` instead of crashing the build.
+- Front matter after a byte-order mark, or with spaces after a `---` fence, used to be dropped without a word; it's read now, and front matter with no closing `---` is reported as `PARSE`.
+- `check --render` with no renderer installed stops before building, instead of building the deck and then reporting only the missing renderer.
+- An unexpected error inside a command prints its traceback on stderr and exits 2 with an `error` that says it's a bug, so `--json` output stays one object and a crash doesn't look like exit 1, which means issues in the deck.
+- Agent-facing text: the MCP `inspect` and `render` descriptions match what they return, the validator agent's tool list no longer calls `check` read-only, `deck-onboard` lists doctor's `stale` status, doctor's kit fix points to the README's Updating section, and the `deck-builder` skill points to `--help` for every flag.
 
 ## 0.2.0 - 2026-10-03
 

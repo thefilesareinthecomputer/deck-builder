@@ -84,8 +84,8 @@ def render(pptx: Path, backend: str, dpi: int, batch: int, pages: list[int] | No
     past = [str(n) for n in pages or [] if n > total]
     if past:
         raise EnvError(f"--slides {','.join(past)}: the deck has {total} slides")
-    if dpi < 1:
-        raise EnvError(f"dpi must be 1 or more, not {dpi}")
+    if not 48 <= dpi <= 300:  # the MCP tool's range; far above it, pdftoppm silently writes a blank 1x1 image
+        raise EnvError(f"dpi must be between 48 and 300, not {dpi}")
     if batch < 1:
         raise EnvError(f"contact_batch in deck-builder.toml must be 1 or more, not {batch}")
     out_dir = pptx.with_name(pptx.stem + ".render")

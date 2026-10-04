@@ -113,11 +113,13 @@ def load(explicit: str | None = None, cwd: Path | None = None) -> Config:
     ws = _workspace(root, path, str(raw.get("workspace", "workspace")))
     brand_paths = [_brand_path(root, path, str(p)) for p in raw.get("brand_paths", [str(ws / "brands")])]
     r = raw.get("render", {}) or {}
-    render = RenderConfig(
-        backend=str(r.get("backend", "auto")),
-        dpi=int(r.get("dpi", 96)),
-        contact_batch=int(r.get("contact_batch", 20)),
-    )
+    numbers = {}
+    for key, default in (("dpi", 96), ("contact_batch", 20)):
+        try:
+            numbers[key] = int(r.get(key, default))
+        except (TypeError, ValueError) as e:
+            raise EnvError(f"{path}: render.{key} must be a whole number, not {r.get(key)!r}") from e
+    render = RenderConfig(backend=str(r.get("backend", "auto")), **numbers)
     if render.backend not in ("auto", "powerpoint", "libreoffice"):
         raise EnvError(f"{path}: render.backend must be auto, powerpoint or libreoffice")
     return Config(

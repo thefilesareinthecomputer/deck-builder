@@ -8,7 +8,7 @@ from typing import Any
 
 import yaml
 
-from deck_builder.errors import Issue
+from deck_builder.errors import EnvError, Issue
 from deck_builder.model import SLIDE_KEYS, Bullets, Chart, Code, Deck, Image, Series, Slide, Table, Value, Where
 
 SPEC_VERSION = 1
@@ -129,19 +129,25 @@ def substitute(text: str, row: dict[str, str] | None, file: str, issues: list[Is
 
 
 def split_front_matter(text: str, file: str, issues: list[Issue]) -> tuple[dict[str, Any], str, int]:
-    if text.startswith("---\n"):
-        end = text.find("\n---\n", 4)
-        if end != -1:
-            try:
-                meta = yaml.safe_load(text[4:end]) or {}
-            except yaml.YAMLError as e:
-                issues.append(Issue("PARSE", f"front matter: {e}", file=file, line=1))
-                meta = {}
-            if not isinstance(meta, dict):
-                issues.append(Issue("PARSE", "front matter must be key: value pairs", file=file, line=1))
-                meta = {}
-            return meta, text[end + 5 :], text[: end + 5].count("\n")
-    return {}, text, 0
+    """(front matter, the text after it, the number of lines it took). The fences are `---` lines; spaces
+    after them are ignored, and an opening fence with no closing one is reported rather than dropped."""
+    lines = text.split("\n")
+    if lines[0].rstrip() != "---":
+        return {}, text, 0
+    close = next((i for i in range(1, len(lines)) if lines[i].rstrip() == "---"), None)
+    if close is None:
+        issues.append(Issue("PARSE", "front matter opens with --- on line 1 but has no closing --- line",
+                            file=file, line=1))
+        return {}, text, 0
+    try:
+        meta = yaml.safe_load("\n".join(lines[1:close])) or {}
+    except yaml.YAMLError as e:
+        issues.append(Issue("PARSE", f"front matter: {e}", file=file, line=1))
+        meta = {}
+    if not isinstance(meta, dict):
+        issues.append(Issue("PARSE", "front matter must be key: value pairs", file=file, line=1))
+        meta = {}
+    return meta, "\n".join(lines[close + 1:]), close + 1
 
 
 def parse_text_block(lines: list[str]) -> str | Bullets:
@@ -288,7 +294,11 @@ def parse(path: Path, row: dict[str, str] | None = None) -> tuple[Deck, list[Iss
     """deck.md -> Deck. With a bulk data row, its {{tokens}} are substituted first."""
     issues: list[Issue] = []
     name = path.name
-    raw = substitute(path.read_text(encoding="utf-8"), row, name, issues)
+    try:
+        text = path.read_text(encoding="utf-8-sig")  # -sig drops the byte-order mark some editors write
+    except UnicodeDecodeError as e:
+        raise EnvError(f"{path} isn't UTF-8 text; save it as UTF-8 and try again") from e
+    raw = substitute(text, row, name, issues)
     if issues:  # an unknown token or an unsafe data value: anything parsed past it would be noise
         return Deck(meta={}, slides=[], source=str(path)), issues
     meta, body, offset = split_front_matter(raw, name, issues)

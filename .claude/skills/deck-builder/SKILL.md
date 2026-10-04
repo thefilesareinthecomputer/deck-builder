@@ -26,6 +26,7 @@ user has to ask for explicitly (see AGENTS.md).
 - Inside the deck-builder clone, run the CLI as `uv run deck-builder`; elsewhere it's `deck-builder`
   (installed with `uv tool install`). Below, `db` stands for whichever applies.
 - `db brand list` shows the brands. If it reports no config, run the `deck-onboard` skill first.
+- `db <command> --help` lists every flag a command takes; this skill names only the ones the loop uses.
 
 ## Who does what
 
