@@ -14,6 +14,10 @@ All notable changes to this project are listed here. The format follows [Keep a 
 
 - A dependency missing from the install (a pull that added one, without a reinstall) stops every command with the package's name and the reinstall to run, instead of a traceback.
 
+### Fixed
+
+- `render --slides` with a number past the last slide, or below 1, used to report success with nothing rendered; it now refuses with the deck's slide count. `--dpi 0` used to fall back to the default silently, and a `dpi` or `contact_batch` under 1 is now refused.
+
 ## 0.2.0 - 2026-10-03
 
 ### Upgrading from 0.1.0

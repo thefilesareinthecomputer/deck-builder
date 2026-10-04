@@ -78,6 +78,15 @@ def empty_placeholders(pptx: Path) -> list[Issue]:
 def render(pptx: Path, backend: str, dpi: int, batch: int, pages: list[int] | None,
            brand: Brand | None) -> Rendered:
     """PDF, slide PNGs and contact sheets in <deck>.render/, plus measured overflow, empty placeholders and fonts."""
+    prs = Presentation(str(pptx))
+    total = len(prs.slides)
+    past = [str(n) for n in pages or [] if n > total]
+    if past:
+        raise EnvError(f"--slides {','.join(past)}: the deck has {total} slides")
+    if dpi < 1:
+        raise EnvError(f"dpi must be 1 or more, not {dpi}")
+    if batch < 1:
+        raise EnvError(f"contact_batch in deck-builder.toml must be 1 or more, not {batch}")
     out_dir = pptx.with_name(pptx.stem + ".render")
     # out_dir sits beside pptx and can already be an existing symlink; confine it (and so what render
     # deletes inside it) before touching it. A no-op outside an MCP call.
@@ -93,8 +102,6 @@ def render(pptx: Path, backend: str, dpi: int, batch: int, pages: list[int] | No
     out_dir.mkdir(parents=True, exist_ok=True)
     pdf = out_dir / "deck.pdf"
     backends.to_pdf(backend, pptx, pdf)
-    prs = Presentation(str(pptx))
-    total = len(prs.slides)
     hidden = hidden_slide_numbers(prs)
     visible = [n for n in range(1, total + 1) if n not in hidden]
     w_emu, h_emu = int(prs.slide_width or 0), int(prs.slide_height or 0)

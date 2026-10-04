@@ -119,6 +119,20 @@ def test_render_selected_slides_only(project, capsys):
     assert sorted(p.name for p in Path(out["render_dir"]).glob("slide-*.png")) == ["slide-02.png", "slide-05.png"]
 
 
+@pytest.mark.parametrize("args, message", [
+    (["--slides", "2,13"], "--slides 13: the deck has 12 slides"),
+    (["--slides", "0"], "--slides takes slide numbers from 1"),
+    (["--dpi", "0"], "dpi must be 1 or more, not 0"),
+])
+def test_render_refuses_slides_past_the_deck_and_a_dpi_under_one(project, capsys, args, message):
+    deck = project / "workspace" / "decks" / "quarterly-review" / "deck.md"
+    run("--config", cfg(project), "build", str(deck), capsys=capsys)
+    pptx = project / "workspace" / "out" / "quarterly-review.pptx"
+    code, out = run("--config", cfg(project), "render", str(pptx), *args, capsys=capsys)
+    assert code == 2
+    assert message in out["error"]
+
+
 def test_powerpoint_backend_results_are_marked_unverified(project, capsys, monkeypatch):
     """LibreOffice stands in for PowerPoint; the result must still say the backend is unverified."""
     from deck_builder.qa import backends

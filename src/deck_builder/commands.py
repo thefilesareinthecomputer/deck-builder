@@ -474,7 +474,8 @@ def _render_into(r: Result, pptx: Path, cfg: cfgmod.Config, backend_req: str | N
             with contextlib.suppress(EnvError):
                 brand = registry.get(cfg, slug)
     backend = qa_backends.choose(backend_req or cfg.render.backend)
-    out = qa_render.render(pptx, backend, dpi or cfg.render.dpi, cfg.render.contact_batch, pages, brand)
+    out = qa_render.render(pptx, backend, cfg.render.dpi if dpi is None else dpi, cfg.render.contact_batch, pages,
+                           brand)
     for i in out.issues:
         r.add(i)
     r.data.update({
@@ -492,9 +493,12 @@ def _pages(spec: str | None) -> list[int] | None:
     if not spec:
         return None
     try:
-        return sorted({int(x) for x in spec.split(",") if x.strip()})
+        pages = sorted({int(x) for x in spec.split(",") if x.strip()})
     except ValueError as e:
         raise EnvError("--slides takes slide numbers separated by commas, e.g. 3,7") from e
+    if pages and pages[0] < 1:
+        raise EnvError("--slides takes slide numbers from 1")
+    return pages
 
 
 def skills_cmd(args: argparse.Namespace) -> Result:

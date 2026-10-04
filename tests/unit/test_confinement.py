@@ -264,8 +264,10 @@ def test_an_image_ref_from_a_data_row_is_confined_per_row(ws, capsys):
 
 
 def test_rerendering_deletes_only_the_files_render_writes(tmp_path, monkeypatch):
+    from pptx import Presentation
+
     pptx = tmp_path / "deck.pptx"
-    pptx.write_bytes(b"")
+    Presentation().save(str(pptx))
     out_dir = tmp_path / "deck.render"
     out_dir.mkdir()
     for name in ("deck.pdf", "slide-01.png", "slide-12.png", "contact-01.png", "my-notes.md", "slide-01-edit.png"):
