@@ -263,6 +263,13 @@ def test_an_image_ref_from_a_data_row_is_confined_per_row(ws, capsys):
 # ---------------------------------------------------------------- render folder
 
 
+def test_rendering_a_file_that_isnt_a_pptx_is_a_clear_error(tmp_path):
+    pptx = tmp_path / "deck.pptx"
+    pptx.write_text("not a pptx")
+    with pytest.raises(EnvError, match="isn't a PowerPoint file"):
+        qa_render.render(pptx, "libreoffice", 96, 20, None, None)
+
+
 def test_rerendering_deletes_only_the_files_render_writes(tmp_path, monkeypatch):
     from pptx import Presentation
 

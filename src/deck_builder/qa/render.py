@@ -15,6 +15,7 @@ from deck_builder.brand.registry import Brand
 from deck_builder.build.deck import manifest_path
 from deck_builder.errors import EnvError, Issue
 from deck_builder.qa import backends, fonts, images, measure
+from deck_builder.template import open_template
 
 FLAG_CODES = {"OVERFLOW_MEASURED", "EMPTY_PLACEHOLDER", "ASSET_LOW_RES"}
 VISUAL = {PP_PLACEHOLDER.PICTURE, PP_PLACEHOLDER.CHART, PP_PLACEHOLDER.TABLE}
@@ -78,7 +79,7 @@ def empty_placeholders(pptx: Path) -> list[Issue]:
 def render(pptx: Path, backend: str, dpi: int, batch: int, pages: list[int] | None,
            brand: Brand | None) -> Rendered:
     """PDF, slide PNGs and contact sheets in <deck>.render/, plus measured overflow, empty placeholders and fonts."""
-    prs = Presentation(str(pptx))
+    prs = open_template(pptx)  # a clear error for a file that isn't a .pptx, and the zip-bomb cap
     total = len(prs.slides)
     past = [str(n) for n in pages or [] if n > total]
     if past:

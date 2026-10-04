@@ -46,6 +46,8 @@ says what each subagent may read and write.
 
 Changes to this repo follow [CONTRIBUTING.md](CONTRIBUTING.md).
 
+- `uv run pytest`, `uv run ruff check`, `uv run mypy` must pass before a commit.
+- Example content uses invented companies and people only.
 - `tasks/` holds local working notes (the handoff, plans, the archived design spec) and isn't tracked.
 - Skills hold no engine logic. When a skill needs something the CLI can't do, tell the user;
   building it under `src/` is a separate task, done only when the user asks, with tests.
