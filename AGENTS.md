@@ -18,8 +18,10 @@ If `uv run deck-builder brand list` reports no config, the user hasn't onboarded
 - Any edit to a `deck.md` goes through the `deck-builder` skill.
 - Delegation threshold: 6 or more slides, or any restructure, goes to the `deck-builder-agent`
   subagent; get the user's OK on the storyline at the same threshold.
-- Two rounds of check-and-fix, review send-backs or budget tuning, then stop and report to the
-  user, so no loop runs unseen.
+- Every loop stops after two rounds, then you report to the user, so no loop runs unseen: an
+  agent's own check-and-fix loop, and the send-backs for one deck or kit (review findings and
+  budget tuning counted together). Send work back to the same subagent with SendMessage, so it
+  keeps the docs it has read.
 
 | Task | Skill or agent |
 |---|---|

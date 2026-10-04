@@ -34,7 +34,7 @@ When the deck has to come out of more material than fits here (a folder of docum
 knowledge base or vault), start with the `deck-decomposer-agent`. It runs no commands, since what
 it reads is untrusted, so put the output of `brand show <slug> --json`, `docs deck-md` and
 `docs design` in its prompt. It returns `outline.md` (the storyline with a source for every slide, plus open questions)
-and a draft `deck.md`; run `check` on the draft and send any issues back to it, up to two rounds,
+and a draft `deck.md`; run `check` on the draft and send any issues back to the same agent (SendMessage), up to two rounds,
 then report what's left to the user. Walk the user through the outline, co-author and proofread
 with them (or convert to `.xlsx` for their team), and only then build.
 
@@ -88,17 +88,19 @@ Speaker notes hold the source of every number and anything cut from the slide.
 
 Before any built deck reaches the user:
 
-1. Run `db check <deck> --render --json` yourself; it must report no errors.
+1. Run `db check <deck> --json` yourself; it must report no errors. The loop's last step already
+   rendered the deck, so add `--render` only when the deck changed after that render.
 2. Read the builder's report (when a subagent built it) and the manifest (`<deck>.manifest.json`
    beside the `.pptx`).
 3. Hand the deck to the `deck-validator-agent`: the deck's path, the brand slug, the `render_dir`
-   from step 1 and the approved storyline (the `storyboard.md` path when there is one). It reads every rendered slide against `docs design`,
-   writes nothing, and returns `VERDICT: PASS` or `SEND BACK` with `severity | slide | field |
-   finding | fix` lines.
-4. On SEND BACK, give its blocker and major findings to the builder (the `deck-builder-agent`, or
-   fix them here), then validate again. Up to two rounds, counted with every other send-back; after
-   that, report what's unresolved instead. Pass its engine or brand findings to the user, since
-   they aren't content fixes.
+   (from the builder's report or your last render), the warnings from step 1, and the approved
+   storyline (the `storyboard.md` path when there is one). It reads every rendered slide against
+   `docs design`, writes nothing, and returns `VERDICT: PASS` or `SEND BACK` with `severity | slide |
+   field | finding | fix` lines.
+4. On SEND BACK, give its blocker and major findings to the same `deck-builder-agent` (continue it
+   with SendMessage, so it keeps what it has read) or fix them here, then validate again. Up to two
+   send-backs per deck; after that, report what's unresolved instead. Pass its engine or brand
+   findings to the user, since they aren't content fixes.
 
 Then report: output path, slide count, render backend, any slide you're unsure about, and any
 number or source you couldn't verify.

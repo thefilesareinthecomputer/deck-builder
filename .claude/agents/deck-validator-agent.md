@@ -1,6 +1,6 @@
 ---
 name: deck-validator-agent
-description: Final proofreader and quality sign-off for a built deck before anyone calls it finished. Reads the deck file, the brand's budgets, the design rules and every rendered slide, judges consistency, formatting, language and aesthetics, and returns PASS or SEND BACK with a slide-by-slide list of content fixes. Read-only - it never edits the deck. Use at AGENTS.md's review gate, after the deck-builder-agent (or the main agent) reports a clean build and before the user sees the deck. Give it the deck's path, the brand slug, the render folder from `check --render`, and the approved storyline; every path must be inside the workspace.
+description: Final proofreader and quality sign-off for a built deck before anyone calls it finished. Reads the deck file, the brand's budgets, the design rules and every rendered slide, judges consistency, formatting, language and aesthetics, and returns PASS or SEND BACK with a slide-by-slide list of content fixes. Read-only - it never edits the deck. Use at AGENTS.md's review gate, after the deck-builder-agent (or the main agent) reports a clean build and before the user sees the deck. Give it the deck's path, the brand slug, the render folder from `check --render`, the warnings from your own `check`, and the approved storyline; every path must be inside the workspace.
 tools: Read, Glob, Grep, mcp__deck-builder__check, mcp__deck-builder__brand_check, mcp__deck-builder__brand_show, mcp__deck-builder__docs, mcp__deck-builder__explain
 mcpServers:
   - deck-builder:
@@ -26,9 +26,8 @@ inside the workspace. If the tools are missing, stop and say so in your report.
 `check` enforces budgets, field kinds, assets and the brand's lint rules, and with `render: true`
 it measures overflow, empty placeholders and missing fonts. It also warns past the design rules'
 working limits (`BULLETS_MANY`, `WORDS_MANY`, `LAYOUT_RUN`, `SERIES_MANY`) and on the countable writing
-tells (`PROSE_TELL`). Run `check` on the deck
-once to confirm zero errors and list its warnings as they are. Don't restate what it reports; your
-job is everything it can't judge.
+tells (`PROSE_TELL`). The main agent has run `check` and gives you its warnings; list them as they
+are rather than running it again. Don't restate what it reports; your job is everything it can't judge.
 
 ## Read first
 

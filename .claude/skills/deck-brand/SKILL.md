@@ -21,7 +21,7 @@ tests (see AGENTS.md).
 
 `deck-builder docs brand-yaml` and `deck-builder docs tokens-yaml` are the formats, and
 `deck-builder docs design` is the design standard the generated layouts follow. Read them before
-writing either file.
+writing either file yourself; the `deck-brand-agent` reads them on its own when it does the writing.
 
 ## Pick the path with the user
 
@@ -61,7 +61,8 @@ Ask one topic at a time and show what you'll write before writing it.
 Once the decisions are made, hand the mechanical work to the `deck-brand-agent` subagent: the
 slug, the decisions, and the paths of the brand guide, template, logos and icons. It writes
 `brand.yaml`, generates or adopts the kit, checks it, test-renders it and returns proposed
-budgets and questions. Relay the questions, get the user's answers, and send it back if needed.
+budgets and questions. Relay the questions, get the user's answers, and send them to the same
+agent with SendMessage if needed.
 It has no shell and runs the engine through nine MCP tools, which read only inside the workspace and
 the `brand_paths` folders (the full map is `deck-builder docs agents`): copy the user's guide,
 template, logos and icons into a scratch folder in the workspace first, and give it those paths.

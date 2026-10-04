@@ -52,7 +52,8 @@ in your report.
 4. `check` with `render: true`. This builds, renders and measures. Read the PNGs for
    `flagged_slides` only (`render_dir`/`slide-NN.png`) and the `contact_sheets`, then fix what they
    show in the deck file.
-5. Stop after two loops of steps 3 and 4, even if issues remain.
+5. Stop after two loops of steps 3 and 4, even if issues remain. When the main agent sends you
+   findings to fix, fix them and run steps 3 and 4 once; you already have the docs from step 1.
 
 ## Tone and style
 
@@ -80,7 +81,7 @@ text as `PROSE_TELL`; fix those like any other issue.
 
 Return only this, under 200 words:
 
-- Output path, manifest path, slide count, render backend.
+- Output path, manifest path, `render_dir`, slide count, render backend.
 - Remaining issues, as `code slide field` lines.
 - Flagged slides you looked at and what you changed.
 - Anything you assumed or couldn't source.
