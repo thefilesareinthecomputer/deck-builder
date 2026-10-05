@@ -40,7 +40,7 @@ tool's owner when the job is delegated to a subagent.
 
 | Tool | Owner | Notes |
 |---|---|---|
-| `check` | `deck-builder-agent` | Validates; with `render: true` it also builds, renders and measures in one call. Also called by `deck-brand-agent` (its test-deck render), `deck-validator-agent` (to confirm a clean check, and to render when no current render exists) and the main agent (the review gate, and the loop itself below the delegation threshold). |
+| `check` | `deck-builder-agent` | Validates; with `render: true` it also builds, renders and measures in one call. Also called by `deck-brand-agent` (its test-deck render), `deck-validator-agent` (to render when the main agent says its render is out of date) and the main agent (the review gate, and the loop itself below the delegation threshold). |
 | `build` | `deck-builder-agent` | Bulk runs only (`data`, one deck per row). The normal loop uses `check` with `render: true`, which builds internally. |
 | `brand_show` | `deck-builder-agent` | Layouts, fields and budgets to write to, read first. Also called by `deck-brand-agent` (the report's summary), `deck-validator-agent` (budgets and voice rules) and the main agent. |
 | `brand_check` | `deck-brand-agent` | Must pass before any deck uses the kit. Also called by `deck-validator-agent`, read-only, for the kit's accessibility warnings. |
