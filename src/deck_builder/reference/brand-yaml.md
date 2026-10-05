@@ -86,6 +86,11 @@ generate:                        # read only by `brand init`
     statement: 40                # full and designed sets: the statement slide's sentence (read: 28)
 ```
 
+Title color is the `dk2` theme slot, which also fills the dark slide backgrounds (title, section,
+closing), so a bright title color makes those slides bright too. Content-slide title size is
+`generate.type.title`; `brand check` warns `TYPE_LARGE` with the size that fits when it's too big for
+the box. The title and section slides' own title sizes come from the layout set and have no setting.
+
 Pick the mode by how the deck is used. A projected deck keeps every size at 18 pt or more. A read deck
 sets single-column text to a 9 in measure so lines stay readable at its smaller size. Character budgets
 in `tokens.yaml` are computed from these sizes, so changing them changes how much text each field takes.

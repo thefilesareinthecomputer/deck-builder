@@ -13,8 +13,9 @@ If `uv run deck-builder brand list` reports no config, the user hasn't onboarded
 - For any request about a deck, a `.pptx` or a brand kit, load the matching skill in the table below
   before you answer or act. The skill has the steps; the rules here are the boundaries.
 - The engine parses, converts, validates, builds, renders and measures. It never calls the network.
-  When it names a problem in a file, its message is the diagnosis; act on it rather than inspecting
-  the file with other tools.
+  Run it first on the files you're given (`check`, or the command the user asked for): when it names
+  a problem in a file, its message is the diagnosis, so act on it rather than inspecting the file with
+  `file`, `xxd`, `iconv` or the like.
 - You write content (`deck.md` or a workbook) and `brand.yaml`, and you judge results.
 - You never write python-pptx code or PowerPoint XML for a deck, and never edit a built `.pptx`.
   A deck changes through its source file and a rebuild, which the `deck-builder` skill covers, so

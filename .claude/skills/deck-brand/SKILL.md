@@ -40,7 +40,8 @@ Ask one topic at a time and show what you'll write before writing it.
   `accent`, `ink`, `surface`), not by hue.
 - **Theme slots.** Map `dk1`, `lt1`, `dk2`, `lt2`, `accent1` to `accent6`, `hlink`, `folHlink` to
   palette names. Don't judge contrast by eye: `brand_check` reports `LOW_CONTRAST` for any pair
-  under the WCAG 2.2 threshold once the kit exists.
+  under the WCAG 2.2 threshold once the kit exists. After a color change, pass on each one it
+  reports as it reports it, with the ratio, rather than summarizing them.
 - **Fonts.** A heading and a body family, each with a fallback that ships with Office. Ask whether
   the fonts are licensed for embedding and installed on every machine that renders.
 - **Logos.** PNG files with ids (`primary`, `mono`). Ask which one goes on the master, if any.

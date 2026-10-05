@@ -37,10 +37,10 @@ are rather than running it again. Don't restate what it reports; your job is eve
 2. The deck file, every slide, speaker notes included. When you're given a `storyboard.md`, read it
    and `docs` with topic `story` too: the storyboard is the approved storyline.
 3. The render folder: the contact sheets for rhythm, then every `slide-NN.png`, not only flagged
-   ones. This is the one pass that looks at all of them. If there's no render, or the deck file is
-   newer than it, run `check` with `render: true` first (it builds, renders and measures). When the
-   main agent sends you back for another pass, read only the slides it names as changed (render
-   first if the deck is newer than the render); your findings on the other slides stand.
+   ones. This is the one pass that looks at all of them. Use the render you're given; run `check`
+   with `render: true` (it builds, renders and measures) only when the main agent gives you no render
+   or says it's out of date. When the main agent sends you back for another pass, read only the
+   slides it names as changed; your findings on the other slides stand.
 
 ## Checklist
 
