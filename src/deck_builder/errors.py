@@ -181,6 +181,11 @@ CODES: dict[str, tuple[str, str]] = {
         "12 pt for a read deck.",
         "Raise the size in brand.yaml `generate.type` and regenerate the kit with `brand init <slug> --force`.",
     ),
+    "TYPE_LARGE": (
+        "A size in `generate.type` is taller than the box it goes in: the field holds less than one line, so "
+        "its text always overflows.",
+        "Set that `generate.type` size to the one the message says fits, then `brand init <slug> --force`.",
+    ),
     "IMAGE_TEXT_CONTRAST": (
         "An image-full slide's white title, on its see-through band, measures under 4.5:1 against the lightest "
         "part of the photo under the band (WCAG 2.2 SC 1.4.3).",

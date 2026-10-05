@@ -139,17 +139,35 @@ def cvd_issues(brand: Brand) -> list[Issue]:
 
 
 def type_issues(brand: Brand) -> list[Issue]:
-    """TYPE_SMALL warnings for generate.type sizes under the legibility floor of the kit's mode."""
+    """TYPE_SMALL warnings for generate.type sizes under the legibility floor of the kit's mode, and TYPE_LARGE
+    for a field whose box can't hold one line at its size, with the size that would fit, so nobody has to find
+    it by regenerating and rendering."""
     from deck_builder.brand.layouts import Scale
 
     gen = brand.meta.get("generate") or {}
     mode = gen.get("mode", "projected")
     floor = TYPE_FLOOR.get(mode, TYPE_FLOOR["projected"])
     scale = Scale.from_meta(gen)
-    return [Issue("TYPE_SMALL", f"generate.type {f.name} is {size:g} pt; a {mode} deck needs {floor:g} pt or more",
-                  severity="warning", actual=size, limit=floor)
-            for f in fields(scale) if isinstance(size := getattr(scale, f.name), int | float)
-            and not isinstance(size, bool) and f.name != "big_number" and size < floor]
+    out = [Issue("TYPE_SMALL", f"generate.type {f.name} is {size:g} pt; a {mode} deck needs {floor:g} pt or more",
+                 severity="warning", actual=size, limit=floor)
+           for f in fields(scale) if isinstance(size := getattr(scale, f.name), int | float)
+           and not isinstance(size, bool) and f.name != "big_number" and size < floor]
+    short: dict[str, list[str]] = {}
+    least: dict[str, float] = {}
+    for lname, layout in (brand.tokens.get("layouts") or {}).items():
+        for fname, spec in (layout.get("fields") or {}).items():
+            lines = spec.get("max_lines")
+            if isinstance(lines, int | float) and not isinstance(lines, bool) and lines < 1:
+                short.setdefault(fname, []).append(lname)
+                least[fname] = min(least.get(fname, lines), lines)
+    for fname, layouts in short.items():
+        size = getattr(scale, fname, None)
+        fits = (f"; about {int(size * least[fname])} pt fits" if isinstance(size, int | float)
+                and not isinstance(size, bool) else "")
+        where = ", ".join(layouts) if len(layouts) <= 3 else f"{len(layouts)} layouts ({', '.join(layouts[:3])}, ...)"
+        out.append(Issue("TYPE_LARGE", f"{fname} holds {least[fname]:g} of a line at its type size on {where}, so "
+                         f"every {fname} there overflows{fits}", severity="warning", field=fname))
+    return out
 
 
 def contrast_issues(brand: Brand) -> list[Issue]:

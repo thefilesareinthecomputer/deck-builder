@@ -219,6 +219,17 @@ def test_a_kit_generated_before_kits_recorded_their_maker_reports_stale(ws, caps
     assert code == 0 and len(found) == 1 and "older than 0.2.0" in found[0]["message"]
 
 
+def test_a_type_size_too_tall_for_its_box_is_reported_with_the_size_that_fits(ws, capsys, tmp_path):
+    _kit(ws, capsys, tmp_path / "a", layout_set="designed")
+    code, out = cli_json(ws, "brand", "check", "pemberton", capsys=capsys)
+    assert "TYPE_LARGE" not in [i["code"] for i in out["issues"]]  # the default sizes fit their boxes
+    _kit(ws, capsys, tmp_path / "b", layout_set="designed", type={"title": 60})
+    code, out = cli_json(ws, "brand", "check", "pemberton", capsys=capsys)
+    found = [i for i in out["issues"] if i["code"] == "TYPE_LARGE"]
+    assert code == 0 and found and found[0]["severity"] == "warning"
+    assert "content" in found[0]["message"] and " pt fits" in found[0]["message"]
+
+
 def test_unknown_type_key_is_refused(ws, capsys, tmp_path):
     code, out = cli_json(ws, "brand", "init", "pemberton", "--from", str(source(tmp_path, type={"huge": 99})),
                          capsys=capsys)

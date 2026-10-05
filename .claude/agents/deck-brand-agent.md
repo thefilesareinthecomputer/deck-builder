@@ -37,6 +37,9 @@ the design rules; read them first.
   and PowerPoint polish. Only use it when told to. It copies the old kit into its `backups/` folder
   first and lists the budgets that changed; put both in your report.
 - Change budgets in `tokens.yaml` only as a proposal in your report, unless told to apply them.
+- For a size request, `brand_check` reports `TYPE_LARGE` with the size that fits a box; use that size
+  rather than searching for one by regenerating. Any regenerate-and-check loop stops after two
+  rounds; then report what's left.
 
 ## Steps
 
