@@ -212,6 +212,18 @@ def test_brand_copy_never_writes_through_a_linked_brand_yaml(ws, capsys, tmp_pat
     assert shared.read_text() == before  # the file the original kit links to is untouched
 
 
+def test_regenerating_a_copy_never_writes_through_its_linked_files(ws, capsys, tmp_path):
+    kit, _ = _kit(ws, capsys, tmp_path)
+    shared = tmp_path / "shared-tokens.yaml"
+    shared.write_text((kit / "tokens.yaml").read_text())
+    (kit / "tokens.yaml").unlink()
+    (kit / "tokens.yaml").symlink_to(shared)
+    before = shared.read_text()
+    code, out = cli_json(ws, "brand", "init", "pemberton", "--force", capsys=capsys)
+    assert code == 0, out
+    assert not (kit / "tokens.yaml").is_symlink() and shared.read_text() == before
+
+
 def test_a_linked_backups_folder_is_refused(ws, capsys, tmp_path):
     kit, _ = _kit(ws, capsys, tmp_path)
     (kit / "backups").symlink_to(kit / "assets")
