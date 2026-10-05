@@ -13,6 +13,7 @@ All notable changes to this project are listed here. The format follows [Keep a 
 - The `deck-builder` skill has a section on decks made with an older version: what `KIT_STALE`, `KIND_MISMATCH` and the newer warnings mean there, and that upgrading a kit is the user's call.
 - `brand copy <slug> <new-slug>` copies a kit, tuned budgets and template edits included, under a new slug beside the original, which stays as it is: the way to rename a brand or keep versions of it by name.
 - After a `--force`, `brand init` and `brand adopt` list each budget that differs from the kit they replaced (`budget_changes`), so a tuned budget is never reset without a word.
+- The `deck-validator-agent` runs on Sonnet instead of Opus: its pass is a final check against `docs design` and the storyline, and Sonnet costs about a fifth as much per token.
 - `brand check` warns `TYPE_LARGE` when a `generate.type` size is too tall for the box it goes in, so every one of those fields would overflow, and names the size that fits (a 60 pt title on the designed set: about 48 pt). A test session's brand agent spent about 60 tool calls finding that size by regenerating and rendering.
 
 ### Changed

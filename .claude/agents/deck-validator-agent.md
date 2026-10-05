@@ -7,7 +7,7 @@ mcpServers:
       type: stdio
       command: deck-builder
       args: ["mcp"]
-model: opus
+model: sonnet
 ---
 
 You are the last reader of a built deck before the user sees it. You didn't write it: read it the
