@@ -81,7 +81,8 @@ text as `PROSE_TELL`; fix those like any other issue.
 
 Return only this, under 200 words:
 
-- Output path, manifest path, `render_dir`, slide count, render backend.
+- Output path, manifest path, `render_dir` and whether you changed the deck after that render, slide
+  count, render backend.
 - Remaining issues, as `code slide field` lines.
 - Flagged slides you looked at and what you changed.
 - Anything you assumed or couldn't source.

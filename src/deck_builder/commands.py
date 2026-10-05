@@ -187,8 +187,9 @@ def _copy_brand(args: argparse.Namespace, cfg: cfgmod.Config, r: Result) -> Resu
     target = confine.guard(b.path.parent / new_slug, "the kit folder")  # beside the original
     if target.exists():
         raise EnvError(f"{target} already exists; pick another slug")
-    shutil.copytree(b.path, target, symlinks=True, ignore=shutil.ignore_patterns(BACKUPS))
+    shutil.copytree(b.path, target, symlinks=True, ignore=_but_backups(b.path))
     text = (target / "brand.yaml").read_text(encoding="utf-8")
+    (target / "brand.yaml").unlink()  # a linked brand.yaml is copied as a link; never write through it
     renamed = re.sub(rf"(?m)^slug:\s*['\"]?{re.escape(b.slug)}['\"]?\s*$", f"slug: {new_slug}", text, count=1)
     if renamed == text:  # an unusual slug line; rewrite the file rather than leave the old slug in the copy
         meta = yaml.safe_load(text)
@@ -397,15 +398,21 @@ def backup_kit(kit_dir: Path) -> Path:
     """Copy a kit, all but its earlier backups, to <kit>/backups/<time>/ before a --force replaces any of it, so
     tuned budgets, template edits and assets can always be copied back. Discovery only looks one folder deep
     under a brand path, so a backup is never loaded as a second kit."""
-    root = confine.guard(kit_dir / BACKUPS, "the kit's backups folder")  # it can already be a symlink
+    if (kit_dir / BACKUPS).is_symlink():  # it would land somewhere else, or inside what it copies
+        raise EnvError(f"{kit_dir / BACKUPS} is a link; make it a plain folder (or remove it) and try again")
+    root = confine.guard(kit_dir / BACKUPS, "the kit's backups folder")
     stamp = dt.datetime.now().strftime("%Y-%m-%d-%H%M%S")
     dest, n = root / stamp, 1
     while dest.exists():
         n += 1
         dest = root / f"{stamp}-{n}"
-    shutil.copytree(kit_dir, dest, symlinks=True,  # a link is copied as a link, never followed out of the kit
-                    ignore=lambda d, names: [BACKUPS] if Path(d) == kit_dir else [])
+    shutil.copytree(kit_dir, dest, symlinks=True, ignore=_but_backups(kit_dir))  # links stay links
     return dest
+
+
+def _but_backups(kit_dir: Path) -> Any:
+    """copytree's ignore for a kit: its own backups/ folder, and only that one."""
+    return lambda d, names: [BACKUPS] if Path(d) == kit_dir else []
 
 
 def _write_yaml(path: Path, data: dict[str, Any], header: str) -> None:
@@ -459,11 +466,11 @@ def _kept(r: Result, target: Path) -> str:
     if "backup" not in r.data:
         return ""
     backup = Path(r.data["backup"])
-    try:
+    try:  # a malformed old tokens.yaml only loses the list, never the backup path
         old, new = (yaml.safe_load((d / "tokens.yaml").read_text(encoding="utf-8")) or {} for d in (backup, target))
-    except (OSError, yaml.YAMLError, UnicodeDecodeError):
-        old, new = {}, {}
-    changes = kit.budget_changes(old, new) if isinstance(old, dict) and isinstance(new, dict) else []
+        changes = kit.budget_changes(old, new)
+    except (OSError, yaml.YAMLError, UnicodeDecodeError, AttributeError, TypeError):
+        changes = []
     if not changes:
         return f"; the kit as it was is kept in {backup}"
     r.data["budget_changes"] = changes

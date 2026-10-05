@@ -708,11 +708,14 @@ def _check_asset(name: str, ref: str, brand: Brand, deck_dir: Path, at: dict[str
 
 
 def _readable_image(path: Path) -> bool:
+    import struct
+
     from PIL import Image as PILImage
 
     try:
         with PILImage.open(path) as im:
             im.verify()
-    except (OSError, SyntaxError, ValueError):  # Pillow's errors for bytes that aren't an image, or a broken one
+    # Pillow's errors for bytes that aren't an image, a broken one, or one too large to decode safely
+    except (OSError, SyntaxError, ValueError, struct.error, PILImage.DecompressionBombError):
         return False
     return True

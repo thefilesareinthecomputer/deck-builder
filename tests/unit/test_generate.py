@@ -198,6 +198,27 @@ def test_brand_copy_makes_a_renamed_kit_and_leaves_the_original(ws, capsys, tmp_
     assert code == 2 and "already" in out["error"]  # never over an existing kit
 
 
+def test_brand_copy_never_writes_through_a_linked_brand_yaml(ws, capsys, tmp_path):
+    kit, _ = _kit(ws, capsys, tmp_path)
+    shared = tmp_path / "shared-brand.yaml"
+    shared.write_text((kit / "brand.yaml").read_text())
+    (kit / "brand.yaml").unlink()
+    (kit / "brand.yaml").symlink_to(shared)
+    before = shared.read_text()
+    code, out = cli_json(ws, "brand", "copy", "pemberton", "pemberton-2026", capsys=capsys)
+    assert code == 0, out
+    copy = ws / "brands" / "pemberton-2026" / "brand.yaml"
+    assert not copy.is_symlink() and yaml.safe_load(copy.read_text())["slug"] == "pemberton-2026"
+    assert shared.read_text() == before  # the file the original kit links to is untouched
+
+
+def test_a_linked_backups_folder_is_refused(ws, capsys, tmp_path):
+    kit, _ = _kit(ws, capsys, tmp_path)
+    (kit / "backups").symlink_to(kit / "assets")
+    code, out = cli_json(ws, "brand", "init", "pemberton", "--force", capsys=capsys)
+    assert code == 2 and "backups" in out["error"]
+
+
 def test_replacing_an_asset_keeps_a_copy_of_the_kit(ws, capsys, tmp_path):
     kit, _ = _kit(ws, capsys, tmp_path)
     old = (kit / "assets" / "logo.png").read_bytes()

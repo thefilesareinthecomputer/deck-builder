@@ -20,9 +20,10 @@ If `uv run deck-builder brand list` reports no config, the user hasn't onboarded
 - You never write python-pptx code or PowerPoint XML for a deck, and never edit a built `.pptx`.
   A deck changes through its source file and a rebuild, which the `deck-builder` skill covers, so
   load it and make the change that way rather than answer with a refusal.
-- Brand kits (`brand.yaml`, `tokens.yaml`, templates) change only when the user asks, and only
-  through `deck-builder brand` commands, which back the kit up first; never move, copy over or delete
-  a kit folder with shell commands. Styling goes there, never into engine code.
+- Brand kits (`brand.yaml`, `tokens.yaml`, templates) change only when the user asks: edit the kit's
+  `brand.yaml` or budgets and regenerate with `deck-builder brand` commands, which back the kit up
+  first. Never move, copy over or delete a kit folder with shell commands. Styling goes there, never
+  into engine code.
 - Any edit to a `deck.md` goes through the `deck-builder` skill.
 - Delegation threshold: writing or changing 6 or more slides, or any restructure, goes to the
   `deck-builder-agent` subagent; get the user's OK on the storyline at the same threshold. A rebuild

@@ -103,7 +103,8 @@ and 2 are the whole gate: look at the contact sheet and the flagged slides yours
 4. On SEND BACK, give its blocker and major findings to the same `deck-builder-agent` (continue it
    with SendMessage, so it keeps what it has read) or fix them here, then validate again by
    continuing the same validator with SendMessage, naming the slides that changed and saying whether
-   the render is current (the builder's last step renders), so it reads only those again. Up to two send-backs per deck; after that, report what's unresolved instead. Pass its engine or brand
+   the render is current (the builder's report says whether it changed the deck after its last
+   render), so it reads only those again. Up to two send-backs per deck; after that, report what's unresolved instead. Pass its engine or brand
    findings to the user, since they aren't content fixes.
 
 Then report: output path, slide count, render backend, any slide you're unsure about, and any
@@ -179,8 +180,8 @@ substitute fonts.
 - **Assets:** `db assets <slug>` lists logo, icon and color ids; `![alt](brand:logo/<id>)` places a
   logo, `brand:icon/<id>` an icon, and deck images sit in the deck's `assets/` folder. A bad image
   blocks only its own slide: offer to drop that slide or switch it to a text layout, so the rest
-  builds while the user finds a real image. If they insist the file is fine or don't pick, drop the
-  slide, build the rest, and tell them how to add it back.
+  builds while the user finds a real image. If they insist the file is fine or don't pick, copy
+  `deck.md` into `scratch/`, drop the slide, build the rest, and tell them how to add it back.
 - **A layout the content needs but the brand lacks:** tell the user; the `deck-brand` skill adds
   layouts. Don't fake it with another layout's fields.
 - **A fact from outside the workspace** (another repo, a live system, a conversation): before it
