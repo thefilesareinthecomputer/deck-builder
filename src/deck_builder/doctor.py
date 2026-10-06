@@ -185,13 +185,14 @@ def agent_preflight(start: Path) -> Check:
         if cmd is None:
             problems.append(f"{f.stem}: lists deck-builder tools but declares no {SERVER} MCP server")
             continue
-        if cmd[:2] != [SERVER, "mcp"] or (exe := mcp_command()) is None:
-            # only ever run deck-builder itself: an agent file in this folder is not trusted to name a command
+        if cmd != [SERVER, "mcp"] or (exe := mcp_command()) is None:
+            # only ever run `deck-builder mcp` itself: an agent file in this folder isn't trusted to name a
+            # command or its arguments
             problems.append(f"{f.stem}: declares `{' '.join(cmd)}`; the agents' server is `{SERVER} mcp` on PATH")
             continue
         key = tuple(cmd)
         if key not in served:
-            replies, why = ask_server([*exe, *cmd[1:]], cwd=start)
+            replies, why = ask_server([*exe, "mcp"], cwd=start)
             served[key] = ({str(t.get("name")) for t in replies[1]["result"]["tools"]} if replies else None, why)
         tools_, why = served[key]
         checked += 1

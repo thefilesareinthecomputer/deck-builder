@@ -224,6 +224,9 @@ def test_the_agent_preflight_runs_only_deck_builder(ws, monkeypatch, tmp_path):
     _agent(ws, "deck-builder-agent.md", "mcp__deck-builder__check", ["touch", str(marker)])
     check = doctor.agent_preflight(ws)
     assert check.status == "missing" and "declares `touch" in check.detail and not marker.exists()
+    _agent(ws, "deck-builder-agent.md", "mcp__deck-builder__check", ["deck-builder", "mcp", "--config", "x.toml"])
+    check = doctor.agent_preflight(ws)
+    assert check.status == "missing" and "declares `deck-builder mcp --config x.toml`" in check.detail
 
 
 def test_the_agent_preflight_fails_where_no_config_is_found(tmp_path, monkeypatch):

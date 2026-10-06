@@ -172,6 +172,10 @@ def _check_front_matter(deck: Deck) -> list[Issue]:
     kicker = meta.get("kicker")
     if kicker is not None and not isinstance(kicker, str | int | float):
         out.append(Issue("PARSE", f"front matter kicker: {kicker!r} must be one line of text", **at))
+    fit = meta.get("fit")
+    if fit is not None and fit not in images.FITS:
+        out.append(Issue("PARSE", f"front matter fit: {fit!r} must be contain (show every image whole) or cover",
+                         **at))
     # output: isn't checked here. default_output() already confines and validates it with a clear EnvError
     # at build time; duplicating that here would need the workspace config this function doesn't have.
     return out
@@ -180,7 +184,7 @@ def _check_front_matter(deck: Deck) -> list[Issue]:
 def resolve(deck: Deck, brand: Brand, deck_dir: Path) -> tuple[Deck, list[Issue]]:
     """Check a deck against its brand and return a resolved copy with the issues: front matter, max_slides,
     each slide (layout, fields, budgets, assets, banned patterns) and the deck-wide conventions. The copy has
-    the deck-wide kicker filled in and a bare body moved to the layout's one matching field."""
+    the deck-wide kicker and fit filled in and a bare body moved to the layout's one matching field."""
     deck = copy.deepcopy(deck)
     issues: list[Issue] = _check_front_matter(deck)
     spec_layouts: dict[str, Any] = brand.tokens.get("layouts") or {}
@@ -196,11 +200,13 @@ def resolve(deck: Deck, brand: Brand, deck_dir: Path) -> tuple[Deck, list[Issue]
         issues.append(Issue("MAX_SLIDES", f"{len(deck.slides)} slides, limit {max_slides}",
                             file=_file(deck), actual=len(deck.slides), limit=max_slides))
 
-    kicker = deck.meta.get("kicker")
+    kicker, fit = deck.meta.get("kicker"), deck.meta.get("fit")
     for n, s in enumerate(deck.slides, start=1):
         fields_of = (spec_layouts.get(s.layout) or {}).get("fields") or {}
         if isinstance(kicker, str | int | float) and "kicker" in fields_of and "kicker" not in s.fields:
             s.fields["kicker"] = str(kicker)  # the deck-wide section label, where a slide sets none
+        if fit in images.FITS and s.fit is None:
+            s.fit = fit  # the deck-wide fit, such as contain for a deck of screenshots
         issues += _check_slide(s, n, spec_layouts, prs_layouts, brand, deck_dir, banned)
     issues += _conventions(deck, brand, spec_layouts)
     return deck, issues

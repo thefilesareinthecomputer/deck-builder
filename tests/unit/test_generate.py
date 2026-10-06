@@ -534,6 +534,50 @@ def test_image_2_shows_two_screenshots_whole(ws, capsys, tmp_path):
     assert pics[1].height > 0.9 * pics[0].height  # the second fills its box's height, at full size
 
 
+SHAPES = {"tall": (900, 1600), "narrow": (300, 1600), "square": (1000, 1000), "wide": (1600, 900),
+          "fat": (2400, 400), "edged": (800, 600)}  # edged: transparent margins, as a window capture's shadow
+
+
+def test_screenshots_of_every_shape_keep_their_ratio_and_edges_on_every_image_layout(ws, capsys, tmp_path):
+    """A deck of screenshots (front matter `fit: contain`): each one is scaled to fit its box whole, centered,
+    never cropped or stretched, filling the box's width or height, on image, image-right and image-2."""
+    cli_json(ws, "brand", "init", "pemberton", "--from", str(source(tmp_path, layout_set="designed")), capsys=capsys)
+    shots = ws / "decks" / "assets" / "shots"
+    shots.mkdir(parents=True)
+    for name, size in SHAPES.items():
+        im = Image.new("RGBA", size, (40, 60, 80, 255))
+        if name == "edged":
+            im.paste((0, 0, 0, 0), (0, 0, size[0], 40))  # a fully transparent band along the top edge
+        im.save(shots / f"{name}.png")
+    slides = []
+    for name in SHAPES:
+        slides.append(f"## The {name} capture\nlayout: image-right\n\n- One point\n\n### image\n"
+                      f"![{name}](assets/shots/{name}.png)\n")
+        slides.append(f"## The {name} capture alone\nlayout: image\n\n### image\n![{name}](assets/shots/{name}.png)\n")
+    names = list(SHAPES)
+    for a, b in zip(names, names[1:] + names[:1], strict=True):
+        slides.append(f"## The {a} and {b} captures\nlayout: image-2\n\n### image1\n![{a}](assets/shots/{a}.png)\n\n"
+                      f"### image2\n![{b}](assets/shots/{b}.png)\n")
+    deck = write_deck(ws, "---\nbrand: pemberton\nfit: contain\n---\n" + "\n".join(slides))
+    code, out = cli_json(ws, "build", str(deck), capsys=capsys)
+    assert code == 0, out["issues"]
+    checked = 0
+    for slide in Presentation(out["output"]).slides:
+        boxes = {ph.placeholder_format.idx: ph for ph in slide.slide_layout.placeholders
+                 if ph.placeholder_format.type == 18}  # the layout's picture placeholders
+        for pic in (sh for sh in slide.shapes if sh.shape_type == 13):
+            iw, ih = SHAPES[pic._element.find(".//{*}cNvPr").get("descr")]  # the alt text names the shape
+            assert (pic.crop_left, pic.crop_right, pic.crop_top, pic.crop_bottom) == (0, 0, 0, 0)
+            assert abs(pic.width / pic.height - iw / ih) < 0.01  # the file's own ratio
+            box = min(boxes.values(), key=lambda b: abs((b.left + b.width / 2) - (pic.left + pic.width / 2)))
+            assert box.left - 2 <= pic.left and pic.left + pic.width <= box.left + box.width + 2
+            assert box.top - 2 <= pic.top and pic.top + pic.height <= box.top + box.height + 2
+            assert abs(pic.width - box.width) < 0.01 * box.width or abs(pic.height - box.height) < 0.01 * box.height
+            assert abs((pic.top + pic.height / 2) - (box.top + box.height / 2)) < 2000  # centered
+            checked += 1
+    assert checked == 4 * len(SHAPES)  # one on image-right, one on image, two on image-2
+
+
 def test_a_layout_the_kit_lacks_says_how_the_kit_gets_it(ws, capsys, tmp_path):
     cli_json(ws, "brand", "init", "pemberton", "--from", str(source(tmp_path)), capsys=capsys)  # standard set
     deck = write_deck(ws, "---\nbrand: pemberton\n---\n## Routes\nlayout: image-right\n\n- North\n")

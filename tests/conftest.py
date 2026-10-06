@@ -111,6 +111,29 @@ ALL_OPTIONS = {**DESIGNED_DEFAULTS, "takeaway": "quote", "icons": {"tile": "circ
                "process": {"icons": True}, "bands": {"label_shape": "rectangle"}}
 
 
+DEMO_BRANDS = Path(__file__).resolve().parent / "fixtures" / "demo-brands"
+README_IMAGES = Path(__file__).resolve().parents[1] / "docs" / "images"
+
+
+def stage_images_deck(folder: Path, slug: str) -> Path:
+    """demo-brands/images/deck.md on brand slug, in folder, with the images it names. The README's
+    screenshots of deck-builder's own output stand in for app screenshots, a portrait crop of one for a tall
+    capture, and a demo hero for a photo. retry-log.png is a capture not taken yet, and spare.png a file
+    no slide names."""
+    shots = folder / "assets" / "screenshots"
+    shots.mkdir(parents=True, exist_ok=True)
+    for name in ("contact-sheet.png", "showcase.png"):
+        shutil.copyfile(README_IMAGES / name, shots / name)
+    shutil.copyfile(README_IMAGES / "contact-sheet.png", shots / "spare.png")
+    with Image.open(README_IMAGES / "decks.png") as im:
+        im.convert("RGB").crop((0, 0, 760, im.height)).save(shots / "order-form.png")
+    shutil.copyfile(DEMO_BRANDS / "layouts" / "assets" / "soap-club-hero.png", folder / "assets" / "photo.png")
+    deck = folder / "deck.md"
+    text = (DEMO_BRANDS / "images" / "deck.md").read_text(encoding="utf-8")
+    deck.write_text(text.replace("---\n", f"---\nbrand: {slug}\n", 1), encoding="utf-8")
+    return deck
+
+
 def init_demo_brands(root: Path, brands: Path, slugs: tuple[str, ...], generate: dict | None = None) -> None:
     """Generate each demo brand in the workspace `init` made at root: from its own brand.yaml, or with
     these generate settings over its own (DESIGNED_DEFAULTS, FULL_SET, ALL_OPTIONS)."""

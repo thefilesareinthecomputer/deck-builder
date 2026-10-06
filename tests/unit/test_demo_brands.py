@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import ALL_OPTIONS, DESIGNED_DEFAULTS, FULL_SET, cli_json, init_demo_brands
+from conftest import ALL_OPTIONS, DESIGNED_DEFAULTS, FULL_SET, cli_json, init_demo_brands, stage_images_deck
 
 DEMO = Path(__file__).resolve().parents[1] / "fixtures" / "demo-brands"
 SLUGS = ("dumbder-nifftlin", "cubicle-nine", "soap-club")
@@ -123,6 +123,36 @@ def test_designed_deck_uses_the_new_layouts_and_builds_clean_in_all_three_brands
 
 def test_every_brand_has_a_pitch_a_review_and_an_edge_deck():
     assert [(slug, name) for slug in sorted(SLUGS) for name in ("edge", "pitch", "review")] == DECKS
+
+
+@pytest.mark.parametrize("slug", SLUGS)
+def test_images_deck_shows_screenshots_whole_and_says_where_each_image_lands(demo_ws, slug, capsys):
+    """demo-brands/images/: a wide and a tall screenshot on image-right, two on image-2, a capture the process
+    slide can't show, and a photo, on each brand's designed kit."""
+    import json
+
+    deck = stage_images_deck(demo_ws / "decks" / f"images-{slug}", slug)
+    capsys.readouterr()
+    code, out = cli_json(demo_ws, "build", str(deck), "-o", str(demo_ws / "out" / f"images-{slug}.pptx"),
+                         capsys=capsys)
+    assert code == 0, out["issues"]
+    assert [(i["code"], i["slide"]) for i in out["issues"]] == [("IMAGE_NO_SLOT", 4)], out["issues"]
+    assert "image-right (image)" in out["issues"][0]["message"]
+    slides = json.loads(Path(out["manifest"]).read_text(encoding="utf-8"))["slides"]
+    fits = [{k: f.get("fit") for k, f in s["fields"].items() if "asset" in f} for s in slides]
+    assert fits == [{"image": "contain"}, {"image": "contain"}, {"image1": "contain", "image2": "contain"}, {},
+                    {"image": None}]
+    code, out = cli_json(demo_ws, "assets", str(deck), "--images", capsys=capsys)
+    assert code == 0, out
+    rows = [(r["slide"], r["where"], Path(r["path"]).name, r["status"], r.get("sides"), r.get("missing"))
+            for r in out["images"]]
+    assert rows == [(1, "image", "contact-sheet.png", "shown", None, None),
+                    (2, "image", "order-form.png", "shown", None, None),
+                    (3, "image1", "showcase.png", "shown", None, None),
+                    (3, "image2", "contact-sheet.png", "shown", None, None),
+                    (4, "notes", "retry-log.png", "notes only", None, True),
+                    (5, "image", "photo.png", "cropped", "left and right", None),
+                    (None, None, "spare.png", "unused", None, None)]
 
 
 @pytest.mark.parametrize("slug,name", DECKS)

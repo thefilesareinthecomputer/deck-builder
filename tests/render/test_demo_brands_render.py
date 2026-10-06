@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import ALL_OPTIONS, DESIGNED_DEFAULTS, FULL_SET, init_demo_brands
+from conftest import ALL_OPTIONS, DESIGNED_DEFAULTS, FULL_SET, init_demo_brands, stage_images_deck
 from deck_builder.cli import main
 from deck_builder.qa import tools
 
@@ -90,6 +90,18 @@ def test_code_deck_renders_in_the_code_font_with_no_flags(own_kits, slug, capsys
     cfg, out = own_kits
     res = rendered_clean(cfg, out / "code" / f"{slug}.pptx", capsys)
     assert any(f.startswith("menlo") for f in embedded(Path(res["render_dir"]) / "deck.pdf"))
+
+
+@pytest.mark.parametrize("slug", SLUGS)
+def test_images_deck_renders_with_only_its_unshown_capture_flagged(own_kits, slug, capsys):
+    """Screenshots shown whole on image-right and image-2 overflow nothing; the one flag is the capture the
+    content slide can't show (IMAGE_NO_SLOT, slide 4)."""
+    cfg, out = own_kits
+    deck = stage_images_deck(out.parent / "workspace" / "decks" / f"images-{slug}", slug)
+    capsys.readouterr()
+    code, res = run("--config", cfg, "check", str(deck), "--render", capsys=capsys)
+    assert code == 0, res["issues"]
+    assert res["flagged_slides"] == [{"slide": 4, "codes": ["IMAGE_NO_SLOT"]}], res["issues"]
 
 
 @pytest.mark.parametrize("slug,name", DECKS)

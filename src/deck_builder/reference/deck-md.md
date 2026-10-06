@@ -15,6 +15,8 @@ slide_numbers: false           # optional; slide numbers are on by default where
 first_slide_number: 21         # optional; an excerpt of a larger deck numbers its slides from here
 kicker: Q3 review              # optional; the section label on every slide whose layout has one and
                                # that sets none itself (kicker: "" on a slide leaves it blank)
+fit: contain                   # optional; every image shown whole unless its slide sets fit: (a deck of
+                               # screenshots)
 ---
 
 ## Paper volume grew 12% in Q3         <- one heading = one slide
@@ -48,9 +50,10 @@ Source: the Q3 shipment ledger.
   (a chart, an image, a text field) as a whole. `build: slots` brings in a cards, process or bands slide
   one card, step or band per click. The effect is a half-second fade and nothing else; there are no
   transitions between slides. The PDF and renders show the finished slide.
-- `fit: contain` shows the slide's images whole inside their boxes; `fit: cover` fills the boxes, cropping
-  what's over. Without it, an image in a `screenshots/` folder or named by an image cue (below) is
-  contained, and any other photo covers its box.
+- `fit: contain` shows the slide's images whole: scaled to fit their boxes, with their own ratio and
+  edges, never cropped or stretched. `fit: cover` fills the boxes, cropping what's over. Without it on
+  the slide, the front matter's `fit:` applies; without either, an image in a `screenshots/` folder or
+  named by an image cue (below) is contained, and any other image covers its box.
 
 ## Images in the notes
 

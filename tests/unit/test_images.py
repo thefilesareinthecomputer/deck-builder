@@ -143,6 +143,9 @@ def test_fit_takes_only_contain_or_cover(ws, capsys):
     p = write_deck(ws, "---\nbrand: stock\n---\n## A\nlayout: title\nfit: stretch\n")
     code, out = cli_json(ws, "check", str(p), capsys=capsys)
     assert code == 1 and "fit: 'stretch' must be contain" in _issue(out, "PARSE")["message"]
+    p = write_deck(ws, "---\nbrand: stock\nfit: fill\n---\n## A\nlayout: title\n")
+    code, out = cli_json(ws, "check", str(p), capsys=capsys)
+    assert code == 1 and "front matter fit: 'fill' must be contain" in _issue(out, "PARSE")["message"]
 
 
 def test_a_contained_screenshot_is_shown_whole_and_a_photo_fills_its_box(ws, capsys):

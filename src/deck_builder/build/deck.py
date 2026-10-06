@@ -173,15 +173,16 @@ class Builder:
         source = asset_source(path, ref, self.brand, self.deck_dir)  # validation confines every asset
         if color:
             path = recolor_icon(path, color, self.cache_dir)
-        # Photos fill their box. Contained images (screenshots, diagrams, a slide's `fit: contain`) fit inside
-        # it at full size, even with transparent pixels, such as a window capture's shadow. Logos, icons and
-        # logo slots fit inside it too, and a logo takes at most its share of a large box.
+        # Photos fill their box. Contained images (screenshots, diagrams, `fit: contain`) are scaled to fit
+        # inside it whole: ratio and edges exactly as the file has them, transparent margins included, such
+        # as a window capture's shadow. Logos, icons and logo slots fit inside it too; a logo is trimmed to
+        # its art and takes at most its share of a large box, and icons keep their set's canvas.
         crop = images.crops(s, ref, fs, path)
         contained = not color and not ref.startswith("brand:") and not fs.get("fit") and \
             images.fit_mode(s, ref) == "contain"
         logo = not crop and not contained
         geo, pic = fill_picture(slide, ph, path, alt, crop=crop, share=fs.get("fit_max", 1.0) if logo else 1.0,
-                                trim=not color and fs.get("kind") != "icon")  # icons keep their set's canvas
+                                trim=logo and not color and fs.get("kind") != "icon")
         fentry["asset"] = {"ref": ref, "source": source, "sha256": sha256_file(path)}
         if contained:
             fentry["fit"] = "contain"

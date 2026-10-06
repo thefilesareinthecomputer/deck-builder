@@ -77,8 +77,9 @@ db explain <CODE>                   # cause and fix for any issue code
    list. Put the conclusion of a chart or table slide in `takeaway:`. Where the layouts have a
    `kicker:`, give every content slide one (a front matter `kicker:` sets the deck-wide default),
    and add a `subtitle:` where the title alone doesn't make the point. A slide that shows a
-   screenshot or photo needs an image layout (`image`, `image-right`, or `image-2` for two). Put
-   screenshots in `<deck folder>/assets/screenshots/` and give each slide a notes line
+   screenshot or photo needs an image layout (`image`, `image-right`, or `image-2` for two). Screenshots
+   are never cropped: put them in `<deck folder>/assets/screenshots/` (or set front matter
+   `fit: contain` for a deck of them), and give each slide a notes line
    `SCREENSHOT: assets/screenshots/<file>.png | shows: <what>` (`docs deck-md`, "Images in the
    notes"), so `check` warns `IMAGE_NO_SLOT` when the layout can't show it.
 3. **Fix by code, never by loosening rules.** Cut words, split the slide, change the layout, move
