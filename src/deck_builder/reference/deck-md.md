@@ -11,7 +11,8 @@ default_layout: content        # used when a slide has no layout:
 slide_level: 2                 # heading level that starts a slide (default 2)
 output: ../../out/quarterly-review.pptx   # relative to this file; a .pptx in its folder or in out/
 footer: Confidential           # optional small text after the slide number; no footer without it
-slide_numbers: false           # optional; slide numbers are on by default where the brand has them
+slide_numbers: false           # optional; slide numbers are on by default where the brand has them, and
+                               # check and build say when they're off and why
 first_slide_number: 21         # optional; an excerpt of a larger deck numbers its slides from here
 kicker: Q3 review              # optional; the section label on every slide whose layout has one and
                                # that sets none itself (kicker: "" on a slide leaves it blank)

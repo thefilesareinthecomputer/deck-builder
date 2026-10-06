@@ -95,7 +95,18 @@ def _style(run: _Run, code_font: str) -> tuple[bool, bool, bool, str]:
     # path, ...) becomes plain text - the rebuild never writes a scheme deck.md authors didn't type.
     if link and not link.lower().startswith(LINK_SCHEMES):
         link = ""
-    return bold, italic, run.font.name == code_font, link
+    return bold, italic, is_code_font(run.font.name, code_font), link
+
+
+# Monospace families people set code in by hand, besides the kit's own code font, so a hand-edited deck's
+# code keeps its backticks on import.
+MONO_FONTS = {"andale mono", "cascadia code", "cascadia mono", "consolas", "courier", "courier new",
+              "dejavu sans mono", "fira code", "fira mono", "ibm plex mono", "jetbrains mono", "liberation mono",
+              "lucida console", "menlo", "monaco", "roboto mono", "sf mono", "source code pro", "ubuntu mono"}
+
+
+def is_code_font(name: str | None, code_font: str) -> bool:
+    return bool(name) and (name == code_font or str(name).strip().lower() in MONO_FONTS)
 
 
 def _md(text: str, bold: bool, italic: bool, code: bool, link: str) -> str:
@@ -169,7 +180,8 @@ def overrides(shape: Any, code_font: str) -> Counter[str]:
             if el.get("sz"):
                 out["size"] += 1
             latin = el.find(qn("a:latin"))
-            if latin is not None and latin.get("typeface") != code_font or el.find(qn("a:ea")) is not None:
+            if latin is not None and not is_code_font(latin.get("typeface"), code_font) or \
+                    el.find(qn("a:ea")) is not None:
                 out["font"] += 1
             if any(el.find(qn(f)) is not None for f in FILLS) or el.find(qn("a:highlight")) is not None:
                 out["color"] += 1
@@ -707,6 +719,9 @@ def report_md(pptx: Path, brand: Brand, adopted: bool, imp: Imported, mismatched
            "Unplaced items are in each slide's speaker notes under \"Unplaced from the original:\". Move them "
            "into fields or cut them, then run `deck-builder check`. Dropped formatting is intended: the rebuild "
            "takes the brand's styling.", ""]
+    if imp.deck.meta.get("slide_numbers") is False:
+        out += ["The original's slides show no slide numbers, so deck.md has `slide_numbers: false`. Delete that "
+                "line to number the rebuilt slides.", ""]
     for r in imp.reports:
         out.append(f"## Slide {r.n}: {r.title or '(no title)'}")
         out.append("")

@@ -78,18 +78,25 @@ def test_every_agent_is_installed_mapped_and_reads_the_design_rules():
         assert "docs design" in (AGENTS_DIR / name).read_text() or "`design`" in (AGENTS_DIR / name).read_text(), name
 
 
-TONE_RULES = ("Compelling comes from the order of the slides", "Plain words.", '"X, not Y"', "Register.",
-              "Truth.", "Symbols.", "Emphasis.")
+VOICE_RULES = ("One colleague talking to another", "is a full sentence", "Cut only whole points",
+               "Slides get reordered", "presenter's script", "Cut, don't caveat",
+               "Compelling comes from the order of the slides", "Plain words.", '"X, not Y"', "Register.",
+               "Truth.", "Symbols.", "Emphasis.", "A line the user wrote stays as written", "old and new")
 
 
-def test_the_agents_that_write_or_judge_slide_text_share_the_tone_and_style_rules():
-    """The storyteller, builder and validator hold the same writing rules in their own prompts, and the
-    builder and validator read `docs story` when there's a storyboard; the agents that can ask for the
-    storyteller say how."""
+def test_the_agents_that_write_or_judge_slide_text_read_one_voice():
+    """`docs voice` holds the writing rules. The decomposer, storyteller, builder, validator and the skill read
+    it rather than keep copies that drift apart; the storyteller, builder and validator read `docs story`
+    when there's a storyboard; the agents that can ask for the storyteller say how."""
+    voice = (SRC / "reference" / "voice.md").read_text()
+    assert all(rule in voice for rule in VOICE_RULES)
+    assert "docs voice" in (AGENTS_DIR.parent / "skills" / "deck-builder" / "SKILL.md").read_text()
+    for name in ("deck-decomposer-agent.md", "deck-storyteller-agent.md", "deck-builder-agent.md",
+                 "deck-validator-agent.md"):
+        text = (AGENTS_DIR / name).read_text()
+        assert "docs voice" in text and "## Tone and style" not in text, name
     for name in ("deck-storyteller-agent.md", "deck-builder-agent.md", "deck-validator-agent.md"):
         text = (AGENTS_DIR / name).read_text()
-        section = text.split("## Tone and style", 1)[1].split("\n## ", 1)[0]
-        assert all(rule in section for rule in TONE_RULES), name
         assert "storyboard" in text and ("`story`" in text or "docs story" in text), name
     for name in ("deck-builder-agent.md", "deck-decomposer-agent.md", "deck-brand-agent.md"):
         assert "`Storyteller: " in (AGENTS_DIR / name).read_text(), name

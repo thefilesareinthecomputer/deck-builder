@@ -18,8 +18,8 @@ layout: code
 focus: lines 4-5
 emphasis: "three times the median"
 visual: none
-after: a close-up on the cause, after the establishing chart on slide 3
-notes: Lines 4 and 5 are the fix; the chart on slide 3 shows the spike. Source: outline.md, item 7.
+after: a close-up on the cause, after the establishing chart of weekly sales
+notes: Lines 4 and 5 cap each week at three times the median, which removes the week-12 spike in the weekly sales chart. Source: forecast/clean.py.
 ```
 
 | Key | What it holds |
@@ -35,8 +35,11 @@ notes: Lines 4 and 5 are the fix; the chart on slide 3 shows the spike. Source: 
 | `after` | How the slide follows the previous one (the transitions below) |
 | `notes` | What the presenter says, and the source of every number on the slide |
 
-The builder fits each title to its budget and may shorten it, but never changes what it claims. An image cue
-names a picture the user supplies; nothing is downloaded or generated.
+A title over its budget may become a shorter full sentence, or move to a layout with a bigger title budget;
+the builder never drops its verb or changes its claim. The `notes` are the presenter's script and end with a
+`Source:` line naming a document the audience could open, never `outline.md` or a storyboard, since the notes
+ship inside the .pptx (`docs voice`). An image cue names a picture the user supplies; nothing is downloaded
+or generated.
 
 ## The title spine
 

@@ -58,9 +58,15 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
     p.add_argument("--out", help="folder to create the kit in (default: the first brand_paths entry)")
     p.add_argument("--force", action="store_true",
                    help="replace the generated files of an existing kit, or an existing asset")
-    p = add("inspect", "list a template's layouts and placeholders", commands.inspect_cmd)
+    p = add("inspect", "list a template's layouts and placeholders, or the words on every slide of any .pptx",
+            commands.inspect_cmd)
     p.add_argument("template", help="a .potx or .pptx")
-    p.add_argument("--yaml", action="store_true", help="print a starter layouts block for tokens.yaml")
+    what = p.add_mutually_exclusive_group()
+    what.add_argument("--yaml", action="store_true", help="print a starter layouts block for tokens.yaml")
+    what.add_argument("--text", action="store_true", help="each slide's words: title, text boxes, tables, alt "
+                      "text and notes, with `code`, bold and links marked as in deck.md")
+    what.add_argument("--index", action="store_true",
+                      help="one line per slide: position, the number shown on it, section and title")
     p = add("assets", "inventory a brand's or a deck's assets", commands.assets_cmd)
     p.add_argument("target", help="a brand slug, or a deck file to list the assets its slides use")
     p.add_argument("--images", action="store_true", help="for a deck: each image its fields and notes name, and "
@@ -96,6 +102,10 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
     which.add_argument("--adopt", metavar="SLUG",
                        help="make a new kit from the file's own masters and layouts, then map onto it")
     p.add_argument("--force", action="store_true", help="replace an existing deck.md, or an adopted kit's files")
+    p = add("fix-text", "replace no-break spaces, zero-width and other invisible characters, and private-use "
+            "glyphs in a text file (INVISIBLE_CHAR)", commands.fix_text_cmd)
+    p.add_argument("file", help="a deck.md or deck.csv file, the folder holding it, or any UTF-8 text file such "
+                                "as a draft")
     p = add("render", "render a .pptx to PDF, slide PNGs and contact sheets; flags slides to look at",
             commands.render_cmd)
     p.add_argument("pptx", help="a built .pptx (to build and render a deck in one step: check --render)")

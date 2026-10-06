@@ -35,11 +35,11 @@ The render tier of the tests needs LibreOffice and poppler, and `doctor` tells y
 
 - Agent and skill files load when a Claude Code session starts, so test an edited one in a fresh process: `claude -p "<test prompt>" --agent <name> --allowedTools "<its tools>"`. Put the prompt first, because `--allowedTools` takes a variable number of values and swallows anything after it. Run an agent that uses MCP tools from the repo root, so `deck-builder mcp` finds the clone's `deck-builder.toml`.
 - Changing an agent's `tools:` list needs the maintainer's OK, and the pull request has to say so.
-- Every agent is linked by `skills install`, mapped in `deck-builder docs agents`, and reads `docs design` before it writes or judges slides (a test checks).
+- Every agent is linked by `skills install`, mapped in `deck-builder docs agents`, and reads `docs design` before it writes or judges slides; the agents that write or judge slide text read `docs voice` instead of keeping their own copy of the writing rules (tests check both).
 
 ## Writing
 
-Docs, comments and commit messages follow the slide writing rules in `deck-builder docs design` and use American spelling. Example content uses invented companies and people only.
+Docs, comments and commit messages follow the writing rules in `deck-builder docs voice` and use American spelling. Example content uses invented companies and people only.
 
 ## Pull requests
 

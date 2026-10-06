@@ -205,7 +205,7 @@ Set `generate.mode` in `brand.yaml` to match how the deck will be used. `project
 
 `generate.layout_set: designed` adds layouts built from shapes instead of loose text: two to five cards with colored labels, three to six process chevrons, two to four labeled bands and a row of logos. It also adds a section label and a subtitle line to every content slide. Options give icons a tile, give each process step an icon, and switch the takeaway to an italic line. Images with transparent backgrounds, like logos, get fitted inside their box instead of cropped, and every brand can use the engine's starter icons.
 
-Accessibility follows WCAG 2.2 AA, the standard that accessibility laws point to. Generated layouts keep projected text at 18 pt or more and white labels at 4.5:1 contrast. `brand check` warns about color pairs under the WCAG ratios, chart colors that look alike to people with color blindness, and type that's too small. `check` warns about images without alt text, two slides with the same title, charts that rely on color alone, and filler words like "leverage" or "dramatically". These are warnings rather than errors, because colors stay the brand owner's call. `deck-builder docs design` has the details.
+Accessibility follows WCAG 2.2 AA, the standard that accessibility laws point to. Generated layouts keep projected text at 18 pt or more and white labels at 4.5:1 contrast. `brand check` warns about color pairs under the WCAG ratios, chart colors that look alike to people with color blindness, and type that's too small. `check` warns about images without alt text, two slides with the same title, charts that rely on color alone, and filler words like "leverage" or "dramatically". These are warnings rather than errors, because colors stay the brand owner's call. `deck-builder docs design` has the details, and `deck-builder docs voice` has the writing rules the agents follow.
 
 ## Fix up an existing deck
 
@@ -254,7 +254,8 @@ A deck picks its brand with `brand: <slug>`, and `--brand` overrides that for on
 | `brand init`, `brand adopt` | Generate a kit, or wrap an existing template; `brand init <slug> --force` regenerates a kit from its own `brand.yaml` |
 | `brand add-asset <slug> <png> --as logo/<id>` | Copy a logo or icon (`icon/<id>`) into a kit |
 | `brand copy <slug> <new-slug>` | Copy a kit under a new slug, tuned budgets and template edits included, to rename or version a brand; the original stays as it is |
-| `inspect <template>` | A template's layouts, placeholders and theme |
+| `inspect <template>` | A template's layouts, placeholders and theme; `--text` prints the words on every slide of any `.pptx`, and `--index` one line per slide |
+| `fix-text <deck>` | Replace no-break spaces and other invisible characters, and the private-use glyphs PowerPoint makes from `:)`, in a deck file or any text file |
 | `assets <brand or deck>` | Logos, icons, colors and images, with the slides that use them; `--images` says where each of a deck's images lands |
 | `docs [topic]`, `explain <CODE>` | Reference topics and issue-code fixes for the installed version |
 | `schema brand\|tokens\|manifest` | The JSON Schema for `brand.yaml`, `tokens.yaml` or a build manifest |

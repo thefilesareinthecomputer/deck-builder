@@ -29,9 +29,12 @@ calls which command.
 ## CLI commands
 
 Every CLI command belongs to the main agent: the subagents have no shell, and the decomposer and the
-storyteller have neither a shell nor an MCP server. Five commands exist only as CLI, never as MCP tools:
-`init`, `mcp`, `schema` and `skills install` set up or link the local install, and `brand copy` copies a
-kit under a new slug, which the main agent runs when the user renames or versions a brand. Every other CLI command (`docs`, `explain`, `brand list/show/check/init/adopt/
+storyteller have neither a shell nor an MCP server. Six commands exist only as CLI, never as MCP tools:
+`init`, `mcp`, `schema` and `skills install` set up or link the local install; `brand copy` copies a
+kit under a new slug, which the main agent runs when the user renames or versions a brand; and
+`fix-text` replaces invisible characters in a deck file, which the main agent runs when `check` warns
+`INVISIBLE_CHAR`. `inspect --text` and `inspect --index`, the words on every slide of any `.pptx`, are
+CLI-only flags too. Every other CLI command (`docs`, `explain`, `brand list/show/check/init/adopt/
 add-asset`, `inspect`, `assets`, `check`, `build`, `convert`, `import`, `render`, `doctor`) also
 exists as an MCP tool, named `brand_show` for `brand show` and so on; the table below gives that
 tool's owner when the job is delegated to a subagent.
@@ -48,7 +51,7 @@ tool's owner when the job is delegated to a subagent.
 | `brand_adopt` | `deck-brand-agent` | Wraps an existing `.potx` or `.pptx` as a kit. |
 | `brand_add_asset` | `deck-brand-agent` | Copies a logo or icon PNG into a kit. |
 | `inspect` | `deck-brand-agent` | A template's layouts and placeholders, for the adopt path. |
-| `docs` | main agent | Reference topics (`deck-md`, `workbook`, `brand-yaml`, `tokens-yaml`, `workflow`, `design`, `story`, `agents`, `codes`). Also called by the three MCP subagents, each for the topics its own job needs; `deck-validator-agent` reads `design` first. |
+| `docs` | main agent | Reference topics (`deck-md`, `workbook`, `brand-yaml`, `tokens-yaml`, `workflow`, `design`, `story`, `voice`, `agents`, `codes`). Also called by the three MCP subagents, each for the topics its own job needs; `deck-validator-agent` reads `design` first, and it and `deck-builder-agent` read `voice`. The main agent puts `voice` in the decomposer's and the storyteller's prompts. |
 | `explain` | main agent | Cause and fix for one issue code. Also called by the three MCP subagents while fixing or judging what `check` or `brand_check` reports. |
 | `render` | main agent | Re-renders an already-built `.pptx` without rebuilding, e.g. the original side of a refresh. Not given to a subagent: `check --render` already covers both loops. |
 | `convert` | main agent | `.md` / `.xlsx` / `.csv` conversion for team editing. |

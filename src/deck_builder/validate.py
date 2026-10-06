@@ -14,6 +14,8 @@ from typing import Any
 
 from deck_builder import highlight, images
 from deck_builder import template as tpl
+from deck_builder.brand.generate import LINE_EM
+from deck_builder.brand.layouts import CODE_EM
 from deck_builder.brand.registry import Brand
 from deck_builder.build.visuals import (
     CELL_PAD_EMU,
@@ -215,7 +217,7 @@ def resolve(deck: Deck, brand: Brand, deck_dir: Path) -> tuple[Deck, list[Issue]
 # Limits from the design research (`docs design`): convention, not standard, so they warn and never fail.
 MAX_BULLETS, MAX_WORDS, MAX_RUN, MAX_SERIES, MAX_CODE_LINES, MAX_CONTRASTS = 4, 60, 3, 8, 12, 2
 
-# The countable writing tells on slide text (`docs design`, "Writing on slides"). Each word is wrong on a slide
+# The countable writing tells on slide text (`docs voice`). Each word is wrong on a slide
 # in any context; words a brand can use literally ("journey", "landscape") are left to the agents' judgment.
 PROSE_WORDS = {
     "inflated word": ("leverage", "leveraging", "leveraged", "utilize", "utilizes", "utilizing", "unlock", "unlocks",
@@ -235,6 +237,51 @@ _PROSE = {kind: re.compile(r"(?<![\w-])(" + "|".join(re.escape(w) for w in words
 EMOJI = re.compile("[\U0001F300-\U0001FAFF☀-➿]")
 CONTRAST = re.compile(r",\s+not\s+\w+", re.IGNORECASE)
 QUOTED = re.compile(r'"[^"\n]*"')
+
+
+# Characters a reader can't see, and private-use glyphs that show as an empty box outside the font that
+# made them (PowerPoint turns ":)" into one in a symbol font), by code point. `fix-text` rewrites them: the
+# no-break spaces to a space, the rest to nothing.
+SPACE_LIKE = (0xA0, 0x2007, 0x202F)
+INVISIBLE_RANGES = [*((c, c) for c in SPACE_LIKE), (0xAD, 0xAD), (0x115F, 0x1160), (0x180E, 0x180E),
+                    (0x200B, 0x200F), (0x202A, 0x202E), (0x2060, 0x2064), (0x2066, 0x2069), (0x3164, 0x3164),
+                    (0xFEFF, 0xFEFF), (0xE000, 0xF8FF), (0xE0000, 0xE007F), (0xF0000, 0x10FFFF)]
+INVISIBLE = re.compile("[" + "".join(f"{chr(a)}-{chr(b)}" for a, b in INVISIBLE_RANGES) + "]")
+# Another slide named by its position, which changes when slides are reordered or pasted into another deck.
+SLIDE_REF = re.compile(r"\b(?:slides?\s+\d+|(?:previous|next|last|prior|preceding|following)\s+slides?\b"
+                       r"(?!\s*decks?\b)|slides?\s+(?:before|after|above|below)\b)", re.IGNORECASE)
+
+
+def char_name(ch: str) -> str:
+    """U+00A0 NO-BREAK SPACE; a private-use character has no name."""
+    return f"U+{ord(ch):04X} {unicodedata.name(ch, 'PRIVATE-USE CHARACTER')}"
+
+
+def _texts(s: Slide) -> list[tuple[str, str, bool]]:
+    """(field, text, is it prose) for everything on a slide a reader sees or hears: the title, each field
+    (a table's cells, a chart's labels, code), each image's alt text, and the speaker notes."""
+    out = [(name, text_of(v), not isinstance(v, Code)) for name, v in s.fields.items()]
+    out += [(name, v.alt, True) for name, v in s.fields.items() if isinstance(v, Image) and v.alt]
+    if s.title and s.title not in s.fields.values():
+        out.insert(0, ("title", s.title, True))
+    return out + [("notes", s.notes, True)] * bool(s.notes)
+
+
+def _text_checks(s: Slide, at: dict[str, Any]) -> list[Issue]:
+    """INVISIBLE_CHAR for characters a reader can't see, and SLIDE_REF for text that names another slide
+    by position, both warnings, in the slide's text and its notes."""
+    out: list[Issue] = []
+    for name, text, prose in _texts(s):
+        where = "the speaker notes" if name == "notes" else f"field {name!r}"
+        if found := sorted(set(INVISIBLE.findall(text))):
+            out.append(Issue("INVISIBLE_CHAR", f"{', '.join(char_name(c) for c in found)} in {where}; run "
+                             "`deck-builder fix-text` on the deck file to replace it", field=name,
+                             severity="warning", **at))
+        if prose and (refs := SLIDE_REF.findall(QUOTED.sub("", INLINE_CODE.sub("", text)))):
+            out.append(Issue("SLIDE_REF", f"a slide named by position in {where} ({', '.join(map(repr, refs))}); "
+                             "slides get reordered and pasted into other decks, so name what that slide shows",
+                             field=name, severity="warning", **at))
+    return out
 
 
 def prose_tells(text: str) -> dict[str, list[str]]:
@@ -270,6 +317,7 @@ def _conventions(deck: Deck, brand: Brand, spec_layouts: dict[str, Any]) -> list
     for n, s in enumerate(deck.slides, start=1):
         at: dict[str, Any] = {"file": s.where.file if s.where else None,
                               "line": s.where.line if s.where else None, "slide": n}
+        out += _text_checks(s, at)
         key = " ".join(plain(s.title).lower().split())
         if key and key in titles:
             out.append(Issue("TITLE_DUPLICATE", f"the same title as slide {titles[key]}: {s.title!r}; a screen "
@@ -381,7 +429,11 @@ def _check_slide(s: Slide, n: int, spec_layouts: dict[str, Any], prs_layouts: di
             continue
         want = fs.get("kind", "text")
         s.fields[name] = _coerce(s.fields[name], want)
-        out += _check_field(name, s.fields[name], fs, want, brand, deck_dir, layout, at)
+        found = _check_field(name, s.fields[name], fs, want, brand, deck_dir, layout, at)
+        over = [i for i in found if i.code in BUDGET_TEXT]
+        if over and name not in images.CARRIED and name != hf:
+            over[0].message += _room(name, s.fields[name], s, spec_layouts, brand, deck_dir)
+        out += found
         fv = s.fields[name]
         txt = text_of(fv) if isinstance(fv, Code) else plain(text_of(fv))  # code has no inline markup
         for pat in banned:
@@ -406,6 +458,41 @@ def _check_slide(s: Slide, n: int, spec_layouts: dict[str, Any], prs_layouts: di
     if s.layout == "image-full" and isinstance(photo, Image) and layout is not None:
         out += _check_image_band(photo, brand, deck_dir, layout, at)
     return out
+
+
+BUDGET_TEXT = ("BUDGET_CHARS", "BUDGET_LINES", "BUDGET_BULLETS", "BUDGET_BULLET_CHARS")
+ROOM_FIELDS = ("body", "caption")  # where a slide's running text can go on another layout
+
+
+def _room(name: str, val: Value, s: Slide, spec_layouts: dict[str, Any], brand: Brand, deck_dir: Path) -> str:
+    """The end of a budget issue's message: the other layouts with a field (the same one, a body or a
+    caption) that holds this text as written, and what moving there drops, so the text moves to a layout
+    with room rather than being cut into fragments to fit."""
+    kinds = {kind_of(v) for k, v in s.fields.items() if k != name and not isinstance(v, str | list)}
+    whole, partial = [], []
+    for lname, ls in spec_layouts.items():
+        fields = ls.get("fields") or {}
+        target = next((f for f in (name, *ROOM_FIELDS) if f in fields), None)
+        if lname == s.layout or target is None:
+            continue
+        fs = fields[target]
+        want = fs.get("kind", "text")
+        if not _fits(want, kind_of(val), val) or \
+                any(i.code in BUDGET_TEXT for i in _check_field(target, val, fs, want, brand, deck_dir, None, {})):
+            continue
+        has = {f.get("kind", "text") for f in fields.values()}
+        if not all(f == target or f in s.fields or (f == "title" and s.title) or spec.get("kind") in kinds
+                   for f, spec in fields.items() if spec.get("required")):
+            continue  # a required field there this slide has nothing for, such as big-number's number
+        lost = sorted(kinds - has)
+        if lost:
+            partial.append(f"{lname} ({target}), which drops the {' and '.join(lost)}")
+        else:
+            whole.append(f"{lname} ({target})")
+    picks = (whole + partial)[:3]
+    if not picks:
+        return "; no other layout holds it as written, so split the slide or move detail to the notes"
+    return f"; layouts that hold it as written: {'; '.join(picks)}"
 
 
 def _unknown_layout(name: str, spec_layouts: dict[str, Any], brand: Brand) -> str:
@@ -625,33 +712,55 @@ def _check_field(name: str, val: Value, fs: dict[str, Any], want: str, brand: Br
 BULLET_GAP_LINES = 0.5 / 1.2  # the space before each bullet, half its size, as a share of a line
 
 
+CODE_WIDTH = CODE_EM / LINE_EM  # an inline code character in body characters: the code font's are wider
+
+
+def word_widths(text: str) -> list[float]:
+    """Each word of a paragraph as the slide shows it, in body characters: inline markup removed, and each
+    character of an inline `code` span counted at the code font's width."""
+    for pat, rep in INLINE[:-1]:  # all but code, whose spans are measured below
+        text = pat.sub(rep, text)
+    widths: list[float] = []
+    word = 0.0
+    for i, part in enumerate(INLINE_CODE.split(text)):  # odd parts are code span contents
+        for ch in part:
+            if ch.isspace():
+                widths += [word] if word else []
+                word = 0.0
+            else:
+                word += CODE_WIDTH if i % 2 else 1.0
+    return widths + ([word] if word else [])
+
+
 def _wrapped(text: str, per_line: int) -> int:
     """Lines a paragraph wraps to at per_line characters, word by word; a word longer than a line breaks."""
-    lines, used = 1, 0
-    for word in text.split():
-        need = len(word) if used == 0 else used + 1 + len(word)
-        if need <= per_line:
+    lines, used = 1, 0.0
+    for word in word_widths(text):
+        need = word if used == 0 else used + 1 + word
+        if need <= per_line + 1e-9:
             used = need
             continue
         if used:  # the word starts a new line
             lines += 1
-        while len(word) > per_line:  # a word longer than a line breaks across lines
+        while word > per_line:  # a word longer than a line breaks across lines
             lines += 1
-            word = word[per_line:]
-        used = len(word)
+            word -= per_line
+        used = word
     return lines
 
 
 def _check_lines(name: str, val: Value, fs: dict[str, Any], want: str, at: dict[str, Any]) -> list[Issue]:
     """BUDGET_LINES when the text, wrapped at the field's line length, needs more lines than its box
     holds: a list counts each bullet's own lines and the space before it, which a character count
-    can't see when short lines make every bullet wrap."""
+    can't see when short lines make every bullet wrap. Inline code counts at the code font's width."""
     items = [t for _, t in val] if isinstance(val, list) else [str(val)]
-    lines = sum(_wrapped(plain(t), int(fs["line_chars"])) for t in items)
+    lines = sum(_wrapped(t, int(fs["line_chars"])) for t in items)
     need = lines + (len(items) * BULLET_GAP_LINES if want == "bullets" else 0.0)
     if need > fs["max_lines"] + 1e-9:
+        over = round((need - fs["max_lines"]) * fs["line_chars"])
         return [Issue("BUDGET_LINES", f"wraps to about {need:.1f} lines at {fs['line_chars']} characters a line; "
-                      f"the box holds {fs['max_lines']:g}", field=name, actual=round(need, 1),
+                      f"the box holds {fs['max_lines']:g}, so about {over} characters too many", field=name,
+                      actual=round(need, 1),
                       limit=fs["max_lines"], **at)]
     return []
 

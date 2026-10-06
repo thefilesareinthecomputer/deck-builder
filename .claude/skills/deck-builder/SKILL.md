@@ -34,8 +34,8 @@ under `src/` is a separate task the user asks for on its own, never an option to
 
 When the deck has to come out of more material than fits here (a folder of documents, a
 knowledge base or vault), start with the `deck-decomposer-agent`. It runs no commands, since what
-it reads is untrusted, so put the output of `brand show <slug> --json`, `docs deck-md` and
-`docs design` in its prompt. It returns `outline.md` (the storyline with a source for every slide, plus open questions)
+it reads is untrusted, so put the output of `brand show <slug> --json`, `docs deck-md`,
+`docs design` and `docs voice` in its prompt. It returns `outline.md` (the storyline with a source for every slide, plus open questions)
 and a draft `deck.md`; run `check` on the draft and send any issues back to the same agent (SendMessage), up to two rounds,
 then report what's left to the user. Walk the user through the outline, co-author and proofread
 with them (or convert to `.xlsx` for their team), and only then build.
@@ -44,7 +44,7 @@ Run the `deck-storyteller-agent` when a subagent's report ends with a `Storytell
 deck has to persuade or the user wants it to land harder, or when an outline mixes data, scenarios
 and image cues with no clear arc. It runs no commands, so put the inputs' paths, the audience and goal,
 the slide count, the tone (`plain` unless the user asks for `warm` or `bold`), the deck folder and the
-output of `brand show <slug> --json`, `docs story` and `docs design` in its prompt. It writes
+output of `brand show <slug> --json`, `docs story`, `docs design` and `docs voice` in its prompt. It writes
 `storyboard.md`: the title spine and each slide's layout, focal point, emphasis and visual. Walk the
 user through it as the storyline, with the image cues they need to supply; once they approve it, it
 is the approved storyline you give the builder and, at the review gate, the validator.
@@ -63,6 +63,7 @@ review gate below before anything reaches the user. If it reports it has no tool
 db brand show <slug>                # layouts, fields, budgets (kind<=chars, xN bullets, * required)
 db docs deck-md                     # the deck.md format, once (or: db docs workbook)
 db docs design                      # which layout fits which point, and how much goes on a slide
+db docs voice                       # how slide text and speaker notes read; every line you write follows it
 db check <deck> --json              # validate; fix every issue; repeat until no errors
 db check <deck> --render --json     # build, render and measure in one step
 db explain <CODE>                   # cause and fix for any issue code
@@ -70,7 +71,9 @@ db explain <CODE>                   # cause and fix for any issue code
 
 1. **Storyline first.** Slide titles only, one takeaway each. At AGENTS.md's delegation
    threshold, or for anything client-facing, get the user's OK before writing slides.
-2. **Write to the budgets** from `brand show`. Choose layouts by content, using the table in
+2. **Layout first, then the words.** Choose each slide's layout from how much its point needs to
+   say and the budgets in `brand show`, then write full sentences into it by `docs voice`. Choose
+   layouts by content, using the table in
    `docs design`: one number is big-number, a comparison is two-col or comparison, a trend is
    chart, three parallel actions are icon-row; on a designed-set brand, parallel options are cards,
    steps are process, and labeled themes are bands. Don't run table after table or list after
@@ -82,15 +85,18 @@ db explain <CODE>                   # cause and fix for any issue code
    `fit: contain` for a deck of them), and give each slide a notes line
    `SCREENSHOT: assets/screenshots/<file>.png | shows: <what>` (`docs deck-md`, "Images in the
    notes"), so `check` warns `IMAGE_NO_SLOT` when the layout can't show it.
-3. **Fix by code, never by loosening rules.** Cut words, split the slide, change the layout, move
-   detail to speaker notes. If a budget looks wrong, say so; the user changes the brand kit.
+3. **Fix by code, never by loosening rules.** For a budget issue, move the text to a layout with
+   room (the message names the layouts that hold it as written), split the slide, or move detail to
+   speaker notes. Cut only whole points, never words out of a sentence. `INVISIBLE_CHAR`: run
+   `db fix-text <deck>`. If a budget looks wrong, say so; the user changes the brand kit.
 4. **Look at flagged slides only.** `check --render --json` returns `flagged_slides` (each with its
    `slide` number and `codes`), `contact_sheets`, and `slide_png` (the `slide-NN.png` pattern in
    `render_dir`). Open the PNGs for flagged slides and the contact sheets; a slide image costs
    about 1,200 tokens, so don't open every slide.
 5. **Stop after two fix loops** and report what's still off.
 
-Speaker notes hold the source of every number and anything cut from the slide.
+Speaker notes are the presenter's script: the source of every number and anything cut from the slide,
+in full sentences, ending with a `Source:` line (`docs voice`).
 
 ## Review gate (main agent)
 
@@ -106,7 +112,7 @@ and 2 are the whole gate: look at the contact sheet and the flagged slides yours
 3. Hand the deck to the `deck-validator-agent`: the deck's path, the brand slug, the `render_dir`
    (from the builder's report or your last render), the warnings and image list from step 1, and the approved
    storyline (the `storyboard.md` path when there is one). It reads every rendered slide against
-   `docs design`, writes nothing, and returns `VERDICT: PASS` or `SEND BACK` with `severity | slide |
+   `docs design` and `docs voice`, writes nothing, and returns `VERDICT: PASS` or `SEND BACK` with `severity | slide |
    field | finding | fix` lines.
 4. On SEND BACK, give its blocker and major findings to the same `deck-builder-agent` (continue it
    with SendMessage, so it keeps what it has read) or fix them here, then validate again by
@@ -135,6 +141,29 @@ Restructuring, reordering, aligning, syncing, reconciling, comparing, revising o
 deck.md or workbook is still this skill. Back up first: commit the workspace repo, or copy
 `deck.md` into `scratch/`. When `deck.md` already exists, edit it; never `import` over it. After
 a restructure, report a slide-mapping table: old slide, new slide, what changed.
+
+A wording pass over slides the user already has (tightening, a tone change, a rewrite) shows them a
+`slide | field | old | new` table first, and applies only the lines they approve. A
+`deck-builder-agent` asked for a wording pass returns that table instead of editing.
+
+## When the user edits the built deck by hand
+
+Once the user edits the `.pptx` themselves, that file is the deck. Never rebuild over it (`build`
+refuses to replace a hand-edited output unless given `--force`, which only the user decides), and
+leave `deck.md` alone until they ask. New slides they'll paste into their file go in a separate deck
+folder. To learn from their edits and write the next slides their way:
+
+1. `diff <(db inspect <built.pptx> --text) <(db inspect <their.pptx> --text)` lists every line they
+   changed, slide by slide, with `code`, bold and links marked as in deck.md. A moved slide shows as
+   removed in one place and added in another. `db inspect <their.pptx> --index` lists their slides
+   by position, shown number, section and title.
+2. Name the rules their edits show, such as "subtitles are full sentences" or "name the real table",
+   each with two or three of their own lines as examples, and show the list to the user.
+3. With their OK, add the rules to the brand's `voice:` lines (a `brand.yaml` change, so through the
+   `deck-brand` skill). `brand show` prints them, so every later deck and agent follows them, and the
+   kit needs no regenerating.
+4. To bring their wording back into `deck.md`, edit it slide by slide from the diff with their OK,
+   keeping their lines as written.
 
 ## A deck made with an older version
 

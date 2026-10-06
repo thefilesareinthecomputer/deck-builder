@@ -16,7 +16,7 @@ from typing import Any
 import yaml
 from PIL import Image as PILImage
 
-from deck_builder import __version__, confine, docs, doctor, importer, pipeline, skills, validate
+from deck_builder import __version__, confine, docs, doctor, importer, pipeline, skills, slide_text, validate
 from deck_builder import assets as asset_inventory
 from deck_builder import config as cfgmod
 from deck_builder import template as tpl
@@ -637,6 +637,38 @@ def doctor_cmd(args: argparse.Namespace) -> Result:
     return r
 
 
+def fix_text_cmd(args: argparse.Namespace) -> Result:
+    """Rewrite the characters INVISIBLE_CHAR warns about in a deck file or any UTF-8 text file: no-break spaces
+    become spaces and the rest are deleted. Line endings and everything else stay byte for byte."""
+    path = Path(args.file)
+    path = pipeline.deck_path(path) if path.is_dir() else path
+    if not path.is_file():
+        raise EnvError(f"file not found: {path}")
+    if path.suffix.lower() == ".xlsx":
+        raise EnvError("fix-text rewrites text files such as deck.md or deck.csv; fix a workbook's cells in Excel, "
+                       "or convert it to deck.md first")
+    try:
+        text = path.read_bytes().decode("utf-8")
+    except UnicodeDecodeError as e:
+        raise EnvError(f"{path} isn't UTF-8 text, so fix-text leaves it alone") from e
+    r = Result(command="fix-text", data={"file": str(path), "changes": []})
+    lines = text.splitlines(keepends=True)
+    for n, line in enumerate(lines, start=1):
+        if found := validate.INVISIBLE.findall(line):
+            counts = {validate.char_name(c): found.count(c) for c in sorted(set(found))}
+            r.data["changes"].append({"line": n, "chars": counts})
+            lines[n - 1] = validate.INVISIBLE.sub(
+                lambda m: " " if ord(m.group()) in validate.SPACE_LIKE else "", line)
+    total = sum(sum(c["chars"].values()) for c in r.data["changes"])
+    if total:
+        path.write_bytes("".join(lines).encode("utf-8"))
+    said = [f"line {c['line']}: " + ", ".join(f"{k}{f' ({v})' if v > 1 else ''}" for k, v in c["chars"].items())
+            for c in r.data["changes"]]
+    tally = f"fixed {total} character{'s' * (total != 1)} on {len(said)} line{'s' * (len(said) != 1)} of {path.name}"
+    r.summary = "\n".join([*said, tally if total else f"nothing to fix in {path.name}"])
+    return r
+
+
 def import_cmd(args: argparse.Namespace) -> Result:
     """An existing .pptx -> <out>/deck.md, <out>/assets/ and <out>/import-report.md."""
     cfg = _cfg(args)
@@ -783,6 +815,11 @@ def inspect_cmd(args: argparse.Namespace) -> Result:
     if not path.is_file():
         raise EnvError(f"template not found: {path}")
     r = Result(command="inspect")
+    if args.text or args.index:
+        found = slide_text.slides(path)
+        r.data["slides"] = found
+        r.summary = slide_text.index_report(found) if args.index else slide_text.text_report(found)
+        return r
     if args.yaml:
         starter = brand_inspect.starter_tokens(path)
         r.data["tokens"] = starter
@@ -810,7 +847,8 @@ def check(args: argparse.Namespace) -> Result:
         deck, brand = _validated(path, cfg, r, args.brand)
         if deck is not None and brand is not None:
             r.data.update(_furniture(deck, brand))
-        r.summary = f"{'ok' if r.ok else 'failed'} check {path.name}: {r.data['slides']} slides, {_tally(r)}"
+        r.summary = (f"{'ok' if r.ok else 'failed'} check {path.name}: {r.data['slides']} slides, {_tally(r)}"
+                     f"{_numbers_said(r)}")
         return r
     qa_backends.choose(args.backend or cfg.render.backend)  # no renderer: say so before building anything
     done = _build_one(path, cfg, args, None, None, r)
@@ -822,7 +860,7 @@ def check(args: argparse.Namespace) -> Result:
     flagged = ", ".join(str(f["slide"]) for f in r.data.get("flagged_slides", [])) or "none"
     hidden = ", ".join(str(n) for n in r.data.get("hidden_slides", [])) or "none"
     r.summary = (f"{'ok' if r.ok else 'failed'} check --render {path.name}: {r.data['slides']} slides, "
-                 f"flagged {flagged}, hidden {hidden}, {_tally(r)}")
+                 f"flagged {flagged}, hidden {hidden}, {_tally(r)}{_numbers_said(r)}")
     return r
 
 
@@ -840,12 +878,24 @@ def _merge_flagged_slides(r: Result, build_issues: list[Issue]) -> None:
 
 
 def _furniture(deck: Deck, brand: Brand) -> dict[str, Any]:
-    """Whether this deck's slides will show numbers, and the footer text they'll show (None for none)."""
+    """Whether this deck's slides will show numbers (and if not, why), and the footer text they'll show (None
+    for none). The build copies each layout's slide-number box onto its slides unless the front matter
+    turns numbers off, which import does for a deck that showed none."""
     numbers, footer = furniture_settings(deck.meta)
     can = kit.furniture_layouts(brand)
     used = {s.layout for s in deck.slides}
-    return {"slide_numbers": numbers and bool(used & set(can["slide_numbers"])),
+    off = None
+    if not numbers:
+        off = "the front matter says slide_numbers: false; delete that line to number the slides"
+    elif not used & set(can["slide_numbers"]):
+        off = (f"none of the layouts this deck uses has a slide-number box in the {brand.slug} kit "
+               f"(`deck-builder brand show {brand.slug}` lists the layouts that do)")
+    return {"slide_numbers": off is None, "slide_numbers_off": off,
             "footer": footer if footer and used & set(can["footer"]) else None}
+
+
+def _numbers_said(r: Result) -> str:
+    return f"; slide numbers off: {r.data['slide_numbers_off']}" if r.data.get("slide_numbers_off") else ""
 
 
 def default_output(path: Path, deck: Deck | None, cfg: cfgmod.Config) -> Path:
@@ -897,7 +947,8 @@ def build(args: argparse.Namespace) -> Result:
         done = _build_one(path, cfg, args, out, None, r)
         if done:
             r.data.update(done)
-            r.summary = f"{'ok' if r.ok else 'failed'} build {done['output']}: {done['slides']} slides, {_tally(r)}"
+            r.summary = (f"{'ok' if r.ok else 'failed'} build {done['output']}: {done['slides']} slides, "
+                         f"{_tally(r)}{_numbers_said(r)}")
         else:
             r.summary = f"failed build {path.name}: {_tally(r)}"
         return r

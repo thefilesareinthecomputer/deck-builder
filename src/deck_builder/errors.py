@@ -67,7 +67,9 @@ CODES: dict[str, tuple[str, str]] = {
     ),
     "BUDGET_CHARS": (
         "A field has more characters than its budget.",
-        "Cut words, split the slide, or move detail to speaker notes. Never raise the budget to pass.",
+        "Move the text to a layout with room for it (the message names the ones that hold it as written), split "
+        "the slide, or move detail to speaker notes. Cut words only where each sentence stays whole. Never raise "
+        "the budget to pass.",
     ),
     "BUDGET_BULLETS": (
         "A bullets field has more bullets than its budget.",
@@ -75,7 +77,8 @@ CODES: dict[str, tuple[str, str]] = {
     ),
     "BUDGET_BULLET_CHARS": (
         "A single bullet is longer than the per-bullet budget.",
-        "Shorten the bullet or split it into two.",
+        "Split it into two bullets that are each a whole sentence, move detail to the notes, or move the text to "
+        "a layout with room for it (the message names the ones that hold it as written).",
     ),
     "BUDGET_LEVEL": (
         "Bullets nest deeper than the field allows.",
@@ -109,8 +112,9 @@ CODES: dict[str, tuple[str, str]] = {
     "BUDGET_LINES": (
         "A text field, wrapped at its box's line length, needs more lines than the box holds. A list counts each "
         "bullet's own lines and the space before it, so short lines that make every bullet wrap show here even "
-        "under the character budget.",
-        "Shorten the bullets that wrap so each fits on one line, use fewer bullets, or move detail to the notes.",
+        "under the character budget. Inline `code` counts at the code font's width, which is wider.",
+        "Move the text to a layout with room for it (the message names the ones that hold it as written), use "
+        "fewer bullets, or move detail to the notes. Shorten a bullet only where it stays a whole sentence.",
     ),
     "CODE_LONG": (
         "A code block has a line longer than its panel is wide, or more lines than the panel holds (a `title=` "
@@ -136,7 +140,20 @@ CODES: dict[str, tuple[str, str]] = {
         "dramatically), a filler transition (moreover, that said), a teaser (here's the catch), or a third "
         "\"X, not Y\" contrast in the deck. Speaker notes, code and quoted words are left alone.",
         "Use the plain word or the number, cut the filler, state the point instead of teasing it, and type the "
-        "plain character. `docs design` has the writing rules.",
+        "plain character. `docs voice` has the writing rules.",
+    ),
+    "SLIDE_REF": (
+        "Slide text or speaker notes name another slide by its position: \"slide 12\", \"the previous slide\", "
+        "\"the next slide\". Slides get reordered, and pasted into other decks, so the reference goes stale.",
+        "Name what that slide shows instead (\"the cost table\", \"the rollout timeline\").",
+    ),
+    "INVISIBLE_CHAR": (
+        "Slide text or speaker notes hold a character a reader can't see (a no-break space, a zero-width or "
+        "direction mark) or a private-use glyph, which shows as an empty box outside the font that made it. "
+        "They break search and text comparison. PowerPoint makes some itself, such as a symbol-font smiley from "
+        "\":)\".",
+        "Run `deck-builder fix-text <deck file>`: it turns no-break spaces into spaces, deletes the rest and lists "
+        "each change. An agent with no shell reports the warning to the main agent, which runs it.",
     ),
     "BULLETS_MANY": (
         "A list on a projected slide has more than four bullets, past what an audience holds at once. "
