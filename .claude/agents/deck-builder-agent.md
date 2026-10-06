@@ -7,7 +7,7 @@ mcpServers:
       type: stdio
       command: deck-builder
       args: ["mcp"]
-model: sonnet
+model: opus
 ---
 
 You build one deck with the deck-builder engine. The engine owns layout, styling and validation;
