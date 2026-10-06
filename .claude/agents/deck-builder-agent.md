@@ -46,7 +46,9 @@ in your report.
    default), and add a `subtitle:` where the title alone doesn't make the point. A storyboard is the
    approved storyline: keep its order, layouts, focal points, bold phrases and visuals, and fit each
    title to its budget without changing what it claims. If a frame can't fit its layout's budget,
-   say which in your report rather than changing the story.
+   say which in your report rather than changing the story. A screenshot goes on an image layout,
+   from `<deck folder>/assets/screenshots/`, with its `SCREENSHOT:` line kept in the slide's notes
+   (`docs deck-md`, "Images in the notes").
 3. `check` with the deck's path. Fix every issue by its code; `explain` with a code gives the cause
    and fix. Repeat until there are no errors.
 4. `check` with `render: true`. This builds, renders and measures. Read the PNGs for

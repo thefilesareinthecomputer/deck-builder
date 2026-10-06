@@ -77,9 +77,10 @@ class Slide:
     where: Where | None = field(default=None, compare=False)
     current: Any = None  # `current: n`: the list item or card to keep in full color; check requires a whole number
     build: Any = None  # `build: <field>` or `build: slots`: what fades in one click at a time
+    fit: Any = None  # `fit: contain` or `fit: cover`: whether the slide's images fit inside their boxes or fill them
 
 
-SLIDE_KEYS = ("current", "build")  # slide settings written like `layout:`, and columns in a workbook or CSV
+SLIDE_KEYS = ("current", "build", "fit")  # slide settings written like `layout:`, and columns in a workbook or CSV
 
 
 @dataclass

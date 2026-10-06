@@ -27,9 +27,10 @@ from deck_builder.brand.registry import Brand
 from deck_builder.build.deck import DEFAULT_DATE
 from deck_builder.build.text import CODE_FONT_DEFAULT
 from deck_builder.build.visuals import CHART_TYPES, CODE_DESCR
+from deck_builder.images import IMAGE_EXT, WHOLE
 from deck_builder.model import Bullets, Chart, Code, Deck, Image, Series, Slide, Table, Value
 from deck_builder.parse.markdown import number
-from deck_builder.validate import IMAGE_EXT, confined
+from deck_builder.validate import confined
 from deck_builder.write.cells import code_md
 from deck_builder.write.markdown import table_md
 
@@ -61,6 +62,7 @@ class Found:
     idx: int | None = None  # placeholder idx; None for a free shape
     title: bool = False
     spid: str = ""  # the shape's id, which a build's animation targets
+    whole: bool = False  # a picture the build showed whole (`fit: contain`)
 
 
 @dataclass
@@ -425,7 +427,8 @@ class Importer:
             if st == MSO_SHAPE_TYPE.PICTURE or sh._element.tag == qn("p:pic"):
                 got = self.picture(sh, n, rep)
                 if got is not None:
-                    found.append(Found(got[0], got[1], f"picture {sh.name!r}", box, idx, spid=str(sh.shape_id)))
+                    found.append(Found(got[0], got[1], f"picture {sh.name!r}", box, idx, spid=str(sh.shape_id),
+                                       whole=sh.name == WHOLE))
                 continue
             rep.dropped += overrides(sh, self.code_font)
             if ph is not None and sh._element.find(f"{qn('p:spPr')}/{qn('a:xfrm')}") is not None:
@@ -583,8 +586,12 @@ class Importer:
         rep.title = title
         marked = CURRENT.match(str(slide._element.cSld.get("name") or ""))  # written by the build for `current:`
         build = build_of(slide, {f.spid: name for name, f in placed.items() if f.spid}, rep)
+        # Imported images lose their screenshots/ folder and their notes' paths, so a picture the build showed
+        # whole says so itself; without it, the rebuild would crop it to fill.
+        whole = any(f.whole for name, f in placed.items() if name in fields)
         return Slide(title=title, layout=key, fields=fields, notes=notes,
-                     current=int(marked.group(1)) if marked else None, build=build), rep
+                     current=int(marked.group(1)) if marked else None, build=build,
+                     fit="contain" if whole else None), rep
 
 
 def build_of(slide: Any, fields_by_spid: dict[str, str], rep: SlideReport) -> str | None:

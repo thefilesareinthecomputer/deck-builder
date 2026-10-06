@@ -147,9 +147,8 @@ def test_a_3_slide_and_a_40_slide_deck_both_build_clean(tmp_path, capsys):
     kit = root / "workspace" / "brands" / "northfield-cycle"
     layouts = set(yaml.safe_load((kit / "tokens.yaml").read_text())["layouts"])
     assert layouts == {"title", "agenda", "section", "content", "two-col", "comparison", "big-number", "statement",
-                       "chart", "table", "image", "image-full", "image-right", "code", "code-right", "icon-row", "team",
-                       "quote",
-                       "closing"}
+                       "chart", "table", "image", "image-full", "image-right", "image-2", "code", "code-right",
+                       "icon-row", "team", "quote", "closing"}
 
 
 @render

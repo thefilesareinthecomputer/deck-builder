@@ -88,6 +88,68 @@ def inventory_deck(deck: Any, brand: Any, deck_dir: Path) -> list[dict[str, Any]
     return out
 
 
+def image_report(deck: Any, brand: Any, deck_dir: Path) -> list[dict[str, Any]]:
+    """One row per image a resolved deck names, in its image fields or its notes' image cues, with where it
+    lands: shown, cropped (with the percent and sides), missing (an image field's file isn't there), or notes
+    only (no slot shows it; `missing` when its file isn't there either); then one row per image in the deck's
+    assets/ folder that nothing names (unused)."""
+    from deck_builder import images
+    from deck_builder import template as tpl
+    from deck_builder.model import Image
+    from deck_builder.validate import confined, crop_of, resolve_asset_confined
+
+    spec_layouts = brand.tokens.get("layouts") or {}
+    prs_layouts = tpl.layouts(tpl.open_template(brand.template)) if brand.template and brand.template.is_file() else {}
+    rows: list[dict[str, Any]] = []
+    named: set[Path] = set()
+
+    def found(ref: str) -> Path | None:
+        path, err = resolve_asset_confined(ref, brand, deck_dir)
+        if err or path is None or not path.is_file():
+            return None
+        named.add(path.resolve())
+        return path
+
+    for n, s in enumerate(deck.slides, start=1):
+        ls = spec_layouts.get(s.layout) or {}
+        fspecs = ls.get("fields") or {}
+        layout = tpl.find_layout(prs_layouts, str(ls.get("template_layout")), ls.get("master")) if ls else None
+        slots = images.photo_slots(fspecs)
+        shown: set[str] = set()
+        for name in slots:
+            img = s.fields.get(name)
+            if not isinstance(img, Image):
+                continue
+            row: dict[str, Any] = {"slide": n, "layout": s.layout, "where": name, "path": img.ref, "status": "shown"}
+            crop = crop_of(s, img, fspecs[name], brand, deck_dir, layout) if layout is not None else None
+            if found(img.ref) is None:
+                row["status"] = "missing"
+            elif crop and crop[0] >= 1:
+                row.update({"status": "cropped", "cropped": crop[0], "sides": crop[1]})
+            rows.append(row)
+            shown.add(img.ref)
+        cs = images.cues(s.notes)
+        spare = len(shown - {c.path for c in cs if c.path})  # shown images a pathless cue can describe
+        for c in cs:
+            if c.path in shown:
+                continue
+            if not c.path and spare:
+                spare -= 1
+                continue
+            cue: dict[str, Any] = {"slide": n, "layout": s.layout, "where": "notes", "path": c.path,
+                                   "status": "notes only", "cue": c.text}
+            if c.path and found(c.path) is None:
+                cue["missing"] = True  # not captured yet, or a wrong path
+            rows.append(cue)
+    assets_dir = deck_dir / "assets"
+    if assets_dir.is_dir() and confined(assets_dir, deck_dir):
+        for p in sorted(assets_dir.rglob("*")):
+            if p.suffix.lower() in images.IMAGE_EXT and p.is_file() and p.resolve() not in named:
+                rows.append({"slide": None, "layout": None, "where": None, "path": p.relative_to(deck_dir).as_posix(),
+                             "status": "unused"})
+    return rows
+
+
 def recolor_icon(src: Path, hex_color: str, cache_dir: Path) -> Path:
     """Fill an icon's alpha mask with one color. Same source and color give the same file."""
     key = hashlib.sha256(src.read_bytes() + hex_color.upper().encode()).hexdigest()

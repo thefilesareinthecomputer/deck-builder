@@ -133,6 +133,18 @@ layout: image-right
 ### image
 ![The new north warehouse](assets/{{brand}}-hero.png)
 
+## Two partners share the north routes
+layout: image-2
+caption1: Cubicle 9 office fit-outs, delivered on our trucks
+caption2: Soap Club stock, on the same Tuesday run
+takeaway: One route now serves both partners
+
+### image1
+![Illustration of an office workspace](assets/cubicle-nine-hero.png)
+
+### image2
+![Two Soap Club bars on a wooden stand](assets/soap-club-hero.png)
+
 ## What changes in Q4
 layout: icon-row
 icon1: brand:icon/growth

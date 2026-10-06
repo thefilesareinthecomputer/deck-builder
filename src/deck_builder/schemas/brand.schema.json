@@ -67,6 +67,7 @@
       "additionalProperties": false,
       "properties": {
         "max_slides": {"type": "integer", "minimum": 1},
+        "max_crop": {"type": "number", "minimum": 0, "maximum": 100, "description": "percent of an image's height a crop to fill can take from the top and bottom before check warns IMAGE_CROPPED (default 15)"},
         "banned_patterns": {"type": "array", "items": {"type": "string"}}
       }
     },

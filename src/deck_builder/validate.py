@@ -12,7 +12,7 @@ import unicodedata
 from pathlib import Path
 from typing import Any
 
-from deck_builder import highlight
+from deck_builder import highlight, images
 from deck_builder import template as tpl
 from deck_builder.brand.registry import Brand
 from deck_builder.build.visuals import (
@@ -24,11 +24,11 @@ from deck_builder.build.visuals import (
     number_columns,
 )
 from deck_builder.errors import Issue
+from deck_builder.images import IMAGE_EXT
 from deck_builder.model import Chart, Code, Deck, Icon, Image, Slide, Table, Value, kind_of
 
 STARTER_ICONS = Path(__file__).resolve().parent / "data" / "icons"  # alpha masks every brand can use
 CHART_TYPES = ("column", "stacked-column", "bar", "stacked-bar", "line", "pie", "doughnut")
-IMAGE_EXT = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tif", ".tiff"}
 EMU_PER_PT = 12700
 INLINE = [
     (re.compile(r"\[([^\]]+)\]\([^)]+\)"), r"\1"),
@@ -334,8 +334,7 @@ def _check_slide(s: Slide, n: int, spec_layouts: dict[str, Any], prs_layouts: di
         return out
     ls = spec_layouts.get(s.layout)
     if ls is None:
-        known = ", ".join(spec_layouts) or "none"
-        out.append(Issue("UNKNOWN_LAYOUT", f"layout {s.layout!r} isn't in the brand (has: {known})", **at))
+        out.append(Issue("UNKNOWN_LAYOUT", _unknown_layout(s.layout, spec_layouts, brand), **at))
         return out
     tl = ls.get("template_layout")
     layout = tpl.find_layout(prs_layouts, str(tl), ls.get("master")) if prs_layouts else None
@@ -363,13 +362,15 @@ def _check_slide(s: Slide, n: int, spec_layouts: dict[str, Any], prs_layouts: di
             reason = "no free field" if not cands else f"several free fields ({', '.join(cands)})"
             out.append(Issue("KIND_MISMATCH",
                              f"the slide body is {got}, and layout {s.layout!r} has {reason} of that kind; "
-                             f"it takes: {takes}. Name the field with `### <field>`.", field="body", **at))
+                             f"it takes: {takes}. Name the field with `### <field>`"
+                             f"{_image_hint(spec_layouts) if got == 'image' else ''}.", field="body", **at))
 
     for name in list(s.fields):
         fs = fspecs.get(name)
         if fs is None:
+            hint = _image_hint(spec_layouts) if isinstance(s.fields[name], Image) else ""
             out.append(Issue("UNKNOWN_FIELD",
-                             f"field {name!r} isn't on layout {s.layout!r} (has: {', '.join(fspecs)})",
+                             f"field {name!r} isn't on layout {s.layout!r} (has: {', '.join(fspecs)}){hint}",
                              field=name, **at))
             continue
         want = fs.get("kind", "text")
@@ -391,10 +392,101 @@ def _check_slide(s: Slide, n: int, spec_layouts: dict[str, Any], prs_layouts: di
         out += _check_current(s, fspecs, at)
     if s.build is not None:
         out += _check_build(s, fspecs, at)
+    if s.fit is not None and s.fit not in images.FITS:
+        out.append(Issue("PARSE", f"fit: {s.fit!r} must be contain (show the whole image) or cover (fill the "
+                         "box, cropping what's over)", field="fit", **at))
+    out += _check_images(s, fspecs, spec_layouts, brand, deck_dir, layout, at)
     photo = s.fields.get("image")
     if s.layout == "image-full" and isinstance(photo, Image) and layout is not None:
         out += _check_image_band(photo, brand, deck_dir, layout, at)
     return out
+
+
+def _unknown_layout(name: str, spec_layouts: dict[str, Any], brand: Brand) -> str:
+    """UNKNOWN_LAYOUT's message: the brand's layouts, and for a layout this engine generates but the kit lacks,
+    how the kit gets it."""
+    from deck_builder.brand.layouts import SETS
+
+    said = f"layout {name!r} isn't in the brand (has: {', '.join(spec_layouts) or 'none'})"
+    if not brand.tokens.get("generated") or name not in SETS["designed"]:
+        return said
+    have = str((brand.meta.get("generate") or {}).get("layout_set", "standard"))
+    if name in SETS.get(have, []):
+        return (f"{said}; the kit was generated before deck-builder had it, and `deck-builder brand init "
+                f"{brand.slug} --force` adds it, keeping the kit as it was in its backups/ folder (the brand "
+                "owner's call)")
+    sets = " and ".join(k for k in ("full", "designed") if name in SETS[k])
+    return f"{said}; it's in the {sets} layout sets, and this kit uses {have} (generate.layout_set in brand.yaml)"
+
+
+def _image_hint(spec_layouts: dict[str, Any]) -> str:
+    holds = images.image_layouts(spec_layouts)
+    return f"; layouts with an image slot: {', '.join(holds)}" if holds else ""
+
+
+def _check_images(s: Slide, fspecs: dict[str, Any], spec_layouts: dict[str, Any], brand: Brand, deck_dir: Path,
+                  layout: Any, at: dict[str, Any]) -> list[Issue]:
+    """IMAGE_NO_SLOT when the slide's notes name more images than its layout can show, with the layouts that
+    hold them and what moving costs; IMAGE_CROPPED for each image a crop to fill takes more than
+    lint.max_crop percent from."""
+    out: list[Issue] = []
+    slots = images.photo_slots(fspecs)
+    count = images.named(s, fspecs)
+    if images.cues(s.notes) and count > len(slots):
+        out.append(_no_slot(s, count, len(slots), spec_layouts, at))
+    limit = (brand.meta.get("lint") or {}).get("max_crop", images.MAX_CROP)
+    for name in slots:
+        val = s.fields.get(name)
+        if isinstance(val, Image) and layout is not None and s.fit != "cover":  # cover: the crop is chosen
+            out += _check_crop(s, name, val, fspecs[name], brand, deck_dir, layout, limit, at)
+    return out
+
+
+def _no_slot(s: Slide, count: int, have: int, spec_layouts: dict[str, Any], at: dict[str, Any]) -> Issue:
+    holds = images.image_layouts(spec_layouts)
+    room = [k for k, n in holds.items() if n >= count]
+    what = f"{count} image{'s' * (count != 1)}"
+    where = "has no image slot" if not have else f"holds {have}"
+    if room:
+        fix = (f"layouts that hold {'them' if count > 1 else 'it'} (their image fields), and what moving there "
+               "costs: " + "; ".join(f"{k} ({', '.join(images.photo_slots(spec_layouts[k]['fields']))}): "
+                                     f"{images.move_cost(s, spec_layouts[k])}" for k in room))
+    elif holds:
+        fix = f"no layout holds {count}; split the slide across " + ", ".join(f"{k} ({n})" for k, n in holds.items())
+    else:
+        fix = "this brand has no image layout"
+    rest = "the rest show" if have else "it shows" if count == 1 else "they show"
+    return Issue("IMAGE_NO_SLOT", f"the notes and fields name {what}, and layout {s.layout!r} {where}, so {rest} "
+                 f"only in the notes. {fix[0].upper()}{fix[1:]}", severity="warning", actual=count, limit=have, **at)
+
+
+def crop_of(s: Slide, img: Image, fs: dict[str, Any], brand: Brand, deck_dir: Path,
+            layout: Any) -> tuple[int, str] | None:
+    """(percent of the image a crop to fill takes, the sides) when the build crops it; None when it fits
+    instead, or when the file or the box can't be read (check reports the file)."""
+    from PIL import Image as PILImage
+
+    path, err = resolve_asset_confined(img.ref, brand, deck_dir)
+    if err or path is None or path.suffix.lower() not in IMAGE_EXT or not path.is_file() or not _readable_image(path):
+        return None
+    ph = next((p for p in layout.placeholders if p.placeholder_format.idx == fs.get("idx")), None)
+    if ph is None or not ph.width or not ph.height or not images.crops(s, img.ref, fs, path):
+        return None
+    with PILImage.open(path) as im:
+        share, sides = images.crop_loss(im.size, (ph.width, ph.height))
+    return round(share * 100), sides
+
+
+def _check_crop(s: Slide, name: str, img: Image, fs: dict[str, Any], brand: Brand, deck_dir: Path, layout: Any,
+                limit: float, at: dict[str, Any]) -> list[Issue]:
+    """IMAGE_CROPPED for a crop from the top and bottom, where a screenshot keeps its title and last line and a
+    photo its heads. A wide image in a narrower box loses only its sides, which `assets --images` reports."""
+    crop = crop_of(s, img, fs, brand, deck_dir, layout)
+    if crop is None or crop[1] != "top and bottom" or crop[0] <= limit:
+        return []
+    return [Issue("IMAGE_CROPPED", f"{img.ref!r} loses {crop[0]}% of its height, from the top and bottom, cropped to "
+                  "fill its box; add `fit: contain` to the slide to show all of it, or `fit: cover` to keep the crop",
+                  field=name, severity="warning", actual=crop[0], limit=limit, **at)]
 
 
 def _check_image_band(img: Image, brand: Brand, deck_dir: Path, layout: Any, at: dict[str, Any]) -> list[Issue]:

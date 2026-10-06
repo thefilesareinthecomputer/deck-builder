@@ -48,8 +48,10 @@ CODES: dict[str, tuple[str, str]] = {
         "Run `deck-builder inspect <template>` and correct template_layout or idx in tokens.yaml.",
     ),
     "UNKNOWN_LAYOUT": (
-        "A slide uses a layout name the brand doesn't define.",
-        "Use a layout from `deck-builder brand show <slug>`.",
+        "A slide uses a layout name the brand doesn't define. A generated kit can lack a layout this "
+        "deck-builder has: one added since the kit was generated, or one outside its generate.layout_set.",
+        "Use a layout from `deck-builder brand show <slug>`. For a layout the message says the kit can get, ask "
+        "the brand owner before regenerating the kit with `deck-builder brand init <slug> --force`.",
     ),
     "UNKNOWN_FIELD": (
         "A slide sets a field its layout doesn't have.",
@@ -191,6 +193,19 @@ CODES: dict[str, tuple[str, str]] = {
         "part of the photo under the band (WCAG 2.2 SC 1.4.3).",
         "Choose a photo, or a crop of it, that's darker where the band sits; or use the image or image-right "
         "layout, which keep text off the photo.",
+    ),
+    "IMAGE_NO_SLOT": (
+        "A slide's speaker notes name an image (a line starting `SCREENSHOT:` or `DIAGRAM:`) that its layout "
+        "has no slot for, so the image shows only in the notes. Only the image layouts (image, image-right, "
+        "image-2) hold one.",
+        "Move the slide to a layout the message lists; it says what each costs in cuts. Or split the slide, or "
+        "keep the image in the notes on purpose.",
+    ),
+    "IMAGE_CROPPED": (
+        "An image is cropped to fill its box, and the crop takes more than lint.max_crop percent (default 15) of "
+        "its height, from the top and bottom: where a screenshot has its title and last line.",
+        "Add `fit: contain` to the slide to show the whole image, or `fit: cover` to keep the crop; or use an "
+        "image closer to the box's shape.",
     ),
     "MISSING_IMAGE": (
         "An image path doesn't exist, or the image is a web address.",

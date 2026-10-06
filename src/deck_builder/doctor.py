@@ -1,6 +1,7 @@
 """What this machine can do: build (Python only), render (PowerPoint or LibreOffice, plus poppler)."""
 from __future__ import annotations
 
+import importlib
 import importlib.metadata as md
 import json
 import shutil
@@ -10,10 +11,18 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 from deck_builder import config as cfgmod
 from deck_builder.qa import tools
 
-PACKAGES = ("python-pptx", "pyyaml", "openpyxl", "defusedxml", "jsonschema", "pillow", "pygments")
+# Each runtime dependency and the module it's imported as
+IMPORTS = {"python-pptx": "pptx", "pyyaml": "yaml", "openpyxl": "openpyxl", "defusedxml": "defusedxml",
+           "jsonschema": "jsonschema", "pillow": "PIL", "pygments": "pygments"}
+PACKAGES = tuple(IMPORTS)
+SERVER = "deck-builder"  # the MCP server name the agent files declare
+MCP_HELLO = [{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-06-18"}},
+             {"jsonrpc": "2.0", "id": 2, "method": "tools/list"}]
 
 
 @dataclass
@@ -42,9 +51,39 @@ def automation_permission() -> Check:
     return Check("powerpoint automation", "ok", "PowerPoint answered")
 
 
-def install_hint() -> str:
+def install_hint(reinstall: bool = False) -> str:
     clone = Path(__file__).resolve().parents[2]
-    return f"uv tool install --editable {clone if (clone / 'pyproject.toml').is_file() else '<clone>'}"
+    flags = "--editable --reinstall" if reinstall else "--editable"
+    return f"uv tool install {flags} {clone if (clone / 'pyproject.toml').is_file() else '<clone>'}"
+
+
+def missing_imports() -> list[str]:
+    """The runtime dependencies this process can't import. The MCP server reports its own, so doctor sees
+    what the install serving the agents lacks, such as a dependency added after it was installed."""
+    out = []
+    for pkg, module in IMPORTS.items():
+        try:
+            importlib.import_module(module)
+        except ImportError:
+            out.append(pkg)
+    return out
+
+
+def ask_server(cmd: list[str], cwd: Path | None = None) -> tuple[list[dict[str, Any]] | None, str]:
+    """Start an MCP server, send initialize and tools/list, and return (its two replies, '') or (None, the
+    last line it wrote to stderr, which says why it didn't answer)."""
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60, cwd=cwd,
+                              input="".join(json.dumps(m) + "\n" for m in MCP_HELLO))
+    except (OSError, subprocess.TimeoutExpired) as e:
+        return None, f"{type(e).__name__}: {e}"
+    try:
+        replies = [json.loads(ln) for ln in proc.stdout.splitlines()]
+        replies[1]["result"]["tools"]
+        return replies, ""
+    except (ValueError, KeyError, IndexError, TypeError):
+        lines = proc.stderr.strip().splitlines()
+        return None, lines[-1] if lines else f"exit {proc.returncode}, no output"
 
 
 def editable_install() -> bool:
@@ -86,19 +125,87 @@ def agent_tools(cfg: cfgmod.Config) -> Check:
     if not cfg.found:
         return Check(name, "missing", "no deck-builder.toml for the MCP server to confine its tools to",
                      "deck-builder init")
-    msgs = [{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-06-18"}},
-            {"jsonrpc": "2.0", "id": 2, "method": "tools/list"}]
-    try:
-        proc = subprocess.run([*cmd, "--config", str(cfg.path), "mcp"], capture_output=True, text=True, timeout=60,
-                              input="".join(json.dumps(m) + "\n" for m in msgs))
-        replies = [json.loads(ln) for ln in proc.stdout.splitlines()]
-        tools_ = replies[1]["result"]["tools"]
-        editable = bool(replies[0]["result"]["serverInfo"].get("editable"))
-        version = str(replies[0]["result"]["serverInfo"].get("version") or "") or None
-    except (OSError, subprocess.TimeoutExpired, ValueError, KeyError, IndexError):
-        return Check(name, "missing", "`deck-builder mcp` didn't answer tools/list", install_hint())
-    return Check(name, "ok", f"`deck-builder mcp` answers with {len(tools_)} tools", editable=editable,
-                 version=version)
+    replies, why = ask_server([*cmd, "--config", str(cfg.path), "mcp"])
+    if replies is None:
+        return Check(name, "missing", f"`deck-builder mcp` didn't answer tools/list: {why}", install_hint(True))
+    info = replies[0].get("result", {}).get("serverInfo", {})
+    editable, version = bool(info.get("editable")), str(info.get("version") or "") or None
+    if info.get("missing"):
+        return Check(name, "missing", f"the installed deck-builder can't import {', '.join(info['missing'])}",
+                     install_hint(True), editable=editable, version=version)
+    return Check(name, "ok", f"`deck-builder mcp` answers with {len(replies[1]['result']['tools'])} tools",
+                 editable=editable, version=version)
+
+
+def _front_matter(path: Path) -> dict[str, Any]:
+    text = path.read_text(encoding="utf-8")
+    if not text.startswith("---\n") or "\n---" not in text[4:]:
+        return {}
+    data = yaml.safe_load(text[4:text.index("\n---", 4)])
+    return data if isinstance(data, dict) else {}
+
+
+def _declared_server(meta: dict[str, Any]) -> list[str] | None:
+    """The command an agent file's mcpServers entry starts the deck-builder server with."""
+    servers = meta.get("mcpServers") or []
+    for entry in servers if isinstance(servers, list) else [servers]:
+        spec = entry.get(SERVER) if isinstance(entry, dict) else None
+        if isinstance(spec, dict) and spec.get("command"):
+            return [str(spec["command"]), *(str(a) for a in spec.get("args") or [])]
+    return None
+
+
+def agent_preflight(start: Path) -> Check:
+    """Start the deck-builder server the way each agent file declares it, from this folder as Claude Code
+    does for a subagent, and check it serves every MCP tool the agent's `tools:` line lists. A server that
+    starts from the clone can still fail here, such as with no deck-builder.toml at or above this folder."""
+    from deck_builder.skills import AGENTS
+
+    name = "agent preflight"
+    files = [next((p for p in (start / ".claude" / "agents" / a, Path.home() / ".claude" / "agents" / a)
+                   if p.is_file()), None) for a in AGENTS]
+    found = [f for f in files if f is not None]
+    if not found:
+        return Check(name, "optional", f"no agent files in {start / '.claude' / 'agents'} or ~/.claude/agents",
+                     "deck-builder skills install --yes")
+    served: dict[tuple[str, ...], tuple[set[str] | None, str]] = {}
+    silent: dict[tuple[str, ...], list[str]] = {}  # agents whose declared server didn't answer
+    problems, checked = [], 0
+    for f in found:
+        try:
+            meta = _front_matter(f)
+        except (OSError, UnicodeDecodeError, yaml.YAMLError) as e:
+            problems.append(f"{f.stem}: can't read its front matter ({type(e).__name__})")
+            continue
+        want = [t.split("__", 2)[2] for t in str(meta.get("tools") or "").replace(" ", "").split(",")
+                if t.startswith(f"mcp__{SERVER}__")]
+        if not want:
+            continue  # the decomposer and the storyteller run no commands
+        cmd = _declared_server(meta)
+        if cmd is None:
+            problems.append(f"{f.stem}: lists deck-builder tools but declares no {SERVER} MCP server")
+            continue
+        if cmd[:2] != [SERVER, "mcp"] or (exe := mcp_command()) is None:
+            # only ever run deck-builder itself: an agent file in this folder is not trusted to name a command
+            problems.append(f"{f.stem}: declares `{' '.join(cmd)}`; the agents' server is `{SERVER} mcp` on PATH")
+            continue
+        key = tuple(cmd)
+        if key not in served:
+            replies, why = ask_server([*exe, *cmd[1:]], cwd=start)
+            served[key] = ({str(t.get("name")) for t in replies[1]["result"]["tools"]} if replies else None, why)
+        tools_, why = served[key]
+        checked += 1
+        if tools_ is None:
+            silent.setdefault(key, []).append(f.stem)
+        elif lacking := [t for t in want if t not in tools_]:
+            problems.append(f"{f.stem}: the server doesn't serve {', '.join(lacking)}")
+    problems += [f"{', '.join(agents)}: `{' '.join(key)}` didn't answer from {start}: {served[key][1]}"
+                 for key, agents in silent.items()]
+    if problems:
+        return Check(name, "missing", "; ".join(problems),
+                     "start Claude Code in the workspace folder (where deck-builder.toml is), or run "
+                     f"`{install_hint(True)}` when the server can't import a package")
+    return Check(name, "ok", f"{checked} agents: the server each declares starts here and serves every tool it lists")
 
 
 def clone_version(start: Path) -> str | None:
@@ -185,6 +292,8 @@ def run(cfg: cfgmod.Config, test_powerpoint: bool) -> list[Check]:
                         "" if cfg.found else "deck-builder init"))
     mcp = agent_tools(cfg)
     checks.append(mcp)
+    if mcp.status == "ok":
+        checks.append(agent_preflight(Path.cwd()))
     from deck_builder import __version__
 
     checks.append(install_version(__version__, mcp.version, clone_version(Path.cwd())))

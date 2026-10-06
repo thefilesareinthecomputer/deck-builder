@@ -56,6 +56,7 @@ on those layouts. The `deck-builder` and `deck-brand` skills read this topic bef
   | Two options, before and after, now and next | `comparison` or `two-col` |
   | Three parallel actions or ideas | `icon-row` |
   | A place, product or screen | `image` or `image-right` |
+  | Two screens or images to compare, or a before and after (full and designed sets) | `image-2` |
   | The one moment, place or product the deck is about (once per deck; full and designed sets) | `image-full` |
   | A voice from outside the team | `quote` |
   | Rows a reader will look up | `table`, six rows or fewer |
@@ -108,10 +109,17 @@ on those layouts. The `deck-builder` and `deck-brand` skills read this topic bef
 - Use icons for parallel ideas, one style and one color per deck, from the brand's icon set.
 - Use vendor and product logos only where the slide is about that product, from the vendor's official
   artwork, unmodified and not recolored, with clear space around it.
-- Use screenshots and photos at their real aspect ratio. The image layouts crop opaque images to fill
-  their box, and fit images with transparent pixels (logos, icons) inside it, so a logo is never cut;
-  in a large box a fitted logo takes at most 60% of it. Give a logo a transparent background to get
-  the fit. Logo slots (comparison panels, the `logos` row) always fit, whatever the image.
+- Only the image layouts show a photo or screenshot: `image`, `image-right`, `image-2` (two) and
+  `image-full`. On any other layout an image stays in the speaker notes, so choose each slide's layout
+  with its images in mind: `check` warns `IMAGE_NO_SLOT` for an image cue the layout can't show, and
+  `deck-builder assets --images <deck>` lists where every image lands.
+- Use screenshots and photos at their real aspect ratio. A photo is cropped to fill its box: a wide one
+  loses its sides, and `check` warns `IMAGE_CROPPED` when a crop takes more than 15% of an image's
+  height. Screenshots and diagrams are shown whole (`fit: contain`, the default for a `screenshots/`
+  folder or an image cue), so a title or last line is never cut. `fit:` on a slide sets either way.
+- Images with transparent pixels (logos, icons) fit inside their box, so a logo is never cut; in a large
+  box a fitted logo takes at most 60% of it. Give a logo a transparent background to get the fit. Logo
+  slots (comparison panels, the `logos` row) always fit, whatever the image.
 
 ## Charts
 

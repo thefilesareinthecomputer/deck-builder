@@ -16,7 +16,7 @@ from pptx.enum.shapes import PP_PLACEHOLDER
 from pptx.oxml import parse_xml
 from pptx.oxml.ns import nsdecls, qn
 
-from deck_builder import __version__, confine
+from deck_builder import __version__, confine, images
 from deck_builder import template as tpl
 from deck_builder.assets import recolor_icon, sha256_file
 from deck_builder.brand.registry import Brand
@@ -95,16 +95,6 @@ def deck_date(meta: dict[str, Any]) -> dt.datetime:
     return dt.datetime(d.year, d.month, d.day, tzinfo=dt.UTC)
 
 
-def _transparent(path: Path) -> bool:
-    """Whether an image has transparent pixels: logos and icons do, photos and screenshots don't.
-    Cropping a logo breaks its usage terms, so these are fitted inside the placeholder instead."""
-    with PILImage.open(path) as im:
-        if im.mode not in ("RGBA", "LA", "PA") and "transparency" not in im.info:
-            return False
-        low = im.convert("RGBA").getchannel("A").getextrema()[0]
-        return isinstance(low, (int, float)) and low < 255
-
-
 def _dpi(path: Path, geo: tuple[int, int, int, int], crop: bool) -> float:
     with PILImage.open(path) as im:
         iw, ih = im.size
@@ -177,18 +167,25 @@ class Builder:
         self.issues: list[Issue] = []
 
     def _picture(self, slide: Any, ph: Any, ref: str, alt: str, at: dict[str, Any],
-                 fentry: dict[str, Any], color: str | None, fs: dict[str, Any]) -> Any:
+                 fentry: dict[str, Any], color: str | None, fs: dict[str, Any], s: Slide) -> Any:
         path, _ = resolve_asset(ref, self.brand, self.deck_dir)
         assert path is not None  # validation guarantees it resolves
-        brand_asset = ref.startswith("brand:")
         source = asset_source(path, ref, self.brand, self.deck_dir)  # validation confines every asset
         if color:
             path = recolor_icon(path, color, self.cache_dir)
-        # Logos, icons and logo slots fit inside their box; photos fill it.
-        crop = not brand_asset and not fs.get("fit") and not _transparent(path)
-        geo, pic = fill_picture(slide, ph, path, alt, crop=crop, share=1.0 if crop else fs.get("fit_max", 1.0),
+        # Photos fill their box. Contained images (screenshots, diagrams, a slide's `fit: contain`) fit inside
+        # it at full size, even with transparent pixels, such as a window capture's shadow. Logos, icons and
+        # logo slots fit inside it too, and a logo takes at most its share of a large box.
+        crop = images.crops(s, ref, fs, path)
+        contained = not color and not ref.startswith("brand:") and not fs.get("fit") and \
+            images.fit_mode(s, ref) == "contain"
+        logo = not crop and not contained
+        geo, pic = fill_picture(slide, ph, path, alt, crop=crop, share=fs.get("fit_max", 1.0) if logo else 1.0,
                                 trim=not color and fs.get("kind") != "icon")  # icons keep their set's canvas
         fentry["asset"] = {"ref": ref, "source": source, "sha256": sha256_file(path)}
+        if contained:
+            fentry["fit"] = "contain"
+            pic.name = images.WHOLE
         if _dpi(path, geo, crop=crop) < MIN_DPI:
             self.issues.append(Issue("ASSET_LOW_RES", f"{ref!r} shows below {MIN_DPI} DPI at this size",
                                      severity="warning", **at))
@@ -232,11 +229,11 @@ class Builder:
                 fill_code(slide, ph, val, self.brand, self.code_font)
                 fentry.update({"language": val.language, "lines": len(val.lines), "shape": ph.name})
             elif isinstance(val, Image):
-                shapes[name] = self._picture(slide, ph, val.ref, val.alt, at, fentry, None, fs)
+                shapes[name] = self._picture(slide, ph, val.ref, val.alt, at, fentry, None, fs, s)
             elif isinstance(val, Icon):
                 icons = self.brand.meta.get("icons") or {}
                 color = self.brand.color(fs.get("color") or icons.get("default_color"))
-                shapes[name] = self._picture(slide, ph, val.ref, "", at, fentry, color, fs)
+                shapes[name] = self._picture(slide, ph, val.ref, "", at, fentry, color, fs, s)
             else:
                 fill_text(ph, val, self.code_font)
                 emphasis = self.brand.color(fs.get("emphasis"))

@@ -54,7 +54,8 @@ keep this context for the storyline and the review. Give it the source material 
 slug, the approved storyline, the deck's path and any constraints. It has no shell and runs the
 engine through five MCP tools, which work only inside the workspace, so every path you give it must
 be there (the full command and tool map is `db docs agents`). It returns a short report; run the
-review gate below before anything reaches the user.
+review gate below before anything reaches the user. If it reports it has no tools, run `db doctor`
+(its `agent preflight` line says why), tell the user, and run the loop below yourself with the CLI.
 
 ## The loop
 
@@ -75,7 +76,11 @@ db explain <CODE>                   # cause and fix for any issue code
    steps are process, and labeled themes are bands. Don't run table after table or list after
    list. Put the conclusion of a chart or table slide in `takeaway:`. Where the layouts have a
    `kicker:`, give every content slide one (a front matter `kicker:` sets the deck-wide default),
-   and add a `subtitle:` where the title alone doesn't make the point.
+   and add a `subtitle:` where the title alone doesn't make the point. A slide that shows a
+   screenshot or photo needs an image layout (`image`, `image-right`, or `image-2` for two). Put
+   screenshots in `<deck folder>/assets/screenshots/` and give each slide a notes line
+   `SCREENSHOT: assets/screenshots/<file>.png | shows: <what>` (`docs deck-md`, "Images in the
+   notes"), so `check` warns `IMAGE_NO_SLOT` when the layout can't show it.
 3. **Fix by code, never by loosening rules.** Cut words, split the slide, change the layout, move
    detail to speaker notes. If a budget looks wrong, say so; the user changes the brand kit.
 4. **Look at flagged slides only.** `check --render --json` returns `flagged_slides` (each with its
@@ -92,11 +97,13 @@ Before any built deck reaches the user. When only the brand kit changed and no c
 and 2 are the whole gate: look at the contact sheet and the flagged slides yourself.
 
 1. Run `db check <deck> --json` yourself; it must report no errors. The loop's last step already
-   rendered the deck, so add `--render` only when the deck changed after that render.
+   rendered the deck, so add `--render` only when the deck changed after that render. When the deck
+   has images, also run `db assets --images <deck>` and show the user its list: each image shown,
+   cropped, notes only, missing or unused.
 2. Read the builder's report (when a subagent built it) and the manifest (`<deck>.manifest.json`
    beside the `.pptx`).
 3. Hand the deck to the `deck-validator-agent`: the deck's path, the brand slug, the `render_dir`
-   (from the builder's report or your last render), the warnings from step 1, and the approved
+   (from the builder's report or your last render), the warnings and image list from step 1, and the approved
    storyline (the `storyboard.md` path when there is one). It reads every rendered slide against
    `docs design`, writes nothing, and returns `VERDICT: PASS` or `SEND BACK` with `severity | slide |
    field | finding | fix` lines.

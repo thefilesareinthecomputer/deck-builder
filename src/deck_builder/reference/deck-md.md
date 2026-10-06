@@ -48,6 +48,34 @@ Source: the Q3 shipment ledger.
   (a chart, an image, a text field) as a whole. `build: slots` brings in a cards, process or bands slide
   one card, step or band per click. The effect is a half-second fade and nothing else; there are no
   transitions between slides. The PDF and renders show the finished slide.
+- `fit: contain` shows the slide's images whole inside their boxes; `fit: cover` fills the boxes, cropping
+  what's over. Without it, an image in a `screenshots/` folder or named by an image cue (below) is
+  contained, and any other photo covers its box.
+
+## Images in the notes
+
+A line in the speaker notes that starts with `SCREENSHOT:` or `DIAGRAM:` is an image cue: an image the
+slide is meant to show. Its path comes first, relative to the deck file, then anything else after `|`.
+Keep screenshots in the deck folder's `assets/screenshots/`, and give the slide's image field the same
+path as its cue:
+
+```markdown
+## Runs finish in four minutes
+layout: image-right
+
+- The scheduler starts each run at six
+
+### image
+![The run page after a full run](assets/screenshots/run-page.png)
+
+Notes:
+SCREENSHOT: assets/screenshots/run-page.png | shows: the run page after a full run
+```
+
+`check` warns `IMAGE_NO_SLOT` when the cues name more images than the slide's layout holds, and lists
+the layouts that hold them with what moving the slide costs. Only `image`, `image-right`, `image-2` and
+`image-full` hold a photo or screenshot. `deck-builder assets --images <deck>` lists every image the deck
+names and where it lands: shown, cropped, notes only, missing or unused.
 
 ## Value kinds
 
@@ -55,7 +83,7 @@ Source: the Q3 shipment ledger.
 |---|---|
 | text | One paragraph, or a `key: value` field |
 | bullets | `- item` lines; numbered lines also work |
-| image | `![alt text](assets/photo.png)`, or `![alt](brand:logo/primary)`, on its own line in the field's `### name` section (or the body); files inside the deck's folder only. A `key:` line takes only a bare path such as `left-logo: assets/logo.png`, with no alt text |
+| image | `![alt text](assets/photo.png)`, or `![alt](brand:logo/primary)`, on its own line in the field's `### name` section (or the body); files inside the deck's folder only. A `key:` line takes only a bare path such as `left-logo: assets/logo.png`, with no alt text. `image-2` takes `### image1` and `### image2` |
 | icon | `brand:icon/<id>` as the field value; an id the kit lacks comes from the engine's starter icons (`brand show` lists both) |
 | table | A pipe table, or a ```` ```table ```` block with `header:` and `rows:` |
 | chart | A ```` ```chart ```` block, below |

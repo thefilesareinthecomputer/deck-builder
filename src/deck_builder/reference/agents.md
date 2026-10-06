@@ -54,7 +54,7 @@ tool's owner when the job is delegated to a subagent.
 | `convert` | main agent | `.md` / `.xlsx` / `.csv` conversion for team editing. |
 | `import` | main agent | Turns an existing `.pptx` into `deck.md`, to refresh or re-brand it. |
 | `brand_list` | main agent | Lists brands when choosing one with the user. |
-| `assets` | main agent | Inventories a brand's or a deck's logos, icons and images. |
+| `assets` | main agent | Inventories a brand's or a deck's logos, icons and images; with `images: true`, where each image a deck names lands, which the main agent passes to `deck-validator-agent` at the review gate. |
 | `doctor` | main agent | Environment and dependency checks, for onboarding. |
 
 ## What each subagent reads and writes

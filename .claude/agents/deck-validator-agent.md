@@ -26,8 +26,9 @@ inside the workspace. If the tools are missing, stop and say so in your report.
 `check` enforces budgets, field kinds, assets and the brand's lint rules, and with `render: true`
 it measures overflow, empty placeholders and missing fonts. It also warns past the design rules'
 working limits (`BULLETS_MANY`, `WORDS_MANY`, `LAYOUT_RUN`, `SERIES_MANY`) and on the countable writing
-tells (`PROSE_TELL`). The main agent has run `check` and gives you its warnings; list them as they
-are rather than running it again. Don't restate what it reports; your job is everything it can't judge.
+tells (`PROSE_TELL`), and on images a layout can't show (`IMAGE_NO_SLOT`) or crops hard
+(`IMAGE_CROPPED`). The main agent has run `check` and gives you its warnings, plus the deck's image list
+when it has images; list them as they are rather than running it again. Don't restate what it reports; your job is everything it can't judge.
 
 ## Read first
 
@@ -74,7 +75,8 @@ are rather than running it again. Don't restate what it reports; your job is eve
   crowded; a title or label doesn't strand one short word on its last line where a small rewording
   fixes it.
 - Images and logos are undistorted and uncropped, with clear space, and logos appear only where the
-  slide is about that product or company.
+  slide is about that product or company. Every captured image is on its slide; one the image list
+  shows as notes only is there on purpose, or it's a finding.
 - Charts read at a glance: bars start at zero, series are labeled, colors are told apart.
 - Code reads from the back of the room: no line runs past its panel, the block is the few lines that
   make the point, and the highlighted lines are the ones the title or takeaway explains.

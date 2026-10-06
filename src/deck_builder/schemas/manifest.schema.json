@@ -35,6 +35,7 @@
                 "idx": {"type": "integer"},
                 "kind": {"type": "string"},
                 "chars": {"type": "integer"},
+                "fit": {"enum": ["contain"], "description": "a photo, screenshot or diagram fitted inside its box instead of cropped to fill it"},
                 "asset": {
                   "type": "object",
                   "required": ["ref", "source", "sha256"],

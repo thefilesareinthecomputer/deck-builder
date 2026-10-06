@@ -723,6 +723,10 @@ def assets_cmd(args: argparse.Namespace) -> Result:
     cfg = _cfg(args)
     target = Path(args.target)
     r = Result(command="assets")
+    if args.images:
+        if target.suffix.lower() not in pipeline.FORMATS and not target.is_dir():
+            raise EnvError(f"--images takes a deck (deck.md, deck.xlsx or deck.csv, or its folder), not {target}")
+        return _image_rows(pipeline.deck_path(target), cfg, r)
     if target.suffix.lower() in pipeline.FORMATS:
         loaded = pipeline.load_deck(target)
         brand = pipeline.brand_for(loaded.deck, target, cfg)
@@ -750,6 +754,27 @@ def assets_cmd(args: argparse.Namespace) -> Result:
             detail += f" slides {','.join(map(str, it['slides']))}"
         lines.append(f"{it['class']:<6} {it['id']:<28} {detail}")
     r.summary = "\n".join(lines) or "no assets"
+    return r
+
+
+def _image_rows(path: Path, cfg: cfgmod.Config, r: Result) -> Result:
+    """assets --images: the deck's images and where each lands, from the same rules check and build use."""
+    loaded = pipeline.load_deck(path)
+    brand = pipeline.brand_for(loaded.deck, path, cfg)
+    deck, _ = validate.resolve(loaded.deck, brand, path.parent)  # check reports its issues; this only reads fields
+    rows = asset_inventory.image_report(deck, brand, path.parent)
+    r.data.update({"deck": str(path), "brand": brand.slug, "images": rows})
+    counts: dict[str, int] = {}
+    for row in rows:
+        counts[row["status"]] = counts.get(row["status"], 0) + 1
+    lines = []
+    for row in rows:
+        status = (f"cropped {row['cropped']}% ({row['sides']})" if row["status"] == "cropped" else row["status"])
+        status += ", no file" if row.get("missing") else ""
+        at = f"slide {row['slide']} {row['layout']} {row['where']}" if row["slide"] else "-"
+        lines.append(f"{status:<30} {at:<36} {row['path'] or row.get('cue', '')}")
+    tally = ", ".join(f"{v} {k}" for k, v in counts.items()) or "no images"
+    r.summary = "\n".join([*lines, f"{path.name}: {tally}"])
     return r
 
 

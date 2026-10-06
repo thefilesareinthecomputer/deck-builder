@@ -136,8 +136,10 @@ TOOLS = {t.name: t for t in (
         Arg("template", TEXT, path=BRAND_READ, required=True, about="a .potx or .pptx"),
         Arg("yaml", FLAG, "--yaml", about="instead of the report, a starter tokens block for tokens.yaml"))),
     Tool("assets", "Inventory a brand's assets (pass its slug) or a deck's (pass its path), with the slides that "
-         "use each.", ("assets",), (
-             Arg("target", TEXT, path=SLUG_OR_ROOT, required=True, about="a brand slug or a deck path"),)),
+         "use each. With images: true and a deck, each image its fields and notes name and where it lands: shown, "
+         "cropped, notes only, missing or unused.", ("assets",), (
+             Arg("target", TEXT, path=SLUG_OR_ROOT, required=True, about="a brand slug or a deck path"),
+             Arg("images", FLAG, "--images", about="for a deck: the image report"))),
     Tool("docs", f"A reference topic: one of {', '.join(docs.topics())}. With no topic, the list.", ("docs",), (
              Arg("topic", {"type": "string", "pattern": "^[a-z][a-z-]*$"}, about="e.g. deck-md"),)),
     Tool("explain", "The cause and fix for one issue code.", ("explain",), (
@@ -273,7 +275,7 @@ class Server:
                 "protocolVersion": asked if asked in PROTOCOLS else PROTOCOLS[0],
                 "capabilities": {"tools": {"listChanged": False}},
                 "serverInfo": {"name": "deck-builder", "version": __version__,
-                               "editable": doctor.editable_install()},
+                               "editable": doctor.editable_install(), "missing": doctor.missing_imports()},
                 "instructions": (
                     f"deck-builder tools, confined to the workspace at {self.workspace} (brand tools also reach "
                     "the configured brand_paths folders); relative paths resolve against the folder holding "

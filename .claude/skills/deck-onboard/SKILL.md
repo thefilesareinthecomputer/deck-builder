@@ -62,8 +62,10 @@ from the clone (it creates the folder if needed). Then work from that folder wit
 Then install the CLI on their PATH, with their OK: `uv tool install <clone>` (the most common
 setup; `--editable` only for someone changing the engine). Without uv, use `pipx install <clone>`,
 or `pip install <clone>` in a virtual environment; any Python 3.11 or later works. The subagents have no shell and run
-the engine through `deck-builder mcp`, so they need it. Confirm with `deck-builder doctor`: the
-`agent tools (mcp)` row should be `ok`. To use the skills in their other Claude Code projects too,
+the engine through `deck-builder mcp`, so they need it. Confirm with `deck-builder doctor`, run from
+the folder they'll start Claude Code in: the `agent tools (mcp)` and `agent preflight` rows should be
+`ok`. The preflight starts the server the way each agent file does, from that folder, so it fails
+when no `deck-builder.toml` is at or above it. To use the skills in their other Claude Code projects too,
 run `deck-builder skills install` from the clone, show them the plan it prints, and rerun with
 `--yes` after they agree.
 

@@ -63,6 +63,8 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
     p.add_argument("--yaml", action="store_true", help="print a starter layouts block for tokens.yaml")
     p = add("assets", "inventory a brand's or a deck's assets", commands.assets_cmd)
     p.add_argument("target", help="a brand slug, or a deck file to list the assets its slides use")
+    p.add_argument("--images", action="store_true", help="for a deck: each image its fields and notes name, and "
+                   "whether it's shown, cropped, notes only, missing or unused")
     deck_help = "a deck.md, deck.xlsx or deck.csv file, or the folder holding it"
     p = add("check", "validate a deck; with --render, also build, render and measure it", commands.check)
     p.add_argument("deck", help=deck_help)

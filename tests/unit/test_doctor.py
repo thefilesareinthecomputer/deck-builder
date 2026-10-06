@@ -165,6 +165,81 @@ def test_doctor_names_kits_another_version_generated(ws, capsys):
     assert kits["status"] == "stale" and "stock" in kits["detail"] and "--force" in kits["fix"]
 
 
+FAKE_SERVER = """
+import json, sys
+for line in sys.stdin:
+    m = json.loads(line)
+    result = ({"serverInfo": {"name": "deck-builder", "version": "0.2.0", "missing": ["pygments"]}}
+              if m["method"] == "initialize" else {"tools": []})
+    print(json.dumps({"jsonrpc": "2.0", "id": m["id"], "result": result}), flush=True)
+"""
+
+
+def test_a_server_that_cant_import_a_dependency_is_missing_with_the_reinstall(ws, capsys, monkeypatch):
+    monkeypatch.setattr("deck_builder.doctor.mcp_command", lambda: [sys.executable, "-c", FAKE_SERVER])
+    check = agent_check(ws, capsys)
+    assert check["status"] == "missing" and "can't import pygments" in check["detail"]
+    assert "--reinstall" in check["fix"]
+
+
+def test_a_server_that_crashes_at_start_says_why(ws, capsys, monkeypatch):
+    crash = ("import sys; sys.modules['pygments'] = None; from deck_builder.cli import main; "
+             "raise SystemExit(main(sys.argv[1:]))")
+    monkeypatch.setattr("deck_builder.doctor.mcp_command", lambda: [sys.executable, "-c", crash])
+    check = agent_check(ws, capsys)
+    assert check["status"] == "missing" and "missing the 'pygments' package" in check["detail"]
+
+
+def test_missing_imports_names_the_package(monkeypatch):
+    monkeypatch.setitem(doctor.IMPORTS, "no-such-package", "no_such_module_for_this_test")
+    assert doctor.missing_imports() == ["no-such-package"]
+
+
+def _agent(folder, name, tools, command):
+    (folder / ".claude" / "agents").mkdir(parents=True, exist_ok=True)
+    args = json.dumps(command[1:])
+    (folder / ".claude" / "agents" / name).write_text(
+        f"---\nname: {name[:-3]}\ntools: Read, {tools}\nmcpServers:\n  - deck-builder:\n      type: stdio\n"
+        f"      command: {command[0]}\n      args: {args}\n---\n\nBody.\n", encoding="utf-8")
+
+
+SERVER = ["deck-builder", "mcp"]  # as the agent files declare it
+
+
+def test_the_agent_preflight_starts_each_declared_server_from_this_folder(ws, monkeypatch):
+    monkeypatch.setattr("deck_builder.doctor.Path.home", lambda: ws / "home")
+    monkeypatch.setattr("deck_builder.doctor.mcp_command", lambda: [sys.executable, "-m", "deck_builder"])
+    _agent(ws, "deck-builder-agent.md", "mcp__deck-builder__check, mcp__deck-builder__docs", SERVER)
+    _agent(ws, "deck-validator-agent.md", "mcp__deck-builder__check", SERVER)
+    check = doctor.agent_preflight(ws)
+    assert check.status == "ok" and check.detail.startswith("2 agents"), check
+    _agent(ws, "deck-brand-agent.md", "mcp__deck-builder__brand_init, mcp__deck-builder__nope", SERVER)
+    check = doctor.agent_preflight(ws)
+    assert check.status == "missing" and "deck-brand-agent: the server doesn't serve nope" in check.detail
+
+
+def test_the_agent_preflight_runs_only_deck_builder(ws, monkeypatch, tmp_path):
+    monkeypatch.setattr("deck_builder.doctor.Path.home", lambda: ws / "home")
+    marker = tmp_path / "ran"
+    _agent(ws, "deck-builder-agent.md", "mcp__deck-builder__check", ["touch", str(marker)])
+    check = doctor.agent_preflight(ws)
+    assert check.status == "missing" and "declares `touch" in check.detail and not marker.exists()
+
+
+def test_the_agent_preflight_fails_where_no_config_is_found(tmp_path, monkeypatch):
+    """Claude Code starts a subagent's server in its own folder: with no deck-builder.toml at or above it, the
+    server refuses to start and the agents have no tools."""
+    monkeypatch.setattr("deck_builder.doctor.Path.home", lambda: tmp_path / "home")
+    monkeypatch.delenv("DECK_BUILDER_CONFIG", raising=False)
+    monkeypatch.setattr("deck_builder.config.USER_CONFIG", tmp_path / "none.toml")
+    monkeypatch.setattr("deck_builder.doctor.mcp_command", lambda: [sys.executable, "-m", "deck_builder"])
+    project = tmp_path / "project"
+    _agent(project, "deck-builder-agent.md", "mcp__deck-builder__check", SERVER)
+    check = doctor.agent_preflight(project)
+    assert check.status == "missing" and "no deck-builder.toml here or above" in check.detail
+    assert "deck-builder-agent:" in check.detail and "workspace folder" in check.fix
+
+
 def test_a_dependency_missing_from_the_install_says_how_to_reinstall():
     """The update that broke an editable install: the code needs a package its environment lacks. The CLI
     names it and the reinstall instead of a traceback."""

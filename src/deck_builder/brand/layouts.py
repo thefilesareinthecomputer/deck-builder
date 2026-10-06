@@ -310,6 +310,17 @@ def _defs(g: Grid, s: Scale, body_anchor: str, big_number: str, mode: str = "pro
            anchor=single, lift=lift),
         PH("image", "pic", 2, two[1][0], BODY_Y, two[1][1], g.body_h, required=True, fit_max=LOGO_SHARE),
     ]))
+    # Two images side by side, such as two screens to compare, each with a two-line caption under it. The
+    # gap above the captions closes to about 0.1 in on the designed set, whose headers move the images down
+    # at their full height and compress what's under them.
+    pair, cap_h = [_title(g, s)], 0.75
+    for i, (x, w) in enumerate(two, start=1):
+        pair.append(PH(f"image{i}", "pic", 30 + 10 * i, x, BODY_Y, w, BODY_END - cap_h - 0.35 - BODY_Y,
+                       required=True, fit_max=LOGO_SHARE))
+        pair.append(PH(f"caption{i}", "body", 31 + 10 * i, x, BODY_END - cap_h, w, cap_h, size=caption, align="ctr"))
+    pair.append(_takeaway(g, st.takeaway))
+    add(LayoutDef("image-2", "Image 2", "Two images side by side, each with a caption, such as two screens to "
+                  "compare or a before and after", pair))
     icon_row = [_title(g, s)]
     icon_decor: list[Decor] = []
     icon, icon_y = 1.1, BODY_Y + 0.8
@@ -557,8 +568,8 @@ SETS = {
     "standard": ["title", "section", "content", "two-col", "big-number", "chart", "table", "image", "quote",
                  "closing"],
     "full": ["title", "section", "agenda", "content", "two-col", "comparison", "big-number", "statement", "chart",
-             "table", "image", "image-full", "image-right", "code", "code-right", "icon-row", "team", "quote",
-             "closing"],
+             "table", "image", "image-full", "image-right", "image-2", "code", "code-right", "icon-row", "team",
+             "quote", "closing"],
 }
 # The designed set: the full set, every content slide with a section label and a subtitle line, plus
 # cards, process, band and logo-row layouts built from shapes rather than loose text.

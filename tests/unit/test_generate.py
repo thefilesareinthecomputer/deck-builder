@@ -489,3 +489,62 @@ def test_generated_kit_builds_every_layout(ws, capsys, tmp_path):
     prs = Presentation(out["output"])
     assert len(prs.slides) == 15
     assert prs.slides[13].placeholders[1].text_frame.text.startswith('"Paper is still')
+
+
+@pytest.mark.parametrize("layout_set", ["full", "designed"])
+def test_image_2_puts_each_caption_under_its_image(layout_set):
+    from deck_builder.brand.layouts import layout_set as make
+
+    ld = next(ld for ld in make(layout_set, 13.333, 7.5) if ld.key == "image-2")
+    ph = {p.field: p for p in ld.phs}
+    for i in (1, 2):
+        image, caption = ph[f"image{i}"], ph[f"caption{i}"]
+        assert image.required and image.kind == "pic" and caption.x == image.x and caption.w == image.w
+        assert image.y + image.h <= caption.y - 0.05  # clear of the image, on both sets
+        assert caption.y + caption.h <= ph["takeaway"].y
+    assert ph["image1"].x + ph["image1"].w < ph["image2"].x
+
+
+def test_image_2_shows_two_screenshots_whole(ws, capsys, tmp_path):
+    cli_json(ws, "brand", "init", "pemberton", "--from", str(source(tmp_path, layout_set="designed")), capsys=capsys)
+    shots = ws / "decks" / "assets" / "screenshots"
+    shots.mkdir(parents=True)
+    Image.new("RGB", (1400, 900), "#334455").save(shots / "before.png")
+    Image.new("RGBA", (900, 1400), (51, 68, 85, 255)).save(shots / "after.png")  # a window capture's alpha
+    deck = write_deck(ws, """
+        ---
+        brand: pemberton
+        ---
+        ## The import page before and after
+        layout: image-2
+        caption1: Before, with the manual mapping
+        caption2: After, mapped from the header row
+
+        ### image1
+        ![The import page before](assets/screenshots/before.png)
+
+        ### image2
+        ![The import page after](assets/screenshots/after.png)
+        """)
+    code, out = cli_json(ws, "build", str(deck), capsys=capsys)
+    assert code == 0, out["issues"]
+    slide = Presentation(out["output"]).slides[0]
+    pics = sorted((sh for sh in slide.shapes if sh.shape_type == 13), key=lambda sh: sh.left)
+    assert len(pics) == 2 and all(p.crop_left == p.crop_top == 0 for p in pics)
+    assert pics[1].height > 0.9 * pics[0].height  # the second fills its box's height, at full size
+
+
+def test_a_layout_the_kit_lacks_says_how_the_kit_gets_it(ws, capsys, tmp_path):
+    cli_json(ws, "brand", "init", "pemberton", "--from", str(source(tmp_path)), capsys=capsys)  # standard set
+    deck = write_deck(ws, "---\nbrand: pemberton\n---\n## Routes\nlayout: image-right\n\n- North\n")
+    _, out = cli_json(ws, "check", str(deck), capsys=capsys)
+    said = next(i["message"] for i in out["issues"] if i["code"] == "UNKNOWN_LAYOUT")
+    assert "it's in the full and designed layout sets, and this kit uses standard" in said
+    tokens = ws / "brands" / "pemberton" / "tokens.yaml"  # a kit generated before deck-builder had `quote`
+    data = yaml.safe_load(tokens.read_text(encoding="utf-8"))
+    del data["layouts"]["quote"]
+    tokens.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+    deck = write_deck(ws, '---\nbrand: pemberton\n---\n## "Paper is fast."\nlayout: quote\n')
+    _, out = cli_json(ws, "check", str(deck), capsys=capsys)
+    said = next(i["message"] for i in out["issues"] if i["code"] == "UNKNOWN_LAYOUT")
+    assert "`deck-builder brand init pemberton --force` adds it" in said

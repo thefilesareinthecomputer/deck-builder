@@ -55,6 +55,7 @@ voice:                           # writing rules the agent follows; not enforced
 lint:                            # enforced by `check`
   max_slides: 40
   banned_patterns: ["—", "(?i)\\bsynerg"]   # Python regex over slide text and notes
+  max_crop: 15                   # percent of an image's height a crop can take before IMAGE_CROPPED (default 15)
 
 generate:                        # read only by `brand init`
   slide_size: "16:9"             # 16:9 | 4:3
@@ -112,7 +113,7 @@ or when another version generated it.
 |---|---|
 | minimal | title, section, content, closing |
 | standard | minimal plus two-col, big-number, chart, table, image, quote |
-| full | standard plus agenda, comparison, image-right, icon-row, team |
+| full | standard plus agenda, comparison, statement, image-full, image-right, image-2, code, code-right, icon-row, team |
 | designed | full plus cards-2 to cards-5, process-3 to process-6, bands-2 to bands-4 and logos; every content slide also takes `kicker:` and `subtitle:`, and comparison takes `left-logo:` and `right-logo:` |
 
 The designed set's extra layouts are built from shapes rather than loose text. Cards are equal

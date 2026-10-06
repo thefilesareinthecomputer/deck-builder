@@ -186,6 +186,8 @@ def add_line(basket, item, quantity):
 
 A few more options help with emphasis and pacing. `layout: statement` puts one sentence in large type. `layout: image-full` runs a photo edge to edge with the title on a band across the bottom. `build: <field>` fades a list, a chart or a set of cards in one click at a time while you present. In a long deck, `current: n` on the agenda shows which part you're in.
 
+Screenshots are shown whole and photos fill their box. `layout: image-2` puts two screens side by side. A `SCREENSHOT:` line in a slide's notes names a capture the slide should show, and `check` warns when the slide's layout can't show it, with the layouts that can and what moving costs. `deck-builder assets --images <deck>` lists every image and whether it's shown, cropped, only in the notes, missing or unused.
+
 ## Example decks
 
 <p align="center">
@@ -242,7 +244,7 @@ A deck picks its brand with `brand: <slug>`, and `--brand` overrides that for on
 | Command | Does |
 |---|---|
 | `init` | Create the workspace, config, neutral brand and example decks |
-| `doctor` | Check Python packages, poppler, LibreOffice, PowerPoint and its automation permission |
+| `doctor` | Check Python packages, poppler, LibreOffice, PowerPoint and its automation permission, and that the agents' tools start from this folder |
 | `check <deck> [--render]` | Check a deck; with `--render`, also build, render and measure it |
 | `build <deck> [--data rows.csv]` | Build the `.pptx` and its manifest; with `--data`, one deck per row |
 | `convert <in> <out>` | Convert between `.md`, `.xlsx` and `.csv`, refusing anything that would lose content |
@@ -253,7 +255,7 @@ A deck picks its brand with `brand: <slug>`, and `--brand` overrides that for on
 | `brand add-asset <slug> <png> --as logo/<id>` | Copy a logo or icon (`icon/<id>`) into a kit |
 | `brand copy <slug> <new-slug>` | Copy a kit under a new slug, tuned budgets and template edits included, to rename or version a brand; the original stays as it is |
 | `inspect <template>` | A template's layouts, placeholders and theme |
-| `assets <brand or deck>` | Logos, icons, colors and images, with the slides that use them |
+| `assets <brand or deck>` | Logos, icons, colors and images, with the slides that use them; `--images` says where each of a deck's images lands |
 | `docs [topic]`, `explain <CODE>` | Reference topics and issue-code fixes for the installed version |
 | `schema brand\|tokens\|manifest` | The JSON Schema for `brand.yaml`, `tokens.yaml` or a build manifest |
 | `skills install` | Link this clone's skills and agents into `~/.claude` |
