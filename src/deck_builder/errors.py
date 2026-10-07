@@ -66,17 +66,21 @@ CODES: dict[str, tuple[str, str]] = {
         "Give the field the kind `brand show` lists, or move the content to a field of that kind.",
     ),
     "BUDGET_CHARS": (
-        "A field has more characters than its budget.",
+        "A field has more characters than its budget. The character budget is a rough estimate, so where the "
+        "field also has a line budget and the text fits its lines, this is a warning: the text fits its box.",
         "Move the text to a layout with room for it (the message names the ones that hold it as written), split "
         "the slide, or move detail to speaker notes. Cut words only where each sentence stays whole. Never raise "
         "the budget to pass.",
     ),
     "BUDGET_BULLETS": (
-        "A bullets field has more bullets than its budget.",
-        "Merge or cut bullets, or split the slide.",
+        "A bullets field has more bullets than its budget. A warning where the field has a line budget and the "
+        "list fits its lines.",
+        "Merge bullets that make one point, split the slide, or move the list to a layout with room for it. "
+        "Cutting the user's own bullets is their call.",
     ),
     "BUDGET_BULLET_CHARS": (
-        "A single bullet is longer than the per-bullet budget.",
+        "A single bullet is longer than the per-bullet budget. A warning where the field has a line budget and "
+        "the list fits its lines.",
         "Split it into two bullets that are each a whole sentence, move detail to the notes, or move the text to "
         "a layout with room for it (the message names the ones that hold it as written).",
     ),
@@ -142,6 +146,14 @@ CODES: dict[str, tuple[str, str]] = {
         "Use the plain word or the number, cut the filler, state the point instead of teasing it, and type the "
         "plain character. `docs voice` has the writing rules.",
     ),
+    "FILLER_TEXT": (
+        "A field or bullet holds a stand-in instead of content: a pointer to the notes (\"Full text is in the "
+        "speaker notes.\"), TBD, TODO, placeholder text or lorem ipsum. An agent writes these to pass a budget "
+        "or required-field check when the real text didn't fit.",
+        "Put the slide's own text in the field. When it doesn't fit, move the slide to a layout that holds it (a "
+        "budget issue names them) or split it; cutting or moving the user's lines to the notes is their call, so "
+        "ask.",
+    ),
     "SLIDE_REF": (
         "Slide text or speaker notes name another slide by its position: \"slide 12\", \"the previous slide\", "
         "\"the next slide\". Slides get reordered, and pasted into other decks, so the reference goes stale.",
@@ -156,14 +168,18 @@ CODES: dict[str, tuple[str, str]] = {
         "each change. An agent with no shell reports the warning to the main agent, which runs it.",
     ),
     "BULLETS_MANY": (
-        "A list on a projected slide has more than four bullets, past what an audience holds at once. "
-        "A convention from `docs design`, so it warns.",
-        "Cut to the four that make the point, split the slide, or move detail to the speaker notes.",
+        "A list on a projected slide has more bullets than an audience holds at once: four at the standard "
+        "density, three at tight and five at roomy (front matter `density:`, or the brand's lint.density). A "
+        "convention from `docs design`, so it warns.",
+        "Keep the bullets that make the point, split the slide, or move detail to the speaker notes. For the "
+        "user's own text, ask before cutting, or set the deck's `density:`.",
     ),
     "WORDS_MANY": (
-        "A projected slide has more than 60 words; about 40 reads well from the back of a room. "
-        "A convention from `docs design`, so it warns.",
-        "Move detail to the speaker notes, or split the slide.",
+        "A projected slide has more words than reads well from the back of a room: 60 at the standard density, "
+        "45 at tight and 80 at roomy (front matter `density:`, or the brand's lint.density). A convention from "
+        "`docs design`, so it warns.",
+        "Move detail to the speaker notes, or split the slide. For the user's own text, ask before moving it, or "
+        "set the deck's `density:`.",
     ),
     "LAYOUT_RUN": (
         "More than three slides in a row use the same layout, so the deck reads as a document. "
@@ -298,6 +314,13 @@ CODES: dict[str, tuple[str, str]] = {
     "RENDER_UNVERIFIED": (
         "The PowerPoint render backend hasn't been verified on a real Mac yet.",
         "Treat the render as provisional; run scripts/probe_powerpoint.sh to verify the backend.",
+    ),
+    "OUTPUT_EDITED": (
+        "The .pptx a build would write was saved after deck-builder built it, so it may hold someone's edits. "
+        "The build stops before writing anything, and with `check --render` nothing renders.",
+        "Build to a new file: front matter `output: <name>-v2.pptx` (a .pptx in the deck's folder or out/), or "
+        "`build -o <new path>`. `--force` replaces the edited file and loses the edits; that's the user's call. "
+        "Report the build as failed until a new file is written.",
     ),
     "STALE_BUILD": (
         "The deck source recorded in the .pptx's manifest was edited after the .pptx was built.",

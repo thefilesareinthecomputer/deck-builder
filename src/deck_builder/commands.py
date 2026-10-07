@@ -849,6 +849,8 @@ def check(args: argparse.Namespace) -> Result:
             r.data.update(_furniture(deck, brand))
         r.summary = (f"{'ok' if r.ok else 'failed'} check {path.name}: {r.data['slides']} slides, {_tally(r)}"
                      f"{_numbers_said(r)}")
+        if getattr(args, "trim", False):
+            _trim(r, path)
         return r
     qa_backends.choose(args.backend or cfg.render.backend)  # no renderer: say so before building anything
     done = _build_one(path, cfg, args, None, None, r)
@@ -857,11 +859,44 @@ def check(args: argparse.Namespace) -> Result:
         build_flags = [i for i in r.issues if i.slide is not None]  # e.g. ASSET_LOW_RES, raised at build
         _render_into(r, Path(done["output"]), cfg, args.backend, None)
         _merge_flagged_slides(r, build_flags)
-    flagged = ", ".join(str(f["slide"]) for f in r.data.get("flagged_slides", [])) or "none"
-    hidden = ", ".join(str(n) for n in r.data.get("hidden_slides", [])) or "none"
-    r.summary = (f"{'ok' if r.ok else 'failed'} check --render {path.name}: {r.data['slides']} slides, "
-                 f"flagged {flagged}, hidden {hidden}, {_tally(r)}{_numbers_said(r)}")
+        flagged = ", ".join(str(f["slide"]) for f in r.data.get("flagged_slides", [])) or "none"
+        hidden = ", ".join(str(n) for n in r.data.get("hidden_slides", [])) or "none"
+        r.summary = (f"{'ok' if r.ok else 'failed'} check --render {path.name}: {r.data['slides']} slides, "
+                     f"flagged {flagged}, hidden {hidden}, {_tally(r)}{_numbers_said(r)}")
+    else:
+        r.summary = f"failed check --render {path.name}: nothing was built or rendered, {_tally(r)}"
+    if getattr(args, "trim", False):
+        _trim(r, path)
     return r
+
+
+def _trim(r: Result, path: Path) -> None:
+    """check --trim: the text budget issues as one row per field, most over first, in place of their issue
+    lines. `trim` means the text doesn't fit its box; `fits` means it's over a rough count but fits."""
+    titles = {n: validate.plain(s.title) for n, s in enumerate(pipeline.load_deck(path).deck.slides, start=1)}
+    rows: dict[tuple[int, str], dict[str, Any]] = {}
+    keep = []
+    for i in r.issues:
+        if i.code not in validate.BUDGET_TEXT or i.slide is None or not i.limit:
+            keep.append(i)
+            continue
+        over = round(100 * (float(i.actual) - float(i.limit)) / float(i.limit))
+        row = rows.setdefault((i.slide, i.field or ""), {"slide": i.slide, "title": titles.get(i.slide, ""),
+                                                         "field": i.field, "verdict": "fits", "over": 0, "by": []})
+        row["by"].append(f"{i.code} {i.actual:g} of {i.limit:g}")
+        row["over"] = max(row["over"], over)
+        if i.severity == "error":
+            row["verdict"] = "trim"
+    found = sorted(rows.values(), key=lambda x: (x["verdict"] != "trim", -x["over"]))
+    r.issues = keep
+    r.data["trim"] = found
+    trim = [x for x in found if x["verdict"] == "trim"]
+    lines = [f"{x['verdict']:<5} slide {x['slide']} {x['field']}: {x['over']}% over ({'; '.join(x['by'])}) "
+             f"{x['title'][:50]!r}" for x in found]
+    lines.append(f"{len(trim)} field{'s' * (len(trim) != 1)} on {len({x['slide'] for x in trim})} slides need "
+                 f"trimming or a roomier layout; {len(found) - len(trim)} more are over a rough count but fit "
+                 "their box")
+    r.summary = "\n".join([*lines, r.summary])
 
 
 def _merge_flagged_slides(r: Result, build_issues: list[Issue]) -> None:
@@ -890,8 +925,10 @@ def _furniture(deck: Deck, brand: Brand) -> dict[str, Any]:
     elif not used & set(can["slide_numbers"]):
         off = (f"none of the layouts this deck uses has a slide-number box in the {brand.slug} kit "
                f"(`deck-builder brand show {brand.slug}` lists the layouts that do)")
+    profile, source = validate.density(deck, brand)
     return {"slide_numbers": off is None, "slide_numbers_off": off,
-            "footer": footer if footer and used & set(can["footer"]) else None}
+            "footer": footer if footer and used & set(can["footer"]) else None,
+            "density": profile, "density_from": source}
 
 
 def _numbers_said(r: Result) -> str:

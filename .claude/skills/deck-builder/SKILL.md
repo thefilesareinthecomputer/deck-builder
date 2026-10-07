@@ -87,8 +87,13 @@ db explain <CODE>                   # cause and fix for any issue code
    notes"), so `check` warns `IMAGE_NO_SLOT` when the layout can't show it.
 3. **Fix by code, never by loosening rules.** For a budget issue, move the text to a layout with
    room (the message names the layouts that hold it as written), split the slide, or move detail to
-   speaker notes. Cut only whole points, never words out of a sentence. `INVISIBLE_CHAR`: run
-   `db fix-text <deck>`. If a budget looks wrong, say so; the user changes the brand kit.
+   speaker notes. Cut only whole points, never words out of a sentence. A character or bullet count
+   that only warns needs no change: the text fits its box's lines. The user's own text goes on the
+   slides word for word; when it doesn't fit, show them `db check <deck> --trim` (one row per field,
+   most over first) and ask for a layout with room or which lines to trim, before any of it moves to
+   the notes. `INVISIBLE_CHAR`: run `db fix-text <deck>`. `OUTPUT_EDITED`: the user saved the `.pptx`
+   by hand, so build to a new file (front matter `output: <name>-v2.pptx`); `--force` is their call.
+   If a budget looks wrong, say so; the user changes the brand kit.
 4. **Look at flagged slides only.** `check --render --json` returns `flagged_slides` (each with its
    `slide` number and `codes`), `contact_sheets`, and `slide_png` (the `slide-NN.png` pattern in
    `render_dir`). Open the PNGs for flagged slides and the contact sheets; a slide image costs
@@ -122,7 +127,8 @@ and 2 are the whole gate: look at the contact sheet and the flagged slides yours
    findings to the user, since they aren't content fixes.
 
 Then report: output path, slide count, render backend, any slide you're unsure about, and any
-number or source you couldn't verify. Ask about fixes only for what the request caused; list
+number or source you couldn't verify. When no `.pptx` was built or nothing rendered, the report's
+first word is `Failed`, then the reason; a deck is never called finished without its file. Ask about fixes only for what the request caused; list
 problems the deck already had for later, so a yes doesn't start work the user didn't ask for.
 
 ## Reading output

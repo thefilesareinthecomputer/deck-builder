@@ -34,6 +34,10 @@ in your report.
 - Fix a budget issue by moving the text to a layout with room, splitting the slide, or moving detail to
   the notes. Cut only whole points, never words out of a sentence: a field that can't hold a full
   sentence belongs on another layout. Never loosen a budget or a lint rule.
+- Text the user wrote goes onto the slides word for word. When a line of theirs fits no layout, leave it
+  in the field so the error shows and list it in your report from `check` with `trim: true`; never move
+  their lines to the notes and never write a stand-in such as "Full text is in the speaker notes."
+  (`FILLER_TEXT`).
 - When you're asked for a wording pass over slides that already exist, don't edit them: return each
   changed line as `slide | field | old | new` in your report, for the user to approve first.
 - Every number on a slide has its source in that slide's speaker notes. Don't invent numbers.
@@ -71,6 +75,7 @@ in your report.
 
 Return only this, under 200 words (a wording pass's table doesn't count toward the limit):
 
+- When no `.pptx` was built or no render came out, the first word is `Failed`, then the reason.
 - Output path, manifest path, `render_dir` and whether you changed the deck after that render, slide
   count, render backend.
 - Remaining issues, as `code slide field` lines.

@@ -68,6 +68,7 @@
       "properties": {
         "max_slides": {"type": "integer", "minimum": 1},
         "max_crop": {"type": "number", "minimum": 0, "maximum": 100, "description": "percent of an image's height a crop to fill can take from the top and bottom before check warns IMAGE_CROPPED (default 15)"},
+        "density": {"enum": ["tight", "standard", "roomy"], "description": "how much text a projected slide holds before check warns WORDS_MANY and BULLETS_MANY: 45 words and 3 bullets, 60 and 4 (the default), or 80 and 5; a deck's front matter density: overrides it"},
         "banned_patterns": {"type": "array", "items": {"type": "string"}}
       }
     },

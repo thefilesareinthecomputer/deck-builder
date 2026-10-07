@@ -273,8 +273,10 @@ def build(deck: Deck, brand: Brand, deck_path: Path, out_path: Path, cache_dir: 
             raise EnvError(f"{out_path} exists and has no {mpath.name} beside it, so deck-builder "
                            "didn't build it; move it or write somewhere else")
         if not force and _recorded_sha256(mpath) != sha256_file(out_path):
-            raise EnvError(f"{out_path} was changed after deck-builder built it; keep the edit by moving the "
-                           "file elsewhere, or pass --force to replace it")
+            raise EnvError(f"{out_path} was saved after deck-builder built it, so it may hold someone's edits, and "
+                           "nothing was built. To build without touching it, write to a new file: front matter "
+                           f"`output: {out_path.stem}-v2.pptx`, or `build -o <new path>`. Replacing it with "
+                           "--force loses those edits, so only the user decides that.", code="OUTPUT_EDITED")
     prs = tpl.open_template(brand.template)
     if not keep_template_slides:
         tpl.remove_all_slides(prs)

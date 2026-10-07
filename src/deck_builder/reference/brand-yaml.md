@@ -56,6 +56,8 @@ lint:                            # enforced by `check`
   max_slides: 40
   banned_patterns: ["—", "(?i)\\bsynerg"]   # Python regex over slide text and notes
   max_crop: 15                   # percent of an image's height a crop can take before IMAGE_CROPPED (default 15)
+  density: standard              # tight | standard | roomy: words and bullets before WORDS_MANY and BULLETS_MANY
+                                 # warn (45/3, 60/4, 80/5); a deck's front matter density: overrides it
 
 generate:                        # read only by `brand init`
   slide_size: "16:9"             # 16:9 | 4:3

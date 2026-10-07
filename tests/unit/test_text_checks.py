@@ -202,6 +202,120 @@ def test_import_reads_any_common_monospace_font_as_code():
     assert not importer.is_code_font(None, "Menlo") and not importer.is_code_font("", "")
 
 
+def _line_budget(ws: Path, **body: int) -> None:
+    tokens = ws / "brands" / "stock" / "tokens.yaml"
+    t = yaml.safe_load(tokens.read_text())
+    t["layouts"]["content"]["fields"]["body"].update(body)
+    tokens.write_text(yaml.safe_dump(t))
+
+
+def test_a_rough_count_over_budget_warns_when_the_text_fits_its_box(ws, capsys):
+    _line_budget(ws, max_chars=40, max_bullets=1, max_bullet_chars=20, line_chars=40, max_lines=6)
+    p = write_deck(ws, """
+        ## Orders ship the same day
+        layout: content
+
+        - Most orders ship by four in the afternoon
+        - Late ones go out first the next morning
+        """)
+    code, out = cli_json(ws, "check", str(p), capsys=capsys)
+    assert code == 0, out["issues"]
+    rough = {i["code"]: i for i in out["issues"] if i["code"].startswith("BUDGET_")}
+    assert set(rough) == {"BUDGET_CHARS", "BUDGET_BULLETS", "BUDGET_BULLET_CHARS"}
+    assert all(i["severity"] == "warning" and "it still fits the box's 6 lines" in i["message"]
+               for i in rough.values())
+
+
+def test_text_past_its_box_still_fails_with_every_count(ws, capsys):
+    _line_budget(ws, max_chars=40, line_chars=40, max_lines=1.5)
+    p = write_deck(ws, """
+        ## Orders ship the same day
+        layout: content
+
+        - Most orders ship by four in the afternoon
+        - Late ones go out first the next morning
+        """)
+    code, out = cli_json(ws, "check", str(p), capsys=capsys)
+    assert code == 1
+    assert {i["code"]: i["severity"] for i in out["issues"] if i["code"].startswith("BUDGET_")} == \
+        {"BUDGET_CHARS": "error", "BUDGET_LINES": "error"}
+
+
+def test_filler_in_a_field_fails(ws, capsys):
+    p = write_deck(ws, """
+        ## Orders ship the same day
+        layout: content
+
+        - Full text is in the speaker notes.
+        - Most orders ship by four
+        - TBD
+        """)
+    code, out = cli_json(ws, "check", str(p), capsys=capsys)
+    assert code == 1
+    hit = _issues(out, "FILLER_TEXT")[0]
+    assert hit["field"] == "body" and "'Full text is in the speaker notes.'" in hit["message"]
+    assert validate.FILLER.fullmatch("See the speaker notes") and validate.FILLER.fullmatch("lorem ipsum dolor")
+    assert not validate.FILLER.fullmatch("See the notes from the March review for the numbers")
+
+
+def test_trim_lists_one_row_per_field_most_over_first(ws, capsys):
+    _line_budget(ws, max_chars=40, line_chars=40, max_lines=1.5)
+    p = write_deck(ws, """
+        ## Orders ship the same day
+        layout: content
+
+        - Most orders ship by four in the afternoon
+        - Late ones go out first the next morning
+
+        ## Returns take two days
+        layout: content
+
+        - Returns reach the main warehouse, and we log each one that afternoon
+
+        ## Refunds go out on day two
+        layout: content
+
+        - We refund on day two
+        """)
+    code, out = cli_json(ws, "check", str(p), "--trim", capsys=capsys)
+    assert code == 1 and not [i for i in out["issues"] if i["code"].startswith("BUDGET_")]
+    rows = out["trim"]
+    assert [(r["slide"], r["field"], r["verdict"]) for r in rows] == [(1, "body", "trim"), (2, "body", "trim")]
+    assert rows[0]["over"] > rows[1]["over"] and rows[0]["title"] == "Orders ship the same day"
+    assert "BUDGET_LINES" in " ".join(rows[0]["by"]) and "BUDGET_CHARS" in " ".join(rows[0]["by"])
+    assert main(["--config", str(ws / "deck-builder.toml"), "check", str(p), "--trim"]) == 1
+    said = capsys.readouterr().out
+    assert "2 fields on 2 slides need trimming or a roomier layout" in said and "BUDGET_LINES" in said
+
+
+def test_density_sets_the_soft_limits_from_front_matter_or_the_brand(ws, capsys):
+    _line_budget(ws, max_bullets=8)
+    six = "\n".join(f"- Point {n} is short" for n in range(1, 7))
+    p = write_deck(ws, f"---\ndensity: roomy\n---\n## Six short points\nlayout: content\n\n{six}\n")
+    code, out = cli_json(ws, "check", str(p), capsys=capsys)
+    assert out["density"] == "roomy" and out["density_from"] == "front matter"
+    assert _issues(out, "BULLETS_MANY")[0]["limit"] == 5
+    brand = ws / "brands" / "stock" / "brand.yaml"
+    b = yaml.safe_load(brand.read_text())
+    b["lint"]["density"] = "tight"
+    brand.write_text(yaml.safe_dump(b))
+    p.write_text(p.read_text().replace("density: roomy\n", ""))
+    code, out = cli_json(ws, "check", str(p), capsys=capsys)
+    assert (out["density"], out["density_from"]) == ("tight", "brand stock")
+    assert _issues(out, "BULLETS_MANY")[0]["limit"] == 3
+    p.write_text(p.read_text().replace("---\n---\n", "---\ndensity: huge\n---\n"))
+    code, out = cli_json(ws, "check", str(p), capsys=capsys)
+    assert code == 1 and "density: 'huge'" in _issues(out, "PARSE")[0]["message"]
+
+
+def test_a_hand_saved_output_stops_the_build_with_the_way_forward(ws, capsys):
+    out_pptx = _built(ws, capsys, "## Orders ship the same day\nlayout: content\n\n- Most orders ship by four\n")
+    out_pptx.write_bytes(out_pptx.read_bytes() + b"saved in PowerPoint")
+    code, out = cli_json(ws, "build", str(ws / "decks" / "deck.md"), capsys=capsys)
+    assert code == 2 and out["code"] == "OUTPUT_EDITED"
+    assert f"output: {out_pptx.stem}-v2.pptx" in out["error"] and "--force" in out["error"]
+
+
 def test_check_and_build_say_why_slide_numbers_are_off(ws, capsys):
     p = write_deck(ws, """
         ---

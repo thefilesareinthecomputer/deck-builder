@@ -42,6 +42,12 @@ Choose each slide's layout from how much its point needs to say, then write full
   another layout.
 - A title over its budget becomes a shorter full sentence, or moves to a layout with a bigger title budget.
   It never drops its verb or changes its claim.
+- The box's lines decide. A character or bullet count past its budget is a warning while the text fits its
+  lines, and needs no change.
+- Text the user wrote goes onto the slide word for word. When it doesn't fit, leave it in place so the error
+  shows, run `check --trim`, and ask the user: a layout with room, or which lines to trim. Never move their
+  lines to the notes without asking, and never put a stand-in such as "Full text is in the speaker notes."
+  in a field (`check` fails `FILLER_TEXT`).
 
 ## Slides stand alone
 

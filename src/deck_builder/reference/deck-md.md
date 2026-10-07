@@ -18,6 +18,8 @@ kicker: Q3 review              # optional; the section label on every slide whos
                                # that sets none itself (kicker: "" on a slide leaves it blank)
 fit: contain                   # optional; every image shown whole unless its slide sets fit: (a deck of
                                # screenshots)
+density: roomy                 # optional; tight, standard or roomy: when check warns WORDS_MANY and
+                               # BULLETS_MANY (45, 60 or 80 words; 3, 4 or 5 bullets); overrides the brand's
 ---
 
 ## Paper volume grew 12% in Q3         <- one heading = one slide

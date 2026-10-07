@@ -174,6 +174,9 @@ def _check_front_matter(deck: Deck) -> list[Issue]:
     kicker = meta.get("kicker")
     if kicker is not None and not isinstance(kicker, str | int | float):
         out.append(Issue("PARSE", f"front matter kicker: {kicker!r} must be one line of text", **at))
+    dens = meta.get("density")
+    if dens is not None and dens not in DENSITY:
+        out.append(Issue("PARSE", f"front matter density: {dens!r} must be tight, standard or roomy", **at))
     fit = meta.get("fit")
     if fit is not None and fit not in images.FITS:
         out.append(Issue("PARSE", f"front matter fit: {fit!r} must be contain (show every image whole) or cover",
@@ -216,6 +219,19 @@ def resolve(deck: Deck, brand: Brand, deck_dir: Path) -> tuple[Deck, list[Issue]
 
 # Limits from the design research (`docs design`): convention, not standard, so they warn and never fail.
 MAX_BULLETS, MAX_WORDS, MAX_RUN, MAX_SERIES, MAX_CODE_LINES, MAX_CONTRASTS = 4, 60, 3, 8, 12, 2
+# The words and bullets a projected slide holds before WORDS_MANY and BULLETS_MANY, by `density:` (front
+# matter, else the brand's lint.density). They don't change what fits a box; the budgets do that.
+DENSITY = {"tight": (45, 3), "standard": (MAX_WORDS, MAX_BULLETS), "roomy": (80, 5)}
+
+
+def density(deck: Deck, brand: Brand) -> tuple[str, str]:
+    """(the density profile in effect, where it came from)."""
+    if deck.meta.get("density") in DENSITY:
+        return str(deck.meta["density"]), "front matter"
+    lint = brand.meta.get("lint") or {}
+    if lint.get("density") in DENSITY:
+        return str(lint["density"]), f"brand {brand.slug}"
+    return "standard", "default"
 
 # The countable writing tells on slide text (`docs voice`). Each word is wrong on a slide
 # in any context; words a brand can use literally ("journey", "landscape") are left to the agents' judgment.
@@ -252,6 +268,14 @@ SLIDE_REF = re.compile(r"\b(?:slides?\s+\d+|(?:previous|next|last|prior|precedin
                        r"(?!\s*decks?\b)|slides?\s+(?:before|after|above|below)\b)", re.IGNORECASE)
 
 
+# A field or bullet that is only a pointer or a stand-in, which an agent writes to pass a check when the real
+# text didn't fit: "Full text is in the speaker notes.", "TBD", "Lorem ipsum".
+FILLER = re.compile(r"(?:(?:see|full text(?: is)?(?: in)?|details(?: are)?(?: in)?|more(?: is)? in|refer to)"
+                    r"(?: the)?(?: speaker)? notes(?: for (?:the )?(?:full text|details))?|tbd|tbc|todo|to do|"
+                    r"x{3,}|placeholder(?: text)?|lorem ipsum.*|(?:add|insert) (?:\w+ )?(?:text|content) here|"
+                    r"text here)[.!]?", re.IGNORECASE)
+
+
 def char_name(ch: str) -> str:
     """U+00A0 NO-BREAK SPACE; a private-use character has no name."""
     return f"U+{ord(ch):04X} {unicodedata.name(ch, 'PRIVATE-USE CHARACTER')}"
@@ -271,6 +295,12 @@ def _text_checks(s: Slide, at: dict[str, Any]) -> list[Issue]:
     """INVISIBLE_CHAR for characters a reader can't see, and SLIDE_REF for text that names another slide
     by position, both warnings, in the slide's text and its notes."""
     out: list[Issue] = []
+    for name, v in s.fields.items():
+        items = [t for _, t in v] if isinstance(v, list) else [v] if isinstance(v, str) else []
+        if filler := [t for t in items if FILLER.fullmatch(plain(t).strip())]:
+            out.append(Issue("FILLER_TEXT", f"field {name!r} holds {plain(filler[0]).strip()!r} instead of its "
+                             "content; put the slide's own text there, and when it doesn't fit, use a layout that "
+                             "holds it or ask the user what to cut", field=name, **at))
     for name, text, prose in _texts(s):
         where = "the speaker notes" if name == "notes" else f"field {name!r}"
         if found := sorted(set(INVISIBLE.findall(text))):
@@ -312,6 +342,8 @@ def _conventions(deck: Deck, brand: Brand, spec_layouts: dict[str, Any]) -> list
     chart whose series or slices are told apart by color alone (1.4.1)."""
     out: list[Issue] = []
     projected = ((brand.meta.get("generate") or {}).get("mode", "projected")) != "read"
+    profile = density(deck, brand)[0]
+    max_words, max_bullets = DENSITY[profile]
     run = contrasts = 0
     titles: dict[str, int] = {}
     for n, s in enumerate(deck.slides, start=1):
@@ -360,13 +392,15 @@ def _conventions(deck: Deck, brand: Brand, spec_layouts: dict[str, Any]) -> list
                     out.append(Issue("PROSE_TELL", f"{kind} {', '.join(repr(f) for f in found)}: {PROSE_FIX[kind]}",
                                      field=name, severity="warning", **at))
             words += len(plain(text_of(val)).split())
-            if projected and isinstance(val, list) and len(val) > MAX_BULLETS and \
+            if projected and isinstance(val, list) and len(val) > max_bullets and \
                     (fields_of.get(name) or {}).get("kind") == "bullets":
-                out.append(Issue("BULLETS_MANY", f"{len(val)} bullets on a projected slide; four or fewer read "
-                                 "best", field=name, severity="warning", actual=len(val), limit=MAX_BULLETS, **at))
-        if projected and words > MAX_WORDS:
-            out.append(Issue("WORDS_MANY", f"{words} words on a projected slide; move detail to the notes",
-                             severity="warning", actual=words, limit=MAX_WORDS, **at))
+                out.append(Issue("BULLETS_MANY", f"{len(val)} bullets on a projected slide; {max_bullets} or fewer "
+                                 f"read best at density {profile}", field=name, severity="warning",
+                                 actual=len(val), limit=max_bullets, **at))
+        if projected and words > max_words:
+            out.append(Issue("WORDS_MANY", f"{words} words on a projected slide, past {max_words} at density "
+                             f"{profile}; move detail to the notes", severity="warning", actual=words,
+                             limit=max_words, **at))
     return out
 
 
@@ -430,7 +464,7 @@ def _check_slide(s: Slide, n: int, spec_layouts: dict[str, Any], prs_layouts: di
         want = fs.get("kind", "text")
         s.fields[name] = _coerce(s.fields[name], want)
         found = _check_field(name, s.fields[name], fs, want, brand, deck_dir, layout, at)
-        over = [i for i in found if i.code in BUDGET_TEXT]
+        over = [i for i in found if i.code in BUDGET_TEXT and i.severity == "error"]
         if over and name not in images.CARRIED and name != hf:
             over[0].message += _room(name, s.fields[name], s, spec_layouts, brand, deck_dir)
         out += found
@@ -674,28 +708,33 @@ def _check_field(name: str, val: Value, fs: dict[str, Any], want: str, brand: Br
     if not _fits(want, got, val):
         out.append(Issue("KIND_MISMATCH", f"expects {want}, got {got}", field=name, **at))
         return out
+    # Wrapped lines against the box's height are the real measure of fit. Where a field has them and the text
+    # fits, a character or bullet count past its budget (a rougher estimate) warns instead of failing.
+    lines = _check_lines(name, val, fs, want, at) if want in ("text", "bullets") and fs.get("line_chars") and \
+        fs.get("max_lines") else None
+    rough: dict[str, Any] = {"severity": "warning"} if lines == [] else {}
+    fits = f"; it still fits the box's {fs.get('max_lines', 0):g} lines" if lines == [] else ""
     if want in ("text", "bullets"):
         n = len(plain(text_of(val)))
         if fs.get("max_chars") and n > fs["max_chars"]:
-            out.append(Issue("BUDGET_CHARS", f"{n} chars, budget {fs['max_chars']}", field=name,
-                             actual=n, limit=fs["max_chars"], **at))
-    if want in ("text", "bullets") and fs.get("line_chars") and fs.get("max_lines"):
-        out += _check_lines(name, val, fs, want, at)
+            out.append(Issue("BUDGET_CHARS", f"{n} chars, budget {fs['max_chars']}{fits}", field=name,
+                             actual=n, limit=fs["max_chars"], **rough, **at))
+    out += lines or []
     if want in ("text", "bullets") and fs.get("line_chars"):
         out += _check_spans(name, val, int(fs["line_chars"]), at)
     if isinstance(val, Code):
         out += _check_code(name, val, fs, at)
     if want == "bullets" and isinstance(val, list) and val:
         if fs.get("max_bullets") and len(val) > fs["max_bullets"]:
-            out.append(Issue("BUDGET_BULLETS", f"{len(val)} bullets, budget {fs['max_bullets']}", field=name,
-                             actual=len(val), limit=fs["max_bullets"], **at))
+            out.append(Issue("BUDGET_BULLETS", f"{len(val)} bullets, budget {fs['max_bullets']}{fits}", field=name,
+                             actual=len(val), limit=fs["max_bullets"], **rough, **at))
         if fs.get("max_bullet_chars"):
             for _, t in val:
                 n = len(plain(t))
                 if n > fs["max_bullet_chars"]:
                     out.append(Issue("BUDGET_BULLET_CHARS",
-                                     f"{n} chars, budget {fs['max_bullet_chars']}: {plain(t)[:40]!r}",
-                                     field=name, actual=n, limit=fs["max_bullet_chars"], **at))
+                                     f"{n} chars, budget {fs['max_bullet_chars']}: {plain(t)[:40]!r}{fits}",
+                                     field=name, actual=n, limit=fs["max_bullet_chars"], **rough, **at))
         deepest = max(lv for lv, _ in val)
         if deepest > fs.get("max_level", 1):
             out.append(Issue("BUDGET_LEVEL", f"nests to level {deepest}, max {fs.get('max_level', 1)}",

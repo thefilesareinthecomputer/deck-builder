@@ -73,7 +73,9 @@ TOOLS = {t.name: t for t in (
     Tool("check", "Validate a deck against its brand: layouts, fields, budgets, assets. Returns ok and issues; fix "
          "each issue by its code (explain gives the fix). With render: true it also builds, renders and measures, "
          "and adds output, flagged_slides, render_dir and contact_sheets: read the PNGs of flagged slides only.",
-         ("check",), (DECK, BRAND, Arg("render", FLAG, "--render", about="also build, render and measure"))),
+         ("check",), (DECK, BRAND, Arg("render", FLAG, "--render", about="also build, render and measure"),
+                      Arg("trim", FLAG, "--trim", about="the text budget issues as one row per field in trim, most "
+                          "over first: trim (doesn't fit its box) or fits (over a rough count only)"))),
     Tool("build", "Build a deck into a .pptx plus its manifest; returns output, manifest and slides. With data, "
          "builds one deck per row of a CSV or XLSX file into the output folder.", ("build",), (
              DECK, BRAND,

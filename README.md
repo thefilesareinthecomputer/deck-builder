@@ -245,7 +245,7 @@ A deck picks its brand with `brand: <slug>`, and `--brand` overrides that for on
 |---|---|
 | `init` | Create the workspace, config, neutral brand and example decks |
 | `doctor` | Check Python packages, poppler, LibreOffice, PowerPoint and its automation permission, and that the agents' tools start from this folder |
-| `check <deck> [--render]` | Check a deck; with `--render`, also build, render and measure it |
+| `check <deck> [--render] [--trim]` | Check a deck; with `--render`, also build, render and measure it; with `--trim`, list the fields over budget, most over first |
 | `build <deck> [--data rows.csv]` | Build the `.pptx` and its manifest; with `--data`, one deck per row |
 | `convert <in> <out>` | Convert between `.md`, `.xlsx` and `.csv`, refusing anything that would lose content |
 | `import <pptx> <out>` | Turn an existing deck back into `deck.md`, its images and a report of what needs a decision |
@@ -293,7 +293,7 @@ Cloning and installing as above always gets you the latest code, so you don't ne
 
 1. Commit or stash anything you're changing in the clone, then run `git pull`.
 2. Reinstall the tool with `uv tool install --reinstall .`, or `uv tool install --editable --reinstall .` for an editable install (`pipx install --force .` without uv). Until you do, the tool keeps running the old version, and so do the agents, since they use the same install. If a new version needs a package your install doesn't have, every command stops and tells you to run this.
-3. If you use the skills and agents in other projects, run `deck-builder skills install --yes` again so any new agent gets linked, and restart any open Claude Code sessions.
+3. If you use the skills and agents in other projects, run `deck-builder skills install --yes` again so any new agent gets linked. Then restart every open Claude Code session, in the clone too: a session loads the skills and agents when it starts, so one left open keeps running the old ones.
 4. Run `deck-builder doctor`. It tells you if the installed tool is behind the clone, if an agent isn't linked, and which brand kits an older version made.
 5. Read the release's "Upgrading" notes in the [changelog](CHANGELOG.md), then run `deck-builder check` on the decks you're working on.
 

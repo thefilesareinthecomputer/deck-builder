@@ -72,7 +72,10 @@ on those layouts. The `deck-builder` and `deck-brand` skills read this topic bef
   projected slide. Working memory holds about four chunks; the exact limits are convention. Move
   detail to speaker notes; the slide makes the point and the notes hold the evidence. `check` warns
   past these limits (`BULLETS_MANY`, `WORDS_MANY` at 60 words) and on more than three slides in a
-  row on one layout (`LAYOUT_RUN`); a read deck skips the text limits.
+  row on one layout (`LAYOUT_RUN`); a read deck skips the text limits. A deck's `density:` (`tight`,
+  `standard` or `roomy`) moves the two warnings to 3 bullets and 45 words, or 5 and 80. What fits a
+  box is set by its budgets: a field's wrapped lines against its height decide, and a character or
+  bullet count past its budget only warns while the lines fit.
 - **Notes add, not repeat.** When the deck is presented, don't read the slide aloud: notes that
   repeat the slide word for word make it harder to follow. Reworded points or extra detail help.
 - **Read decks: lines of 45 to 90 characters, about 55 as the target.** A projected slide is limited

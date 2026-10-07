@@ -76,6 +76,8 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, Handler]]:
     p.add_argument("deck", help=deck_help)
     p.add_argument("--brand", help="brand slug (overrides the deck's brand:)")
     p.add_argument("--render", action="store_true", help="also build, render and measure")
+    p.add_argument("--trim", action="store_true", help="list the text budget issues as one row per field, most "
+                   "over first: trim (doesn't fit its box) or fits (over a rough count only)")
     p.add_argument("--backend", choices=["auto", "powerpoint", "libreoffice"], default=None,
                    help="with --render: default from config: auto prefers LibreOffice, then PowerPoint")
     p.add_argument("--force", action="store_true",
