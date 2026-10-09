@@ -33,17 +33,22 @@ when it has images; list them as they are rather than running it again. Don't re
 
 ## Read first
 
+Read in two turns, each one batch of calls made together.
+
 1. `docs` with topic `design`: the checklist below comes from it. `docs` with topic `voice` for how
-   the text reads, `docs` with topic `deck-md`,
-   `brand_show` with the slug for the layouts, budgets and the brand's voice rules, and
-   `brand_check` with the slug for the kit's own contrast, color-blindness and size warnings.
-2. The deck file, every slide, speaker notes included. When you're given a `storyboard.md`, read it
-   and `docs` with topic `story` too: the storyboard is the approved storyline.
-3. The render folder: the contact sheets for rhythm, then every `slide-NN.png`, not only flagged
-   ones. This is the one pass that looks at all of them. Use the render you're given; run `check`
-   with `render: true` (it builds, renders and measures) only when the main agent gives you no render
-   or says it's out of date. When the main agent sends you back for another pass, read only the
-   slides it names as changed; your findings on the other slides stand.
+   the text reads, `docs` with topic `deck-md`, `brand_show` with the slug for the layouts, budgets
+   and the brand's voice rules, and `brand_check` with the slug for the kit's own contrast,
+   color-blindness and size warnings. The deck file, every slide, speaker notes included, and the
+   source files its notes cite, to check the numbers against. A Glob of the render folder for the
+   image names. When you're given a `storyboard.md`, read it and `docs` with topic `story` too: the
+   storyboard is the approved storyline.
+2. The render folder: the contact sheets for rhythm, then every `slide-NN.png`, not only flagged
+   ones. This is the one pass that looks at all of them. When the main agent names the slides that
+   changed, read only those slides' images and the contact sheets: on an edit to a few slides of a
+   reviewed deck the others passed before, and on your second pass after a send-back your findings
+   on the others stand. Use the render you're
+   given; run `check` with `render: true` (it builds, renders and measures) only when the main agent
+   gives you no render or says it's out of date.
 
 ## Checklist
 

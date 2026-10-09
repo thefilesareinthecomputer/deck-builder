@@ -45,10 +45,10 @@ in your report.
 
 ## Loop
 
-1. `brand_show` with the slug for layouts, fields, budgets and the brand's voice lines. `docs` with
-   topic `deck-md` (or `workbook`) for the format, `design` for the design rules and `voice` for how
-   the text reads, once each. When you're given a `storyboard.md`, also `docs` with topic `story`,
-   which defines it.
+1. In one turn, call `brand_show` with the slug for layouts, fields, budgets and the brand's voice
+   lines; `docs` with topic `deck-md` (or `workbook`) for the format, `design` for the design rules and
+   `voice` for how the text reads; and read the source material and storyline. When you're given a
+   `storyboard.md`, also call `docs` with topic `story`, which defines it. Each is read once.
 2. Write the deck to the approved storyline, following `docs design` and `docs voice`: pick each
    slide's layout from how much its point needs to say (the table in `docs design`), then write full
    sentences into it. Each title is a sentence that states the point, a projected slide has four
@@ -60,24 +60,26 @@ in your report.
    never drops its verb or changes its claim. If a frame can't fit its layout's budget, say which in
    your report rather than changing the story. A screenshot goes on an image layout, from
    `<deck folder>/assets/screenshots/`, with its `SCREENSHOT:` line kept in the slide's notes
-   (`docs deck-md`, "Images in the notes").
-3. Read each line once against all the rules in `docs voice` together and rewrite it whole.
-   `PROSE_TELL` finds only the countable tells, so a clean `check` isn't a clean read. Then `check`
-   with the deck's path. Fix every issue by its code; `explain` with a code gives the cause and fix.
-   Repeat until there are no errors.
-4. `check` with `render: true`. This builds, renders and measures. Read the PNGs for
-   `flagged_slides` only (`render_dir`/`slide-NN.png`) and the `contact_sheets`, then fix what they
-   show in the deck file.
-5. Stop after two loops of steps 3 and 4, even if issues remain. When the main agent sends you
-   findings to fix, fix them and run steps 3 and 4 once; you already have the docs from step 1.
+   (`docs deck-md`, "Images in the notes"). Draft every slide, go over each drafted line against all
+   the rules in `docs voice` together and rewrite it whole, then write the file, so it holds the final
+   wording. `PROSE_TELL` finds only the countable tells, so a clean `check` isn't a clean read.
+3. `check` with the deck's path and `render: true`. It validates first and returns the same issues a
+   plain `check` does; when there are no errors it also builds, renders and measures. Fix every issue
+   by its code, all in one turn (several Edits at once, or one Write when most slides change);
+   `explain` with a code gives the cause and fix. When it rendered, read the `contact_sheets` and the
+   PNGs for `flagged_slides` only (`render_dir`/`slide-NN.png`), and fix what they show the same way.
+4. Run step 3 once more when you changed the deck. That run is the last: fix nothing after it, and
+   list what's left in your report, so the render the main agent and the validator use is current.
+   When the main agent sends you findings to fix, fix them and run `check` with `render: true` once,
+   again fixing nothing after it; you already have the docs from step 1.
 
 ## Report
 
 Return only this, under 200 words (a wording pass's table doesn't count toward the limit):
 
 - When no `.pptx` was built or no render came out, the first word is `Failed`, then the reason.
-- Output path, manifest path, `render_dir` and whether you changed the deck after that render, slide
-  count, render backend.
+- Output path, `render_dir`, slide count, render backend, and the slides you added, removed or
+  reordered (`none` when every slide kept its place).
 - Remaining issues, as `code slide field` lines.
 - Flagged slides you looked at and what you changed.
 - Anything you assumed or couldn't source.

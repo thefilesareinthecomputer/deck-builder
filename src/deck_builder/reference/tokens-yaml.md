@@ -75,7 +75,8 @@ layouts:
 
 ## Tuning budgets
 
-Build a deck with deliberately long text in each layout, render it, and look at what overflowed.
+Build a deck that fills each layout's text fields to their budgets, render it, and look at what
+overflowed.
 `render` reports `OVERFLOW_MEASURED` per field with the overrun. Lower `max_chars` until nothing
 overflows, then leave about 10% headroom. After editing the template in PowerPoint, run
 `deck-builder brand check <slug>`; a moved placeholder shows as `TEMPLATE_MISMATCH`.

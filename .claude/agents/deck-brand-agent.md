@@ -50,9 +50,10 @@ the design rules; read them first.
 2. `brand_add_asset` copies a PNG into an existing kit as `logo/<id>` or `icon/<id>`; declare a new
    logo under `logos:` in the kit's `brand.yaml`.
 3. `brand_check` with the slug must pass.
-4. Write a test deck with long text in every text field of the layouts the change affects (all of
-   them for a new kit; for a color change, one slide per layout that uses the color is enough).
-   `check` it until it has no errors, then `check` it once with `render: true`. If the result has
+4. Write a test deck that fills every text field of the layouts the change affects to its budget
+   from `brand_show` (all of them for a new kit; for a color change, one slide per layout that uses
+   the color is enough), so `check` finds no errors the first time. `check` it with `render: true`;
+   when it reports errors, fix the test text and run it once more. If the result has
    `MISSING_FONT`, stop and report it: budgets measured with a
    substitute font are wrong, and the fonts have to be installed on this machine first. Otherwise
    read the `OVERFLOW_MEASURED` results and the contact sheets, and propose a budget per field that

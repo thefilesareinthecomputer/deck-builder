@@ -34,23 +34,26 @@ under `src/` is a separate task the user asks for on its own, never an option to
 
 When the deck has to come out of more material than fits here (a folder of documents, a
 knowledge base or vault), start with the `deck-decomposer-agent`. It runs no commands, since what
-it reads is untrusted, so put the output of `brand show <slug> --json`, `docs deck-md`,
-`docs design` and `docs voice` in its prompt. It returns `outline.md` (the storyline with a source for every slide, plus open questions)
-and a draft `deck.md`; run `check` on the draft and send any issues back to the same agent (SendMessage), up to two rounds,
-then report what's left to the user. Walk the user through the outline, co-author and proofread
+it reads is untrusted, so save the output of `brand show <slug> --json`, `docs deck-md`,
+`docs design` and `docs voice` to files without reading it here, one per command
+(`db docs design > scratch/<deck slug>/design.md`), and give it those paths. It returns `outline.md` (the storyline with a source for every slide, plus open questions)
+and a draft `deck.md`; run `check` on the draft and send any issues back to the same agent (SendMessage)
+once, then report what's left to the user. Walk the user through the outline, co-author and proofread
 with them (or convert to `.xlsx` for their team), and only then build.
 
 Run the `deck-storyteller-agent` when a subagent's report ends with a `Storyteller:` line, when a
 deck has to persuade or the user wants it to land harder, or when an outline mixes data, scenarios
 and image cues with no clear arc. It runs no commands, so put the inputs' paths, the audience and goal,
-the slide count, the tone (`plain` unless the user asks for `warm` or `bold`), the deck folder and the
-output of `brand show <slug> --json`, `docs story`, `docs design` and `docs voice` in its prompt. It writes
+the slide count, the tone (`plain` unless the user asks for `warm` or `bold`) and the deck folder in its
+prompt, with the paths of files holding the output of `brand show <slug> --json`, `docs story`,
+`docs design` and `docs voice`, saved the same way as for the decomposer. It writes
 `storyboard.md`: the title spine and each slide's layout, focal point, emphasis and visual. Walk the
 user through it as the storyline, with the image cues they need to supply; once they approve it, it
 is the approved storyline you give the builder and, at the review gate, the validator.
 
 At AGENTS.md's delegation threshold, hand the build loop to the `deck-builder-agent` subagent and
-keep this context for the storyline and the review. Give it the source material paths, the brand
+keep this context for the storyline and the review. It reads `brand show` and the docs itself, so
+don't load them here; the storyline needs only the titles. Give it the source material paths, the brand
 slug, the approved storyline, the deck's path and any constraints. It has no shell and runs the
 engine through five MCP tools, which work only inside the workspace, so every path you give it must
 be there (the full command and tool map is `db docs agents`). It returns a short report; run the
@@ -64,8 +67,7 @@ db brand show <slug>                # layouts, fields, budgets (kind<=chars, xN 
 db docs deck-md                     # the deck.md format, once (or: db docs workbook)
 db docs design                      # which layout fits which point, and how much goes on a slide
 db docs voice                       # how slide text and speaker notes read; every line you write follows it
-db check <deck> --json              # validate; fix every issue; repeat until no errors
-db check <deck> --render --json     # build, render and measure in one step
+db check <deck> --render --json     # validate; with no errors, also build, render and measure
 db explain <CODE>                   # cause and fix for any issue code
 ```
 
@@ -110,21 +112,25 @@ and 2 are the whole gate: look at the contact sheet and the flagged slides yours
 
 1. Run `db check <deck> --json` yourself; it must report no errors. The loop's last step already
    rendered the deck, so add `--render` only when the deck changed after that render. When the deck
-   has images, also run `db assets --images <deck>` and show the user its list: each image shown,
-   cropped, notes only, missing or unused.
-2. Read the builder's report (when a subagent built it) and the manifest (`<deck>.manifest.json`
-   beside the `.pptx`).
+   has images, also run `db assets --images <deck>` in the same turn and show the user its list: each
+   image shown, cropped, notes only, missing or unused. Leave the slide images to the validator.
+2. Read the builder's report, when a subagent built it; it has the paths, the slide count and the
+   `render_dir`.
 3. Hand the deck to the `deck-validator-agent`: the deck's path, the brand slug, the `render_dir`
    (from the builder's report or your last render), the warnings and image list from step 1, and the approved
-   storyline (the `storyboard.md` path when there is one). It reads every rendered slide against
+   storyline (the `storyboard.md` path when there is one). When the validator passed this deck
+   earlier in this conversation and the request changed a few slides without adding, removing or
+   reordering any or changing the front matter, also name those slides, so it reads only their
+   renders; otherwise name none. It reads the rendered slides against
    `docs design` and `docs voice`, writes nothing, and returns `VERDICT: PASS` or `SEND BACK` with `severity | slide |
    field | finding | fix` lines.
 4. On SEND BACK, give its blocker and major findings to the same `deck-builder-agent` (continue it
-   with SendMessage, so it keeps what it has read) or fix them here, then validate again by
-   continuing the same validator with SendMessage, naming the slides that changed and saying whether
-   the render is current (the builder's report says whether it changed the deck after its last
-   render), so it reads only those again. Up to two send-backs per deck; after that, report what's unresolved instead. Pass its engine or brand
-   findings to the user, since they aren't content fixes.
+   with SendMessage, so it keeps what it has read) or fix them here and run `check --render`, then run
+   step 1 again and validate once more by continuing the same validator with SendMessage, naming the slides that
+   changed so it reads only those again. When slides were added, removed or reordered (the builder's
+   report lists them), name none, since the slide numbers moved. That's the one send-back; report whatever is still open to
+   the user instead of sending it back again. Pass its engine or brand findings to the user, since
+   they aren't content fixes.
 
 Then report: output path, slide count, render backend, any slide you're unsure about, and any
 number or source you couldn't verify. When no `.pptx` was built or nothing rendered, the report's
@@ -209,8 +215,9 @@ substitute fonts.
    what couldn't be placed, and the formatting that was dropped on purpose. Unplaced content sits in
    each slide's notes under "Unplaced from the original:".
 3. Resolve each unplaced item and every budget issue by editing `deck.md`: move content into a
-   field, split the slide, or cut it with the user's OK. Then `db check <folder> --json` until clean.
-4. `db check <folder> --render --json`, and `db render <deck.pptx>` for the original.
+   field, split the slide, or cut it with the user's OK. Then `db check <folder> --render --json`
+   until clean.
+4. `db render <deck.pptx>` for the original.
 5. Show the old and new contact sheets side by side, and report a slide-mapping table: old
    slide, new slide, what changed.
 

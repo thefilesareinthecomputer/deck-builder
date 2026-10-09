@@ -91,10 +91,10 @@ reports that path and the budgets that changed: tell the user, and offer to copy
 tuned. To rename or version a brand, `brand copy <slug> <new-slug>` copies the whole kit under the
 new slug and leaves the original alone; then point the decks' `brand:` at the new slug.
 
-Budgets in a generated `tokens.yaml` are estimates. Build a test deck with deliberately long
-text in each layout, run `check --render`, and propose tighter or looser budgets per field from
-the `OVERFLOW_MEASURED` results. Change `tokens.yaml` only after the user agrees. Tune for at
-most two rounds of test-render and adjust, then report any remaining overflow to the user.
+Budgets in a generated `tokens.yaml` are estimates. Build a test deck that fills each layout's
+text fields to their budgets, run `check --render`, and propose tighter or looser budgets per field
+from the `OVERFLOW_MEASURED` results. Change `tokens.yaml` only after the user agrees, then render the
+test deck once more and report any remaining overflow to the user.
 
 Fonts: `MISSING_FONT` means the brand font isn't installed on the machine that rendered. Install it
 before tuning budgets, since budgets measured with a substitute font are wrong.

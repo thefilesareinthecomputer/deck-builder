@@ -2,7 +2,7 @@
 
 The one map of every `deck-builder` CLI command and MCP tool to the party that drives it. AGENTS.md,
 the skills and the agent files point here instead of restating it. The delegation threshold and the
-two-round stop rule live in AGENTS.md; this topic is only about which surface each party uses and who
+stop rule for loops and send-backs live in AGENTS.md; this topic is only about which surface each party uses and who
 calls which command.
 
 ## The six parties
@@ -51,7 +51,7 @@ tool's owner when the job is delegated to a subagent.
 | `brand_adopt` | `deck-brand-agent` | Wraps an existing `.potx` or `.pptx` as a kit. |
 | `brand_add_asset` | `deck-brand-agent` | Copies a logo or icon PNG into a kit. |
 | `inspect` | `deck-brand-agent` | A template's layouts and placeholders, for the adopt path. |
-| `docs` | main agent | Reference topics (`deck-md`, `workbook`, `brand-yaml`, `tokens-yaml`, `workflow`, `design`, `story`, `voice`, `agents`, `codes`). Also called by the three MCP subagents, each for the topics its own job needs; `deck-validator-agent` reads `design` first, and it and `deck-builder-agent` read `voice`. The main agent puts `voice` in the decomposer's and the storyteller's prompts. |
+| `docs` | main agent | Reference topics (`deck-md`, `workbook`, `brand-yaml`, `tokens-yaml`, `workflow`, `design`, `story`, `voice`, `agents`, `codes`). Also called by the three MCP subagents, each for the topics its own job needs; `deck-validator-agent` reads `design` first, and it and `deck-builder-agent` read `voice`. The main agent saves the topics the decomposer and the storyteller need to files and gives them the paths. |
 | `explain` | main agent | Cause and fix for one issue code. Also called by the three MCP subagents while fixing or judging what `check` or `brand_check` reports. |
 | `render` | main agent | Re-renders an already-built `.pptx` without rebuilding, e.g. the original side of a refresh. Not given to a subagent: `check --render` already covers both loops. |
 | `convert` | main agent | `.md` / `.xlsx` / `.csv` conversion for team editing. |
@@ -69,11 +69,11 @@ tool's owner when the job is delegated to a subagent.
   the workspace or a `brand_paths` folder) and the reference topics; writes `brand.yaml` and a test
   deck in a scratch folder, and the brand kit itself only through `brand_init`, `brand_adopt` and
   `brand_add_asset`, which write inside a `brand_paths` folder.
-- **`deck-decomposer-agent`** reads the source folder it's given (read-only, untrusted) plus whatever
-  the main agent puts in its prompt; writes only `outline.md` and `deck.md` (or `deck.draft.md` when
+- **`deck-decomposer-agent`** reads the source folder it's given (read-only, untrusted) plus the
+  reference files the main agent saved for it; writes only `outline.md` and `deck.md` (or `deck.draft.md` when
   `deck.md` already exists) in the deck folder it's given.
-- **`deck-storyteller-agent`** reads the inputs it's given (read-only, possibly untrusted) plus whatever
-  the main agent puts in its prompt; writes only `storyboard.md` (or `storyboard.draft.md` when one
+- **`deck-storyteller-agent`** reads the inputs it's given (read-only, possibly untrusted) plus the
+  reference files the main agent saved for it; writes only `storyboard.md` (or `storyboard.draft.md` when one
   already exists) in the deck folder it's given.
 - **`deck-validator-agent`** reads the deck file, its render folder and the reference topics, and
   writes nothing; a `check` with `render: true` it runs writes only the engine's own build and render

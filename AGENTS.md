@@ -28,10 +28,10 @@ If `uv run deck-builder brand list` reports no config, the user hasn't onboarded
 - Delegation threshold: writing or changing 6 or more slides, or any restructure, goes to the
   `deck-builder-agent` subagent; get the user's OK on the storyline at the same threshold. A rebuild
   with no content change (a new or changed brand kit) needs no subagent.
-- Every loop stops after two rounds, then you report to the user, so no loop runs unseen: an
-  agent's own check-and-fix loop, and the send-backs for one deck or kit (review findings and
-  budget tuning counted together). Send work back to the same subagent with SendMessage, so it
-  keeps the docs it has read.
+- An agent's own check-and-fix loop stops after two rounds, and each stage gets one send-back: the
+  decomposer's draft, the validator's review, a kit's budget tuning. Then you report what's left to
+  the user, so no loop runs unseen. Send work back to the same subagent with SendMessage, so it keeps the docs it
+  has read.
 
 | Task | Skill or agent |
 |---|---|
@@ -42,7 +42,7 @@ If `uv run deck-builder brand list` reports no config, the user hasn't onboarded
 | A deck that has to persuade or land harder, or points with no clear arc (optional; also when a subagent's report asks for it) | `deck-storyteller-agent` subagent writes `storyboard.md`: the arc, the title spine and each slide's visual form; the user approves it as the storyline |
 | Writing, converting, building, rendering decks | `deck-builder` skill |
 | The build loop at or past the delegation threshold above | `deck-builder-agent` subagent, then the review gate in the `deck-builder` skill |
-| Final proofread and sign-off of a built deck, before it's called finished | `deck-validator-agent` subagent, run by the main agent at the review gate; its send-backs count toward the two rounds above |
+| Final proofread and sign-off of a built deck, before it's called finished | `deck-validator-agent` subagent, run by the main agent at the review gate; its review gets one send-back, as above |
 
 Subagents can't talk with the user. The main agent holds the conversation, hands each agent the
 decisions it needs, relays the questions they return, and reviews their work before the user sees it.

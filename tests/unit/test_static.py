@@ -102,6 +102,17 @@ def test_the_agents_that_write_or_judge_slide_text_read_one_voice():
         assert "`Storyteller: " in (AGENTS_DIR / name).read_text(), name
 
 
+def test_a_deck_gets_one_send_back_and_the_loop_checks_and_renders_in_one_call():
+    """AGENTS.md's stop rule: an agent's own check-and-fix loop stops after two rounds, and a deck or kit gets one
+    send-back. No agent or skill asks for a second, and the builder goes straight to `check` with render, which
+    returns the same issues a plain `check` does, so a build costs fewer turns."""
+    assert "one send-back" in (SRC.parents[1] / "AGENTS.md").read_text()
+    for path in [*AGENTS_DIR.glob("*.md"), *(AGENTS_DIR.parent / "skills").glob("*/SKILL.md")]:
+        text = path.read_text().lower()
+        assert "two send-backs" not in text and "up to two rounds" not in text, path.name
+    assert "`check` with the deck's path and `render: true`" in (AGENTS_DIR / "deck-builder-agent.md").read_text()
+
+
 def test_yaml_is_only_safe_loaded():
     offenders = [str(p.relative_to(SRC)) for p in modules()
                  if "yaml.load(" in p.read_text() or "yaml.unsafe_load" in p.read_text()]
