@@ -21,9 +21,9 @@
 <br>
 
 <p align="center">
-  <img src="docs/images/hero.png" width="100%" alt="Three slides from three demo brands. On the left, large: a dark green paper supplier's column chart of on-time delivery against the regional average, under a serif title, with a takeaway band across the bottom. On the right, above: a charcoal soap maker's slide with four bullets beside a photo of soap bars. Below it: a navy office-systems company's five process chevrons, each with a short paragraph under it.">
+  <img src="docs/images/hero.png" width="100%" alt="Three slides from one deck in a dark brand kit with violet accents, fanned out on a dark panel. At the back, a table of ten work packages; in the middle, three lessons on violet labels; in front and whole, a bar chart of each work package's variance against budget, titled Three work packages ran over; five came in under, with a takeaway band across the bottom.">
 </p>
-<p align="center"><sub>Slides from the three demo brands. The chart is a native PowerPoint chart, and every word is still editable.</sub></p>
+<p align="center"><sub>Slides from one deck in a dark brand kit. The chart is a native PowerPoint chart, and every word is still editable.</sub></p>
 
 <br>
 
@@ -128,9 +128,9 @@ Field values are YAML, so put quotes around any value with `: ` in it. This exam
 The deck holds only content, and its `brand:` line names the kit that holds the design. Change that line, or pass `--brand <slug>`, and the same content builds in a different design:
 
 <p align="center">
-  <img src="docs/images/brands.png" width="100%" alt="The cards slide from the example, Three bets for Q4, built in three brands and fanned out. At the back, a navy office-systems company with blue card labels on pale blue cards; in the middle, a charcoal soap maker with dark gray labels on warm cards; in front, a dark green paper supplier with green labels, a serif title and a green takeaway band.">
+  <img src="docs/images/brands.png" width="100%" alt="The chart slide from the example, Cases shipped by month, built in three dark brand kits and fanned out on a dark panel: blue at the back, mint in the middle, and violet in front, each with its title, column chart and takeaway band in the kit's color.">
 </p>
-<p align="center"><sub>The cards slide from the example, built in each of the three demo brands.</sub></p>
+<p align="center"><sub>The chart slide from the example, built in three brand kits.</sub></p>
 
 Every field has a budget, the most text that fits its box, and `deck-builder brand show <slug>` lists a brand's layouts, fields and budgets. When a slide uses a layout the brand doesn't have, names a missing image or runs over a budget, `check` reports an issue code, and `deck-builder explain <CODE>` gives the cause and the fix.
 

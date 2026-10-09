@@ -1,32 +1,45 @@
 """Regenerate the README images from the demo-brand fixtures: `uv run python scripts/readme_images.py`.
 
-Builds the showcase deck in the three demo brands and a few slides from their pitch decks, renders them with
-LibreOffice at twice the default resolution, and writes docs/images/hero.png (a large chart slide beside an image
-slide and a process slide, one brand each) and docs/images/brands.png (the showcase's cards slide, the README
-example's second slide, in the three brands, fanned). Run it after any change to the generator, the layouts or
-the renderer, and commit the images with that change.
+Generates three dark kits from the Cubicle 9 demo brand (its fonts and layouts, a dark palette each), renders
+slides from its review deck and the showcase deck in them with LibreOffice at twice the default resolution, and
+writes docs/images/hero.png (three review slides in the violet kit, fanned) and docs/images/brands.png (the
+showcase's chart slide, the README example's third slide, in the three kits, fanned), each on a dark panel.
+Run it after any change to the generator, the layouts or the renderer, and commit the images with that change.
 """
 from __future__ import annotations
 
 import argparse
+import csv
+import shutil
 import sys
 import tempfile
 from pathlib import Path
 
+import yaml
 from PIL import Image, ImageDraw, ImageFilter
 
 from deck_builder.cli import main as cli
 
 REPO = Path(__file__).resolve().parent.parent
 FIXTURES = REPO / "tests" / "fixtures" / "demo-brands"
-BRANDS = ("cubicle-nine", "soap-club", "dumbder-nifftlin")  # brands.png back to front, the README example's in front
-CARDS = 3  # the showcase's cards slide
-# hero.png: (brand, deck, slide) for the large slide, then the two stacked beside it
-HERO = (("dumbder-nifftlin", "pitch", 4), ("soap-club", "pitch", 5), ("cubicle-nine", "pitch", 5))
+BASE = "cubicle-nine"  # the demo brand the dark kits take their fonts, layouts and assets from
+# The dark kits' palettes. Text on a primary-color fill takes the background color, so each primary is light
+# enough for dark text, and the accent is a pale tint of it so a chart's second series stays calm.
+DARK = {
+    "dark-blue": {"primary": "5B8CFF", "accent": "C7D7FF", "ink": "E8ECF3", "muted": "64748B",
+                  "surface": "151B26", "background": "0B0F17"},
+    "dark-mint": {"primary": "4FD1A5", "accent": "C9F2E3", "ink": "E6F0EC", "muted": "64756E",
+                  "surface": "141C19", "background": "0B110F"},
+    "dark-violet": {"primary": "9D85FF", "accent": "E4DEFF", "ink": "EDEDF2", "muted": "6B6B7B",
+                    "surface": "1A1A21", "background": "0F0F13"},
+}
+BRANDS = ("dark-blue", "dark-mint", "dark-violet")  # brands.png back to front, the hero's kit in front
+CHART = 4  # the showcase's chart slide
+HERO = (11, 13, 9)  # review-deck slides in the violet kit, back to front: a table, three lessons, a bar chart
+PANEL = ("1F1A33", "0F0F13")  # the panel's gradient, top to bottom
 DPI = "192"
 RATIO = 9 / 16  # slide height over width
-RADIUS = 18
-SHADOW = 28
+RADIUS = 14
 
 
 def run(*argv: str) -> None:
@@ -35,46 +48,65 @@ def run(*argv: str) -> None:
         sys.exit(f"deck-builder {' '.join(argv)} exited {code}")
 
 
+def dark_kit(slug: str, tmp: Path) -> Path:
+    """A copy of the base brand's folder with a dark palette, ready for `brand init --from`."""
+    folder = tmp / "src" / slug
+    shutil.copytree(FIXTURES / "brands" / BASE, folder)
+    brand = yaml.safe_load((folder / "brand.yaml").read_text())
+    brand["slug"] = slug
+    brand["palette"] = DARK[slug]
+    brand["theme_colors"].update({"accent4": "5EEAD4", "accent5": "F5A9C9", "accent6": "9898A6", "hlink": "accent"})
+    brand["fonts"]["body"] = dict(brand["fonts"]["heading"])
+    brand["icons"]["default_color"] = "primary"
+    brand["generate"].pop("logo_on_master", None)  # the logos are drawn for a light background
+    brand["generate"]["code"] = {"theme": "dark"}
+    (folder / "brand.yaml").write_text(yaml.safe_dump(brand, sort_keys=False))
+    return folder / "brand.yaml"
+
+
 def card(png: Path, width: int) -> Image.Image:
-    """The slide at width, with rounded corners and a hairline edge, on a transparent ground."""
+    """The slide at width, with rounded corners and a faint light edge, on a transparent ground."""
     size = (width, round(width * RATIO))
-    with Image.open(png) as im:
-        im = im.convert("RGBA").resize(size, Image.Resampling.LANCZOS)
+    with Image.open(png) as src:
+        im = src.convert("RGBA").resize(size, Image.Resampling.LANCZOS)
     mask = Image.new("L", size, 0)
     ImageDraw.Draw(mask).rounded_rectangle((0, 0, size[0] - 1, size[1] - 1), RADIUS, fill=255)
-    ImageDraw.Draw(im).rounded_rectangle((0, 0, size[0] - 1, size[1] - 1), RADIUS, outline=(0, 0, 0, 40), width=2)
+    ImageDraw.Draw(im).rounded_rectangle((0, 0, size[0] - 1, size[1] - 1), RADIUS, outline=(255, 255, 255, 34),
+                                         width=2)
     im.putalpha(mask)
     return im
 
 
-def place(canvas: Image.Image, im: Image.Image, xy: tuple[int, int]) -> None:
-    """im on the canvas at xy, over a soft shadow."""
+def panel(size: tuple[int, int], radius: int = 28) -> Image.Image:
+    """A dark vertical gradient with rounded corners."""
+    top, bottom = (tuple(int(c[i:i + 2], 16) for i in (0, 2, 4)) for c in PANEL)
+    strip = Image.new("RGBA", (1, size[1]))
+    for y in range(size[1]):
+        t = y / (size[1] - 1)
+        strip.putpixel((0, y), (*(round(a + (b - a) * t) for a, b in zip(top, bottom, strict=True)), 255))
+    canvas = strip.resize(size)
+    mask = Image.new("L", size, 0)
+    ImageDraw.Draw(mask).rounded_rectangle((0, 0, size[0] - 1, size[1] - 1), radius, fill=255)
+    canvas.putalpha(mask)
+    return canvas
+
+
+def place(canvas: Image.Image, im: Image.Image, xy: tuple[int, int], blur: int = 30) -> None:
+    """im on the canvas at xy, over a dark shadow."""
     alpha = Image.new("L", canvas.size, 0)
-    alpha.paste(im.getchannel("A").point(lambda a: round(a * 0.22)), (xy[0], xy[1] + SHADOW // 2))
+    alpha.paste(im.getchannel("A").point(lambda a: round(a * 0.55)), (xy[0], xy[1] + blur // 3))
     shadow = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
-    shadow.putalpha(alpha.filter(ImageFilter.GaussianBlur(SHADOW)))
+    shadow.putalpha(alpha.filter(ImageFilter.GaussianBlur(blur)))
     canvas.alpha_composite(shadow)
     canvas.alpha_composite(im, xy)
 
 
-def hero(big: Path, top: Path, bottom: Path, out: Path, small: int = 760, gap: int = 40) -> None:
-    """One large slide with two smaller ones stacked to its right, the same height."""
-    pad = 2 * SHADOW
-    small_h = round(small * RATIO)
-    big_w = round((2 * small_h + gap) / RATIO)
-    canvas = Image.new("RGBA", (2 * pad + big_w + gap + small, 2 * pad + 2 * small_h + gap))
-    place(canvas, card(big, big_w), (pad, pad))
-    place(canvas, card(top, small), (pad + big_w + gap, pad))
-    place(canvas, card(bottom, small), (pad + big_w + gap, pad + small_h + gap))
-    canvas.save(out, optimize=True)
-
-
-def fan(slides: list[Path], out: Path, width: int = 1300, step: int = 520) -> None:
-    """Slides overlapping left to right, the last one in front and whole."""
-    pad = 2 * SHADOW
-    canvas = Image.new("RGBA", (2 * pad + width + step * (len(slides) - 1), 2 * pad + round(width * RATIO)))
+def fan(slides: list[Path], out: Path, width: int = 1500, step: tuple[int, int] = (380, 90), margin: int = 64) -> None:
+    """Slides overlapping down and to the right on a dark panel, the last one in front and whole."""
+    n = len(slides)
+    canvas = panel((2 * margin + width + step[0] * (n - 1), 2 * margin + round(width * RATIO) + step[1] * (n - 1)))
     for i, png in enumerate(slides):
-        place(canvas, card(png, width), (pad + i * step, pad))
+        place(canvas, card(png, width), (margin + i * step[0], margin + i * step[1]))
     canvas.save(out, optimize=True)
 
 
@@ -86,21 +118,33 @@ def main() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         config = str(Path(tmp, "deck-builder.toml"))
         run("init", "--dir", tmp)
-        for brand in BRANDS:
-            run("--config", config, "brand", "init", brand, "--from", str(FIXTURES / "brands" / brand / "brand.yaml"))
+        for slug in BRANDS:
+            run("--config", config, "brand", "init", slug, "--from", str(dark_kit(slug, Path(tmp))))
         built = Path(tmp, "built")
-        run("--config", config, "build", str(FIXTURES / "showcase" / "deck.md"),
-            "--data", str(FIXTURES / "showcase" / "brands.csv"), "--name", "{{brand}}.pptx", "-o", str(built))
-        for brand in BRANDS:
-            run("--config", config, "render", str(built / f"{brand}.pptx"), "--slides", str(CARDS),
+        # The showcase deck, one build per kit: the first data row (the README example's), with the kit as brand
+        # and the base brand's photo under the kit's name.
+        showcase = Path(tmp, "showcase")
+        shutil.copytree(FIXTURES / "showcase", showcase)
+        for slug in BRANDS:
+            shutil.copyfile(showcase / "assets" / f"{BASE}-hero.png", showcase / "assets" / f"{slug}-hero.png")
+        with open(showcase / "brands.csv", newline="") as f:
+            rows = list(csv.DictReader(f))
+        with open(showcase / "dark.csv", "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=list(rows[0]))
+            writer.writeheader()
+            writer.writerows({**rows[0], "brand": slug} for slug in BRANDS)
+        run("--config", config, "build", str(showcase / "deck.md"), "--data", str(showcase / "dark.csv"),
+            "--name", "{{brand}}.pptx", "-o", str(built))
+        for slug in BRANDS:
+            run("--config", config, "render", str(built / f"{slug}.pptx"), "--slides", str(CHART),
                 "--backend", "libreoffice", "--dpi", DPI)
-        fan([built / f"{b}.render" / f"slide-{CARDS:02d}.png" for b in BRANDS], out / "brands.png")
-        for brand, deck, n in HERO:
-            pptx = built / "decks" / f"{brand}-{deck}.pptx"
-            run("--config", config, "build", str(FIXTURES / "decks" / brand / deck / "deck.md"), "-o", str(pptx))
-            run("--config", config, "render", str(pptx), "--slides", str(n), "--backend", "libreoffice", "--dpi", DPI)
-        big, top, bottom = (built / "decks" / f"{b}-{d}.render" / f"slide-{n:02d}.png" for b, d, n in HERO)
-        hero(big, top, bottom, out / "hero.png")
+        fan([built / f"{slug}.render" / f"slide-{CHART:02d}.png" for slug in BRANDS], out / "brands.png")
+        review = built / "review.pptx"
+        run("--config", config, "build", str(FIXTURES / "decks" / BASE / "review" / "deck.md"), "--brand", BRANDS[-1],
+            "-o", str(review))
+        run("--config", config, "render", str(review), "--slides", ",".join(map(str, HERO)),
+            "--backend", "libreoffice", "--dpi", DPI)
+        fan([built / "review.render" / f"slide-{n:02d}.png" for n in HERO], out / "hero.png")
     print(f"wrote {out / 'hero.png'} and {out / 'brands.png'}")
 
 

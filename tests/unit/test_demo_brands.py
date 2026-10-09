@@ -56,7 +56,7 @@ def test_code_deck_builds_clean_in_all_three_brands(demo_ws, capsys):
 
 @pytest.mark.parametrize("brand", ["dumbder-nifftlin", "neutral"])
 def test_the_readme_example_checks_clean_on_its_brand_and_on_neutral(demo_ws, brand, capsys):
-    """The README's deck.md example, whose cards slide is its brands image, and what it tells a reader to try
+    """The README's deck.md example, whose chart slide is its brands image, and what it tells a reader to try
     on the neutral brand that `init` creates."""
     readme = (Path(__file__).resolve().parents[2] / "README.md").read_text()
     example = re.search(r"````markdown\n(.*?)````", readme, re.S)
