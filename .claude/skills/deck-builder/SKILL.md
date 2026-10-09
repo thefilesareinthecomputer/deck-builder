@@ -49,12 +49,16 @@ prompt, with the paths of files holding the output of `brand show <slug> --json`
 `docs design` and `docs voice`, saved the same way as for the decomposer. It writes
 `storyboard.md`: the title spine and each slide's layout, focal point, emphasis and visual. Walk the
 user through it as the storyline, with the image cues they need to supply; once they approve it, it
-is the approved storyline you give the builder and, at the review gate, the validator.
+is the approved storyline you give the builder and, at the review gate, the validator. A storyboard in
+another deck's folder isn't this deck's storyline unless the user names it.
 
 At AGENTS.md's delegation threshold, hand the build loop to the `deck-builder-agent` subagent and
-keep this context for the storyline and the review. It reads `brand show` and the docs itself, so
-don't load them here; the storyline needs only the titles. Give it the source material paths, the brand
-slug, the approved storyline, the deck's path and any constraints. It has no shell and runs the
+keep this context for the storyline and the review. It reads the sources, `brand show` and the docs
+itself, so don't load the docs here. Read the sources only to draft the storyline with the user, all in
+one turn; when the user has approved the storyline already, pass their paths without reading them.
+Give it the source material paths, the brand slug, the approved storyline, the deck's path and any
+constraints. A subagent you start or continue with SendMessage reports back on its own: wait for its
+report rather than scheduling a wakeup or checking on it. It has no shell and runs the
 engine through five MCP tools, which work only inside the workspace, so every path you give it must
 be there (the full command and tool map is `db docs agents`). It returns a short report; run the
 review gate below before anything reaches the user. If it reports it has no tools, run `db doctor`
