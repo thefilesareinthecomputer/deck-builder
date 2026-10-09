@@ -21,7 +21,7 @@
 <br>
 
 <p align="center">
-  <img src="docs/images/hero.png" width="100%" alt="Three slides from one deck in a dark brand kit with violet accents, fanned out on a dark panel. At the back, a table of ten work packages; in the middle, three lessons on violet labels; in front and whole, a bar chart of each work package's variance against budget, titled Three work packages ran over; five came in under, with a takeaway band across the bottom.">
+  <img src="docs/images/hero.png" width="100%" alt="Three slides from one deck in a dark brand kit with blue accents, fanned out on a dark panel. At the back, a table of ten work packages; in the middle, three changes for phase two on blue labels; in front and whole, a bar chart of each work package's variance against budget, titled Power and data ran furthest over budget, with a takeaway band across the bottom.">
 </p>
 <p align="center"><sub>Slides from one deck in a dark brand kit. The chart is a native PowerPoint chart, and every word is still editable.</sub></p>
 
@@ -74,38 +74,36 @@ kicker: Q3 review
 
 ## Dumbder Nifftlin Paper Co. Q3 review
 layout: title
-subtitle: Volume, delivery and the plan for Q4
+subtitle: Volume grew in Q3, and Q4 adds three services
 
-## Three bets for Q4
+## Q4 adds three services
 layout: cards-3
-kicker: The plan
+kicker: Q4 plan
 label1: Monthly invoicing
 footer1: "Target: 40 accounts"
 label2: Same-day delivery
 footer2: "Target: 95% same-day"
 label3: Recycled reporting
 footer3: "Target: 12 accounts"
-takeaway: The three bets add about 9% to Q4 revenue
+takeaway: They add about 9% to Q4 revenue
 
 ### body1
-- One invoice a month
-- Pilot with ten accounts
-- All accounts by December
+- Accounts get one invoice a month
+- Every account has it by December
 
 ### body2
-- North region in October
-- Two new evening routes
-- Every order tracked
+- The north region starts in October
+- Customers track every order
 
 ### body3
-- **Recycled** share on invoices
-- A quarterly summary
+- Invoices show the **recycled** share
+- Accounts get a quarterly summary
 
-## Cases shipped by month
+## Core-line shipments grew every month in Q3
 layout: chart
 kicker: Volume
-subtitle: The core line set a record in September
-takeaway: The core line grew every month while specialty held flat
+subtitle: September set a record for the core line
+takeaway: Specialty held flat, so all the growth came from the core line
 
 ```chart
 type: column
@@ -128,7 +126,7 @@ Field values are YAML, so put quotes around any value with `: ` in it. This exam
 The deck holds only content, and its `brand:` line names the kit that holds the design. Change that line, or pass `--brand <slug>`, and the same content builds in a different design:
 
 <p align="center">
-  <img src="docs/images/brands.png" width="100%" alt="The chart slide from the example, Cases shipped by month, built in three dark brand kits and fanned out on a dark panel: blue at the back, mint in the middle, and violet in front, each with its title, column chart and takeaway band in the kit's color.">
+  <img src="docs/images/brands.png" width="100%" alt="The chart slide from the example, Core-line shipments grew every month in Q3, built in three dark brand kits and fanned out on a dark panel: white and gray at the back, teal in the middle, and blue in front, each with its title, column chart and takeaway band in the kit's color.">
 </p>
 <p align="center"><sub>The chart slide from the example, built in three brand kits.</sub></p>
 

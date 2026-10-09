@@ -9,49 +9,47 @@ kicker: Q3 review
 
 ## {{company}} Q3 review
 layout: title
-subtitle: Volume, delivery and the plan for Q4
+subtitle: Volume grew in Q3, and Q4 adds three services
 
 ## Agenda
 layout: agenda
 
 - Volume and what drove it
-- Three bets for Q4
+- New services for Q4
 - Risks and margins
 - Partners and next steps
 
-## Three bets for Q4
+## Q4 adds three services
 layout: cards-3
-kicker: The plan
+kicker: Q4 plan
 label1: Monthly invoicing
 footer1: "Target: 40 accounts"
 label2: Same-day delivery
 footer2: "Target: 95% same-day"
 label3: Recycled reporting
 footer3: "Target: 12 accounts"
-takeaway: The three bets add about 9% to Q4 revenue
+takeaway: They add about 9% to Q4 revenue
 
 ### body1
-- One invoice a month
-- Pilot with ten accounts
-- All accounts by December
+- Accounts get one invoice a month
+- Every account has it by December
 
 ### body2
-- North region in October
-- Two new evening routes
-- Every order tracked
+- The north region starts in October
+- Customers track every order
 
 ### body3
-- **Recycled** share on invoices
-- A quarterly summary
+- Invoices show the **recycled** share
+- Accounts get a quarterly summary
 
 Notes:
 Targets from the Q4 operating plan. Invented figures for the demo fixtures.
 
-## {{unit}} shipped by month
+## Core-line shipments grew every month in Q3
 layout: chart
 kicker: Volume
-subtitle: The core line set a record in September
-takeaway: The core line grew every month while specialty held flat
+subtitle: September set a record for the core line
+takeaway: Specialty held flat, so all the growth came from the core line
 
 ```chart
 type: column

@@ -2,7 +2,7 @@
 
 Generates three dark kits from the Cubicle 9 demo brand (its fonts and layouts, a dark palette each), renders
 slides from its review deck and the showcase deck in them with LibreOffice at twice the default resolution, and
-writes docs/images/hero.png (three review slides in the violet kit, fanned) and docs/images/brands.png (the
+writes docs/images/hero.png (three review slides in the blue kit, fanned) and docs/images/brands.png (the
 showcase's chart slide, the README example's third slide, in the three kits, fanned), each on a dark panel.
 Run it after any change to the generator, the layouts or the renderer, and commit the images with that change.
 """
@@ -23,20 +23,19 @@ from deck_builder.cli import main as cli
 REPO = Path(__file__).resolve().parent.parent
 FIXTURES = REPO / "tests" / "fixtures" / "demo-brands"
 BASE = "cubicle-nine"  # the demo brand the dark kits take their fonts, layouts and assets from
-# The dark kits' palettes. Text on a primary-color fill takes the background color, so each primary is light
-# enough for dark text, and the accent is a pale tint of it so a chart's second series stays calm.
+# The dark kits' palettes: one neutral near-black ground with a standard accent each. Text on a primary-color
+# fill takes the background color, so each primary is light enough for dark text, and a light gray accent keeps
+# a chart's second series neutral.
+NEUTRALS = {"ink": "E6EDF3", "muted": "8B949E", "surface": "161B22", "background": "0D1117"}
 DARK = {
-    "dark-blue": {"primary": "5B8CFF", "accent": "C7D7FF", "ink": "E8ECF3", "muted": "64748B",
-                  "surface": "151B26", "background": "0B0F17"},
-    "dark-mint": {"primary": "4FD1A5", "accent": "C9F2E3", "ink": "E6F0EC", "muted": "64756E",
-                  "surface": "141C19", "background": "0B110F"},
-    "dark-violet": {"primary": "9D85FF", "accent": "E4DEFF", "ink": "EDEDF2", "muted": "6B6B7B",
-                    "surface": "1A1A21", "background": "0F0F13"},
+    "dark-mono": {**NEUTRALS, "primary": "E6EDF3", "accent": "8B949E", "muted": "6E7681"},
+    "dark-teal": {**NEUTRALS, "primary": "2DD4BF", "accent": "C9D1D9"},
+    "dark-blue": {**NEUTRALS, "primary": "58A6FF", "accent": "C9D1D9"},
 }
-BRANDS = ("dark-blue", "dark-mint", "dark-violet")  # brands.png back to front, the hero's kit in front
+BRANDS = ("dark-mono", "dark-teal", "dark-blue")  # brands.png back to front, the hero's kit in front
 CHART = 4  # the showcase's chart slide
-HERO = (11, 13, 9)  # review-deck slides in the violet kit, back to front: a table, three lessons, a bar chart
-PANEL = ("1F1A33", "0F0F13")  # the panel's gradient, top to bottom
+HERO = (11, 13, 9)  # review-deck slides in the blue kit, back to front: a table, three changes, a bar chart
+PANEL = ("161B22", "0D1117")  # the panel's gradient, top to bottom
 DPI = "192"
 RATIO = 9 / 16  # slide height over width
 RADIUS = 14
@@ -55,7 +54,7 @@ def dark_kit(slug: str, tmp: Path) -> Path:
     brand = yaml.safe_load((folder / "brand.yaml").read_text())
     brand["slug"] = slug
     brand["palette"] = DARK[slug]
-    brand["theme_colors"].update({"accent4": "5EEAD4", "accent5": "F5A9C9", "accent6": "9898A6", "hlink": "accent"})
+    brand["theme_colors"].update({"accent4": "3FB950", "accent5": "D29922", "accent6": "A371F7", "hlink": "accent"})
     brand["fonts"]["body"] = dict(brand["fonts"]["heading"])
     brand["icons"]["default_color"] = "primary"
     brand["generate"].pop("logo_on_master", None)  # the logos are drawn for a light background

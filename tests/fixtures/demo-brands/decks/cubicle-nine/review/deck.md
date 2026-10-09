@@ -93,7 +93,7 @@ Source: crew timesheets from the payroll export, all three trades, August 1 to O
 layout: two-col
 kicker: Delivery
 subtitle: What worked, on the left, and what we would change, on the right
-takeaway: Both near-misses came from deliveries, not from work on site
+takeaway: Both near-misses came from deliveries, and the work on site ran to plan
 
 ### left
 - **Weekend-only work** meant no tenant lost a workday in eleven weekends
@@ -104,8 +104,8 @@ takeaway: Both near-misses came from deliveries, not from work on site
 ### right
 - **The furniture order** went in two weeks late and slipped the hand-off by four days
 - **Lift bookings** clashed with another tenant's move on September 13
-- Order furniture at survey sign-off, not after the floor plan is final
-- Book the goods lift for all eleven weekends at the start
+- We'll order furniture at survey sign-off, before the floor plan is final
+- We'll book the goods lift for all eleven weekends at the start
 
 Notes:
 Drawn from the crew debrief on October 30 and the tenant interviews in the week after hand-over.
@@ -114,11 +114,11 @@ Drawn from the crew debrief on October 30 and the tenant interviews in the week 
 layout: section
 kicker: Part 2
 
-## Three work packages ran over; five came in under
+## Power and data ran furthest over budget
 layout: chart
 kicker: Cost
-subtitle: Variance against budget by work package, in thousands; negative is under budget
-takeaway: The net result is 6,000 under a budget of 1.24 million
+subtitle: Each bar is a work package's variance in thousands, with savings to the left of zero
+takeaway: The refit closed 6,000 under its 1.24 million budget
 
 ```chart
 type: bar
@@ -152,11 +152,11 @@ series:
 Notes:
 Source: the cost ledger at close, October 31, grouped by the categories in the July budget.
 
-## Ten work packages finished within 1% of budget
+## Seven of ten packages came in at or under budget
 layout: table
 kicker: Cost
-subtitle: Budget and actual cost by work package, in thousands
-takeaway: Power and data ran 18 over; savings on strip-out and furniture covered it
+subtitle: The table gives budget and actual cost by work package, in thousands
+takeaway: Strip-out and desk savings covered the 18,000 overrun on power and data
 
 | Work package | Budget | Actual | Variance | Status |
 |---|---|---|---|---|
@@ -198,10 +198,10 @@ right-heading: Soap Club, floor 4
 ### right-logo
 ![Soap Club logo](assets/soap-club-logo.png)
 
-## Three lessons carry into phase two
+## Phase two changes when we order, book and survey
 layout: bands-3
 kicker: Lessons
-subtitle: Each lesson has an owner and a change to the phase-two plan
+subtitle: Each change has an owner in the phase-two plan
 label1: Order early
 label2: Book the building
 label3: Ask the tenants
