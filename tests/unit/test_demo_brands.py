@@ -56,30 +56,14 @@ def test_code_deck_builds_clean_in_all_three_brands(demo_ws, capsys):
 
 @pytest.mark.parametrize("brand", ["dumbder-nifftlin", "neutral"])
 def test_the_readme_example_checks_clean_on_its_brand_and_on_neutral(demo_ws, brand, capsys):
-    """The README's deck.md example: the first column of its showcase image, and what it tells a reader
-    to try on the neutral brand that `init` creates."""
+    """The README's deck.md example, whose cards slide is its brands image, and what it tells a reader to try
+    on the neutral brand that `init` creates."""
     readme = (Path(__file__).resolve().parents[2] / "README.md").read_text()
     example = re.search(r"````markdown\n(.*?)````", readme, re.S)
     assert example
     deck = demo_ws / "readme" / "deck.md"
     deck.parent.mkdir(exist_ok=True)
     deck.write_text(example.group(1).replace("brand: dumbder-nifftlin", f"brand: {brand}"))
-    capsys.readouterr()
-    code, out = cli_json(demo_ws, "check", str(deck), capsys=capsys)
-    assert code == 0 and out["issues"] == [], out["issues"]
-
-
-@pytest.mark.parametrize("brand", ["dumbder-nifftlin", "neutral"])
-def test_the_readme_code_example_checks_clean_and_matches_its_grid_slide(demo_ws, brand, capsys):
-    """The README's code example is the grid's first slide, from the Dumbder Nifftlin review deck."""
-    readme = (Path(__file__).resolve().parents[2] / "README.md").read_text()
-    example = re.findall(r"````markdown\n(.*?)````", readme, re.S)[1]
-    review = (DEMO / "decks" / "dumbder-nifftlin" / "review" / "deck.md").read_text()
-    code_block = example[example.index("```python"):]
-    assert code_block in review
-    deck = demo_ws / "readme-code" / "deck.md"
-    deck.parent.mkdir(exist_ok=True)
-    deck.write_text(f"---\nbrand: {brand}\n---\n\n{example}")
     capsys.readouterr()
     code, out = cli_json(demo_ws, "check", str(deck), capsys=capsys)
     assert code == 0 and out["issues"] == [], out["issues"]

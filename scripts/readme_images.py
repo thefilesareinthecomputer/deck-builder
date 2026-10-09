@@ -1,39 +1,32 @@
 """Regenerate the README images from the demo-brand fixtures: `uv run python scripts/readme_images.py`.
 
-Builds tests/fixtures/demo-brands/showcase/deck.md and the brand decks in decks/ into the demo brands,
-renders them with LibreOffice, and writes docs/images/decks.png (nine slides from the brand decks, a column
-per brand), docs/images/showcase.png (one deck in three brands, a column per brand) and docs/images/contact-sheet.png
-(one brand's contact sheet, the review surface). Run it after any
-change to the generator, the layouts or the renderer, and commit the images with that change.
+Builds the showcase deck in the three demo brands and a few slides from their pitch decks, renders them with
+LibreOffice at twice the default resolution, and writes docs/images/hero.png (a large chart slide beside an image
+slide and a process slide, one brand each) and docs/images/brands.png (the showcase's cards slide, the README
+example's second slide, in the three brands, fanned). Run it after any change to the generator, the layouts or
+the renderer, and commit the images with that change.
 """
 from __future__ import annotations
 
 import argparse
-import shutil
 import sys
 import tempfile
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 from deck_builder.cli import main as cli
 
 REPO = Path(__file__).resolve().parent.parent
 FIXTURES = REPO / "tests" / "fixtures" / "demo-brands"
-BRANDS = ("dumbder-nifftlin", "cubicle-nine", "soap-club")
-ROWS = (1, 3, 4)  # the title, cards and chart slides of the showcase deck
-CONTACT_BRAND = "dumbder-nifftlin"  # the brand the README's deck.md example uses
-# decks.png: nine slides from the brands' pitch and review decks, a column per brand, picked for range and
-# color: every row holds one chart, the three charts are three types, one cell is a highlighted code block,
-# and each cell shows its brand's colors. (brand, deck, slide) per cell, row by row.
-GRID = (
-    (("dumbder-nifftlin", "review", 14), ("cubicle-nine", "pitch", 1), ("soap-club", "review", 4)),
-    (("dumbder-nifftlin", "pitch", 4), ("cubicle-nine", "pitch", 5), ("soap-club", "pitch", 5)),
-    (("dumbder-nifftlin", "review", 12), ("cubicle-nine", "review", 5), ("soap-club", "pitch", 3)),
-)
-SLIDE = (560, 315)
-GAP = 24
-RADIUS = 10
+BRANDS = ("cubicle-nine", "soap-club", "dumbder-nifftlin")  # brands.png back to front, the README example's in front
+CARDS = 3  # the showcase's cards slide
+# hero.png: (brand, deck, slide) for the large slide, then the two stacked beside it
+HERO = (("dumbder-nifftlin", "pitch", 4), ("soap-club", "pitch", 5), ("cubicle-nine", "pitch", 5))
+DPI = "192"
+RATIO = 9 / 16  # slide height over width
+RADIUS = 18
+SHADOW = 28
 
 
 def run(*argv: str) -> None:
@@ -42,24 +35,46 @@ def run(*argv: str) -> None:
         sys.exit(f"deck-builder {' '.join(argv)} exited {code}")
 
 
-def rounded(im: Image.Image) -> Image.Image:
-    """The slide with rounded corners and a hairline edge, on a transparent ground."""
-    im = im.convert("RGBA").resize(SLIDE, Image.Resampling.LANCZOS)
-    mask = Image.new("L", SLIDE, 0)
-    ImageDraw.Draw(mask).rounded_rectangle((0, 0, SLIDE[0] - 1, SLIDE[1] - 1), RADIUS, fill=255)
-    ImageDraw.Draw(im).rounded_rectangle((0, 0, SLIDE[0] - 1, SLIDE[1] - 1), RADIUS, outline=(0, 0, 0, 36))
+def card(png: Path, width: int) -> Image.Image:
+    """The slide at width, with rounded corners and a hairline edge, on a transparent ground."""
+    size = (width, round(width * RATIO))
+    with Image.open(png) as im:
+        im = im.convert("RGBA").resize(size, Image.Resampling.LANCZOS)
+    mask = Image.new("L", size, 0)
+    ImageDraw.Draw(mask).rounded_rectangle((0, 0, size[0] - 1, size[1] - 1), RADIUS, fill=255)
+    ImageDraw.Draw(im).rounded_rectangle((0, 0, size[0] - 1, size[1] - 1), RADIUS, outline=(0, 0, 0, 40), width=2)
     im.putalpha(mask)
     return im
 
 
-def grid(cells: list[list[Path]], out: Path) -> None:
-    """Slide images in rows and columns, rounded, on a transparent ground."""
-    rows, cols = len(cells), len(cells[0])
-    canvas = Image.new("RGBA", (cols * SLIDE[0] + (cols - 1) * GAP, rows * SLIDE[1] + (rows - 1) * GAP))
-    for r, row in enumerate(cells):
-        for c, png in enumerate(row):
-            with Image.open(png) as im:
-                canvas.alpha_composite(rounded(im), (c * (SLIDE[0] + GAP), r * (SLIDE[1] + GAP)))
+def place(canvas: Image.Image, im: Image.Image, xy: tuple[int, int]) -> None:
+    """im on the canvas at xy, over a soft shadow."""
+    alpha = Image.new("L", canvas.size, 0)
+    alpha.paste(im.getchannel("A").point(lambda a: round(a * 0.22)), (xy[0], xy[1] + SHADOW // 2))
+    shadow = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+    shadow.putalpha(alpha.filter(ImageFilter.GaussianBlur(SHADOW)))
+    canvas.alpha_composite(shadow)
+    canvas.alpha_composite(im, xy)
+
+
+def hero(big: Path, top: Path, bottom: Path, out: Path, small: int = 760, gap: int = 40) -> None:
+    """One large slide with two smaller ones stacked to its right, the same height."""
+    pad = 2 * SHADOW
+    small_h = round(small * RATIO)
+    big_w = round((2 * small_h + gap) / RATIO)
+    canvas = Image.new("RGBA", (2 * pad + big_w + gap + small, 2 * pad + 2 * small_h + gap))
+    place(canvas, card(big, big_w), (pad, pad))
+    place(canvas, card(top, small), (pad + big_w + gap, pad))
+    place(canvas, card(bottom, small), (pad + big_w + gap, pad + small_h + gap))
+    canvas.save(out, optimize=True)
+
+
+def fan(slides: list[Path], out: Path, width: int = 1300, step: int = 520) -> None:
+    """Slides overlapping left to right, the last one in front and whole."""
+    pad = 2 * SHADOW
+    canvas = Image.new("RGBA", (2 * pad + width + step * (len(slides) - 1), 2 * pad + round(width * RATIO)))
+    for i, png in enumerate(slides):
+        place(canvas, card(png, width), (pad + i * step, pad))
     canvas.save(out, optimize=True)
 
 
@@ -77,21 +92,16 @@ def main() -> None:
         run("--config", config, "build", str(FIXTURES / "showcase" / "deck.md"),
             "--data", str(FIXTURES / "showcase" / "brands.csv"), "--name", "{{brand}}.pptx", "-o", str(built))
         for brand in BRANDS:
-            run("--config", config, "render", str(built / f"{brand}.pptx"), "--backend", "libreoffice")
-        render_dirs = {b: built / f"{b}.render" for b in BRANDS}
-        grid([[render_dirs[b] / f"slide-{n:02d}.png" for b in BRANDS] for n in ROWS], out / "showcase.png")
-        shutil.copyfile(render_dirs[CONTACT_BRAND] / "contact-01.png", out / "contact-sheet.png")
-        picks: dict[tuple[str, str], list[int]] = {}
-        for brand, deck, n in (cell for row in GRID for cell in row):
-            picks.setdefault((brand, deck), []).append(n)
-        for (brand, deck), slides in picks.items():
+            run("--config", config, "render", str(built / f"{brand}.pptx"), "--slides", str(CARDS),
+                "--backend", "libreoffice", "--dpi", DPI)
+        fan([built / f"{b}.render" / f"slide-{CARDS:02d}.png" for b in BRANDS], out / "brands.png")
+        for brand, deck, n in HERO:
             pptx = built / "decks" / f"{brand}-{deck}.pptx"
             run("--config", config, "build", str(FIXTURES / "decks" / brand / deck / "deck.md"), "-o", str(pptx))
-            run("--config", config, "render", str(pptx), "--slides", ",".join(map(str, slides)),
-                "--backend", "libreoffice")
-        grid([[built / "decks" / f"{b}-{d}.render" / f"slide-{n:02d}.png" for b, d, n in row] for row in GRID],
-             out / "decks.png")
-    print(f"wrote {out / 'decks.png'}, {out / 'showcase.png'} and {out / 'contact-sheet.png'}")
+            run("--config", config, "render", str(pptx), "--slides", str(n), "--backend", "libreoffice", "--dpi", DPI)
+        big, top, bottom = (built / "decks" / f"{b}-{d}.render" / f"slide-{n:02d}.png" for b, d, n in HERO)
+        hero(big, top, bottom, out / "hero.png")
+    print(f"wrote {out / 'hero.png'} and {out / 'brands.png'}")
 
 
 if __name__ == "__main__":
