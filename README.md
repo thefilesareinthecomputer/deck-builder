@@ -21,7 +21,7 @@
 <br>
 
 <p align="center">
-  <img src="docs/images/hero.png" width="100%" alt="Three slides from one deck in a dark brand kit with blue accents, fanned out on a dark panel. At the back, a table of ten work packages; in the middle, three changes for phase two on blue labels; in front and whole, a bar chart of each work package's variance against budget, titled Power and data ran furthest over budget, with a takeaway band across the bottom.">
+  <img src="docs/images/hero.png" width="100%" alt="Three slides from one deck in a dark brand kit with blue accents, fanned out on a dark panel. At the back, a table of ten work packages; in the middle, three changes for phase two on blue labels; in front and whole, a line chart of desks installed against the plan, titled Installs slipped in September, then caught up, with a takeaway band across the bottom.">
 </p>
 <p align="center"><sub>Slides from one deck in a dark brand kit. The chart is a native PowerPoint chart, and every word is still editable.</sub></p>
 

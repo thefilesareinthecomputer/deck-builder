@@ -34,7 +34,7 @@ DARK = {
 }
 BRANDS = ("dark-mono", "dark-teal", "dark-blue")  # brands.png back to front, the hero's kit in front
 CHART = 4  # the showcase's chart slide
-HERO = (11, 13, 9)  # review-deck slides in the blue kit, back to front: a table, three changes, a bar chart
+HERO = (11, 13, 5)  # review-deck slides in the blue kit, back to front: a table, three changes, a line chart
 PANEL = ("161B22", "0D1117")  # the panel's gradient, top to bottom
 DPI = "192"
 RATIO = 9 / 16  # slide height over width
