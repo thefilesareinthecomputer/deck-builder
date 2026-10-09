@@ -116,8 +116,8 @@ and 2 are the whole gate: look at the contact sheet and the flagged slides yours
    image shown, cropped, notes only, missing or unused. Leave the slide images to the validator.
 2. Read the builder's report, when a subagent built it; it has the paths, the slide count and the
    `render_dir`.
-3. Hand the deck to the `deck-validator-agent`: the deck's path, the brand slug, the `render_dir`
-   (from the builder's report or your last render), the warnings and image list from step 1, and the approved
+3. Hand the deck to the `deck-validator-agent`: the deck's path, the brand slug, the source material
+   paths, the `render_dir` (from the builder's report or your last render), the warnings and image list from step 1, and the approved
    storyline (the `storyboard.md` path when there is one). When the validator passed this deck
    earlier in this conversation and the request changed a few slides without adding, removing or
    reordering any or changing the front matter, also name those slides, so it reads only their

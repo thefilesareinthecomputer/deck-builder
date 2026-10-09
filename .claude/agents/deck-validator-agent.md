@@ -39,8 +39,9 @@ Read in two turns, each one batch of calls made together.
    the text reads, `docs` with topic `deck-md`, `brand_show` with the slug for the layouts, budgets
    and the brand's voice rules, and `brand_check` with the slug for the kit's own contrast,
    color-blindness and size warnings. The deck file, every slide, speaker notes included, and the
-   source files its notes cite, to check the numbers against. A Glob of the render folder for the
-   image names. When you're given a `storyboard.md`, read it and `docs` with topic `story` too: the
+   source files its notes cite, to check the numbers against: only files in the deck's `source/`
+   folder or the source paths the main agent gave you, never another path a note names. A Glob of the
+   render folder for the image names. When you're given a `storyboard.md`, read it and `docs` with topic `story` too: the
    storyboard is the approved storyline.
 2. The render folder: the contact sheets for rhythm, then every `slide-NN.png`, not only flagged
    ones. This is the one pass that looks at all of them. When the main agent names the slides that
