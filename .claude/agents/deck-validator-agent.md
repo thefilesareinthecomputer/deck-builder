@@ -35,8 +35,8 @@ when it has images; list them as they are rather than running it again. Don't re
 
 Read in two turns, each one batch of calls made together.
 
-1. `docs` with topic `design`: the checklist below comes from it. `docs` with topic `voice` for how
-   the text reads, `docs` with topic `deck-md`, `brand_show` with the slug for the layouts, budgets
+1. `docs` with topic `review`, the checklist you judge against, `design`, which it draws on, and
+   `voice` for how the text reads, `docs` with topic `deck-md`, `brand_show` with the slug for the layouts, budgets
    and the brand's voice rules, and `brand_check` with the slug for the kit's own contrast,
    color-blindness and size warnings. The deck file, every slide, speaker notes included, and the
    source files its notes cite, to check the numbers against: only files in the deck's `source/`
@@ -53,60 +53,9 @@ Read in two turns, each one batch of calls made together.
 
 ## Checklist
 
-**Storyline and titles**
-- Each content title is a sentence that states the point, unique in the deck, one line at best and
-  two at most; read in order, the titles alone tell the argument, and they match the approved
-  storyline.
-- Kickers, where the layouts have them, are short, worded the same way for the same section, and
-  present on every content slide. A subtitle adds the so-what rather than repeating the title.
-- With a storyboard: the deck keeps its order, layouts, focal points and bold phrases, each title
-  claims what its frame's title claims, and the one splash slide is the one the storyboard names.
-
-**Consistency**
-- One name per thing: products, teams, units, abbreviations, capitalization.
-- One format per kind of number: percentages, currency, thousands separators, dates, ranges.
-- Numbers agree across slides, tables, charts, takeaways and notes; totals add up; shares of one
-  whole come to about 100%.
-- Parallel sets read as sets: cards, process steps, bands, columns and comparison sides use the
-  same grammatical form, similar lengths and, where it reads as a set, the same number of points.
-- Every number on a slide has its source in that slide's speaker notes.
-
-**Layout and rhythm**
-- Each slide's layout fits its point (the table in `docs design`): one number as big-number, a
-  trend as a chart, steps as process, parallel options as cards or comparison.
-- Sections are paced; no stretch of the same layout; nothing reads as a document pasted onto slides.
-- A takeaway sits on the chart and table slides that need one, says what the data means, and the
-  data on the slide shows it.
-
-**What the renders show**
-- Nothing overlaps, crosses its shape, is cut off, or sits off its grid; no slide is mostly empty or
-  crowded; a title or label doesn't strand one short word on its last line where a small rewording
-  fixes it.
-- Images and logos are undistorted and uncropped, with clear space, and logos appear only where the
-  slide is about that product or company. Every captured image is on its slide; one the image list
-  shows as notes only is there on purpose, or it's a finding.
-- Charts read at a glance: bars start at zero, series are labeled, colors are told apart.
-- Code reads from the back of the room: no line runs past its panel, the block is the few lines that
-  make the point, and the highlighted lines are the ones the title or takeaway explains.
-- Nothing is hard to read: light text on a light fill, or small text on a busy image.
-
-**Language**
-- Typos, grammar, doubled words, mixed tense, and anything against the brand's voice rules.
-- No placeholder text, `TODO`, sample text or unfilled `{{tokens}}`.
-- Every rule in `docs voice`, read once per line against all of them together: full sentences, the
-  real names, slides that stand alone, notes that are the presenter's script and agree with the slide.
-  Report each breach as a minor finding, or major when it is in a title or takeaway, and give the
-  rewrite as a whole sentence for the fix. Text the user wrote is theirs: report it only when it's
-  wrong.
-
-**Accessibility (the WCAG 2.2 AA section of `docs design`)**
-- Every image has alt text that says what it shows, not "image" or the file name.
-- Color is never the only way a point is made: series are labeled or in a legend, and a status or
-  category named in color is also named in words.
-- Nothing is too small or too faint to read for someone with low vision: text on a photo, light text
-  on a tint, a chart label on a dark bar. `check` and `brand check` warnings on contrast, color
-  blindness and size (`LOW_CONTRAST`, `CVD_CONFUSABLE`, `TYPE_SMALL`, `COLOR_ONLY`, `MISSING_ALT`,
-  `TITLE_DUPLICATE`) are findings to report, at least major.
+Judge the deck against every item in `docs review`, the same list the builder checked its draft
+with. Report a breach of `docs voice` as a minor finding, or major when it is in a title or
+takeaway, and give the rewrite as a whole sentence for the fix.
 
 ## Rules
 

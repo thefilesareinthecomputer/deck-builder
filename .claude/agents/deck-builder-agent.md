@@ -46,8 +46,9 @@ in your report.
 ## Loop
 
 1. In one turn, call `brand_show` with the slug for layouts, fields, budgets and the brand's voice
-   lines; `docs` with topic `deck-md` (or `workbook`) for the format, `design` for the design rules and
-   `voice` for how the text reads; and read the source material and storyline. When you're given a
+   lines; `docs` with topic `deck-md` (or `workbook`) for the format, `design` for the design rules,
+   `voice` for how the text reads and `review` for what the validator judges the deck on; and read the
+   source material and storyline. When you're given a
    `storyboard.md`, also call `docs` with topic `story`, which defines it. Each is read once.
 2. Write the deck to the approved storyline, following `docs design` and `docs voice`: pick each
    slide's layout from how much its point needs to say (the table in `docs design`), then write full
@@ -60,9 +61,13 @@ in your report.
    never drops its verb or changes its claim. If a frame can't fit its layout's budget, say which in
    your report rather than changing the story. A screenshot goes on an image layout, from
    `<deck folder>/assets/screenshots/`, with its `SCREENSHOT:` line kept in the slide's notes
-   (`docs deck-md`, "Images in the notes"). Draft every slide, go over each drafted line against all
-   the rules in `docs voice` together and rewrite it whole, then write the file, so it holds the final
-   wording. `PROSE_TELL` finds only the countable tells, so a clean `check` isn't a clean read.
+   (`docs deck-md`, "Images in the notes"). Place an image only when it shows what its cue or frame
+   asks for; when no supplied image does, use a layout without one and list the missing image in
+   your report for the user to supply. Draft every slide, go over each drafted line against all the
+   rules in `docs voice` together and rewrite it whole, then go over the draft once against
+   `docs review` and fix what it finds, so the file you write holds the final wording and passes
+   review the first time. `PROSE_TELL` finds only the countable tells, so a clean `check` isn't a
+   clean read.
 3. `check` with the deck's path and `render: true`. It validates first and returns the same issues a
    plain `check` does; when there are no errors it also builds, renders and measures. Fix every issue
    by its code, all in one turn (several Edits at once, or one Write when most slides change);

@@ -102,6 +102,16 @@ def test_the_agents_that_write_or_judge_slide_text_read_one_voice():
         assert "`Storyteller: " in (AGENTS_DIR / name).read_text(), name
 
 
+def test_the_builder_and_validator_share_one_review_checklist():
+    """`docs review` holds the checklist the validator judges a deck on; the builder checks its draft with the same
+    list before writing, so a deck passes the first time, and the validator keeps no copy that could drift."""
+    review = (SRC / "reference" / "review.md").read_text()
+    assert "**Storyline and titles**" in review and "**Images**" in review
+    for name in ("deck-builder-agent.md", "deck-validator-agent.md"):
+        assert "`review`" in (AGENTS_DIR / name).read_text(), name
+    assert "**Storyline and titles**" not in (AGENTS_DIR / "deck-validator-agent.md").read_text()
+
+
 def test_a_deck_gets_one_send_back_and_the_loop_checks_and_renders_in_one_call():
     """AGENTS.md's stop rule: an agent's own check-and-fix loop stops after two rounds, and a deck or kit gets one
     send-back. No agent or skill asks for a second, and the builder goes straight to `check` with render, which

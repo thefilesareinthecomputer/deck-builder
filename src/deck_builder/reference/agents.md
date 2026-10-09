@@ -51,7 +51,7 @@ tool's owner when the job is delegated to a subagent.
 | `brand_adopt` | `deck-brand-agent` | Wraps an existing `.potx` or `.pptx` as a kit. |
 | `brand_add_asset` | `deck-brand-agent` | Copies a logo or icon PNG into a kit. |
 | `inspect` | `deck-brand-agent` | A template's layouts and placeholders, for the adopt path. |
-| `docs` | main agent | Reference topics (`deck-md`, `workbook`, `brand-yaml`, `tokens-yaml`, `workflow`, `design`, `story`, `voice`, `agents`, `codes`). Also called by the three MCP subagents, each for the topics its own job needs; `deck-validator-agent` reads `design` first, and it and `deck-builder-agent` read `voice`. The main agent saves the topics the decomposer and the storyteller need to files and gives them the paths. |
+| `docs` | main agent | Reference topics (`deck-md`, `workbook`, `brand-yaml`, `tokens-yaml`, `workflow`, `design`, `story`, `voice`, `review`, `agents`, `codes`). Also called by the three MCP subagents, each for the topics its own job needs; `deck-validator-agent` and `deck-builder-agent` both read `design`, `voice` and `review`, the checklist the validator judges a deck on and the builder checks its draft with. The main agent saves the topics the decomposer and the storyteller need to files and gives them the paths. |
 | `explain` | main agent | Cause and fix for one issue code. Also called by the three MCP subagents while fixing or judging what `check` or `brand_check` reports. |
 | `render` | main agent | Re-renders an already-built `.pptx` without rebuilding, e.g. the original side of a refresh. Not given to a subagent: `check --render` already covers both loops. |
 | `convert` | main agent | `.md` / `.xlsx` / `.csv` conversion for team editing. |
