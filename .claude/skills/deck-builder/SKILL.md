@@ -55,7 +55,8 @@ another deck's folder isn't this deck's storyline unless the user names it.
 At AGENTS.md's delegation threshold, hand the build loop to the `deck-builder-agent` subagent and
 keep this context for the storyline and the review. It reads the sources, `brand show` and the docs
 itself, so don't load the docs here. Read the sources only to draft the storyline with the user, all in
-one turn; when the user has approved the storyline already, pass their paths without reading them.
+one turn; when the user has approved the storyline already, pass their paths without reading them,
+listing folders or running `brand show`.
 Give it the source material paths, the brand slug, the approved storyline, the deck's path and any
 constraints. A subagent you start or continue with SendMessage reports back on its own: wait for its
 report rather than scheduling a wakeup or checking on it. It has no shell and runs the
@@ -127,9 +128,11 @@ and 2 are the whole gate: look at the contact sheet and the flagged slides yours
    reordering any or changing the front matter, also name those slides, so it reads only their
    renders; otherwise name none. It reads the rendered slides against
    `docs design` and `docs voice`, writes nothing, and returns `VERDICT: PASS` or `SEND BACK` with `severity | slide |
-   field | finding | fix` lines.
-4. On SEND BACK, give its blocker and major findings to the same `deck-builder-agent` (continue it
-   with SendMessage, so it keeps what it has read) or fix them here and run `check --render`, then run
+   field | finding | old | new` lines.
+4. On SEND BACK, apply here only findings whose `old` and `new` lines replace text word for word:
+   make those Edits and run `db check <deck> --render --json` in one turn, without reading the deck.
+   Give every other blocker and major finding (new wording, a layout change, a split) to the same
+   `deck-builder-agent` (continue it with SendMessage, so it keeps what it has read). Then run
    step 1 again and validate once more by continuing the same validator with SendMessage, naming the slides that
    changed so it reads only those again. When slides were added, removed or reordered (the builder's
    report lists them), name none, since the slide numbers moved. That's the one send-back; report whatever is still open to

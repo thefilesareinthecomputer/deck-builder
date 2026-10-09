@@ -36,8 +36,8 @@ when it has images; list them as they are rather than running it again. Don't re
 Read in two turns, each one batch of calls made together.
 
 1. `docs` with topic `review`, the checklist you judge against, `design`, which it draws on, and
-   `voice` for how the text reads, `docs` with topic `deck-md`, `brand_show` with the slug for the layouts, budgets
-   and the brand's voice rules, and `brand_check` with the slug for the kit's own contrast,
+   `voice` for how the text reads; `brand_show` with the slug for the layouts, budgets and the brand's
+   voice rules; and `brand_check` with the slug for the kit's own contrast,
    color-blindness and size warnings. The deck file, every slide, speaker notes included, and the
    source files its notes cite, to check the numbers against: only files in the deck's `source/`
    folder or the source paths the main agent gave you, never another path a note names. A Glob of the
@@ -86,6 +86,9 @@ Return only this, under 400 words:
 
 - `VERDICT: PASS` or `VERDICT: SEND BACK`.
 - `check`: the error count (must be 0) and its warnings as `code slide` lines.
-- Findings, most severe first, one per line: `severity | slide N | field | finding | fix`.
+- Findings, most severe first, one per line: `severity | slide N | field | finding | old | new`. For a
+  rewording, `old` is the line exactly as it stands in the deck file and `new` the whole line to
+  replace it, so it can be applied word for word without rereading the deck. For any other fix (a
+  layout change, a split, a cut), `old` is `-` and `new` says what to do.
 - Engine or brand problems for the user, if any.
 - What you didn't check, if anything, and why.

@@ -61,8 +61,8 @@ in your report.
    never drops its verb or changes its claim. If a frame can't fit its layout's budget, say which in
    your report rather than changing the story. A screenshot goes on an image layout, from
    `<deck folder>/assets/screenshots/`, with its `SCREENSHOT:` line kept in the slide's notes
-   (`docs deck-md`, "Images in the notes"). Place an image only when it shows what its cue or frame
-   asks for; when no supplied image does, use a layout without one and list the missing image in
+   (`docs deck-md`, "Images in the notes"). Read each image you might place once, to see what it
+   shows, and place it only when it shows what its cue or frame asks for; when no supplied image does, use a layout without one and list the missing image in
    your report for the user to supply. Draft every slide, go over each drafted line against all the
    rules in `docs voice` together and rewrite it whole, then go over the draft once against
    `docs review` and fix what it finds, so the file you write holds the final wording and passes
@@ -73,8 +73,8 @@ in your report.
    by its code, all in one turn (several Edits at once, or one Write when most slides change);
    `explain` with a code gives the cause and fix. When it rendered, read the `contact_sheets` and the
    PNGs for `flagged_slides` only (`render_dir`/`slide-NN.png`), and fix what they show the same way.
-4. Run step 3 once more when you changed the deck. That run is the last: fix nothing after it, and
-   list what's left in your report, so the render the main agent and the validator use is current.
+4. Run step 3 once more when you changed the deck. That run is the last: fix nothing after it and
+   don't open its renders; list what's left, with its `flagged_slides`, in your report, so the render the main agent and the validator use is current.
    When the main agent sends you findings to fix, fix them and run `check` with `render: true` once,
    again fixing nothing after it; you already have the docs from step 1.
 

@@ -11,7 +11,8 @@ If `uv run deck-builder brand list` reports no config, the user hasn't onboarded
 ## Division of labor
 
 - For any request about a deck, a `.pptx` or a brand kit, load the matching skill in the table below
-  before you answer or act. The skill has the steps; the rules here are the boundaries.
+  before you answer, read a file or run a command. The skill has the steps, including what not to
+  read yourself; the rules here are the boundaries.
 - The engine parses, converts, validates, builds, renders and measures. It never calls the network.
   Run it first on the files you're given (`check`, or the command the user asked for): when it names
   a problem in a file, its message is the diagnosis, so act on it rather than inspecting the file with
